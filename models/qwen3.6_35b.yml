@@ -1,12 +1,12 @@
 name: qwen3.6-35b-a3b-nvfp4
 endpoint:
-  base_url: "http://localhost:8000"   # or your ProxyJump-forwarded local port
-  model_name: "RedHatAI/Qwen3.6-35B-A3B-NVFP4"
+  base_url: "http://127.0.0.1:8000"
+  model_name: "qwen3.6-35b-a3b-nvfp4"
   chat: true
 ready_timeout_s: 600
 monitor_interval_s: 1.0
 prompt_lengths: [32, 128, 512, 2048, 8192, 16384]
-latency_repeats: 10          # bump to 100 once you're happy with runtime
+latency_repeats: 10          # bump toward 100 once runtime is validated
 decode_lengths: [512, 1024, 2048]
 reasoning_prompts:
   - "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show your reasoning."

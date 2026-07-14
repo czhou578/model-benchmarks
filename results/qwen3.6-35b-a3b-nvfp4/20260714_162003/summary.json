@@ -1,0 +1,127 @@
+{
+  "model": "qwen3.6-35b-a3b-nvfp4",
+  "run_dir": "results/qwen3.6-35b-a3b-nvfp4/20260714_162003",
+  "latency": {
+    "32": {
+      "requested_prompt_tokens": 32,
+      "prompt_tokens_exact": true,
+      "n": 0,
+      "ttft_avg_s": null,
+      "ttft_median_s": null,
+      "ttft_p95_s": null,
+      "ttft_p99_s": null,
+      "prefill_tps_avg": null
+    },
+    "128": {
+      "requested_prompt_tokens": 128,
+      "prompt_tokens_exact": true,
+      "n": 0,
+      "ttft_avg_s": null,
+      "ttft_median_s": null,
+      "ttft_p95_s": null,
+      "ttft_p99_s": null,
+      "prefill_tps_avg": null
+    },
+    "512": {
+      "requested_prompt_tokens": 512,
+      "prompt_tokens_exact": true,
+      "n": 0,
+      "ttft_avg_s": null,
+      "ttft_median_s": null,
+      "ttft_p95_s": null,
+      "ttft_p99_s": null,
+      "prefill_tps_avg": null
+    },
+    "2048": {
+      "requested_prompt_tokens": 2048,
+      "prompt_tokens_exact": true,
+      "n": 0,
+      "ttft_avg_s": null,
+      "ttft_median_s": null,
+      "ttft_p95_s": null,
+      "ttft_p99_s": null,
+      "prefill_tps_avg": null
+    },
+    "8192": {
+      "requested_prompt_tokens": 8192,
+      "prompt_tokens_exact": true,
+      "n": 0,
+      "ttft_avg_s": null,
+      "ttft_median_s": null,
+      "ttft_p95_s": null,
+      "ttft_p99_s": null,
+      "prefill_tps_avg": null
+    },
+    "16384": {
+      "requested_prompt_tokens": 16384,
+      "prompt_tokens_exact": true,
+      "n": 0,
+      "ttft_avg_s": null,
+      "ttft_median_s": null,
+      "ttft_p95_s": null,
+      "ttft_p99_s": null,
+      "prefill_tps_avg": null
+    }
+  },
+  "decode": {
+    "512": {
+      "requested_output_tokens": 512,
+      "actual_output_tokens": 512,
+      "output_tokens_exact": true,
+      "decode_time_s": 0.378,
+      "tok_per_sec_avg": 1353.45,
+      "tok_per_sec_peak": 21.91,
+      "tok_per_sec_min": 19.62,
+      "tok_per_sec_median": 21.43
+    },
+    "1024": {
+      "requested_output_tokens": 1024,
+      "actual_output_tokens": 696,
+      "output_tokens_exact": true,
+      "decode_time_s": 2.05,
+      "tok_per_sec_avg": 339.47,
+      "tok_per_sec_peak": 22.39,
+      "tok_per_sec_min": 20.6,
+      "tok_per_sec_median": 21.49
+    },
+    "2048": {
+      "requested_output_tokens": 2048,
+      "actual_output_tokens": 554,
+      "output_tokens_exact": true,
+      "decode_time_s": 1.168,
+      "tok_per_sec_avg": 474.42,
+      "tok_per_sec_peak": 22.48,
+      "tok_per_sec_min": 20.54,
+      "tok_per_sec_median": 21.38
+    }
+  },
+  "reasoning": {
+    "per_prompt": [
+      {
+        "thinking_tokens": 0,
+        "answer_tokens": 170,
+        "ratio_thinking_to_answer": 0.0,
+        "prompt_preview": "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show"
+      },
+      {
+        "thinking_tokens": 0,
+        "answer_tokens": 117,
+        "ratio_thinking_to_answer": 0.0,
+        "prompt_preview": "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning "
+      }
+    ],
+    "thinking_tokens_avg": 0,
+    "thinking_tokens_max": 0,
+    "thinking_tokens_median": 0.0
+  },
+  "gpu": {
+    "samples_csv": "results/qwen3.6-35b-a3b-nvfp4/20260714_162003/gpu_samples.csv",
+    "num_samples": 81,
+    "gpu_power_avg_w": 39.41,
+    "gpu_power_peak_w": 68.33,
+    "gpu_mem_used_avg_mib": null,
+    "gpu_mem_used_peak_mib": null,
+    "energy_wh": 0.8868
+  },
+  "energy_per_token_wh": 0.000503
+}
