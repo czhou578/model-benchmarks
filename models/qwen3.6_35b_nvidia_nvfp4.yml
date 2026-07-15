@@ -31,5 +31,28 @@ prompt_lengths: [32, 128, 512, 2048, 8192, 16384]
 latency_repeats: 10          # bump toward 100 once runtime is validated
 decode_lengths: [512, 1024, 2048]
 reasoning_prompts:
+  # --- Baseline: existing prompts (soft reasoning request, no explicit CoT trigger) ---
   - "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show your reasoning."
   - "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning step by step."
+  # --- CoT-triggering: explicit <antThinking> block to activate Qwen3 reasoning mode ---
+  - |
+    <antThinking>
+    I'll work through this problem step by step.
+    </antThinking>
+    Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph?
+  - |
+    <antThinking>
+    Let me think through this carefully.
+    </antThinking>
+    A farmer has 17 sheep, all but 9 die. How many are left?
+  # --- Harder CoT: multi-step reasoning puzzles ---
+  - |
+    <antThinking>
+    Let me break this down systematically.
+    </antThinking>
+    A bag contains 3 red marbles and 5 blue marbles. If you draw two marbles without replacement, what is the probability that both are blue? Show each step of your calculation.
+  - |
+    <antThinking>
+    I need to analyze this problem step by step.
+    </antThinking>
+    Write a Python function that finds the longest palindromic substring in a given string. Explain your algorithm choice and trace through an example like "babad" or "cbbd".

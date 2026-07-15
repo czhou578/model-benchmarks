@@ -509,59 +509,78 @@ def run_decode_speed(client: ModelClient, output_lengths: list[int],
 # --------------------------------------------------------------------------- #
 
 def analyze_reasoning_tokens(text: str) -> dict[str, Any]:
-    """Separate thinking tokens from answer tokens in a Qwen3 model's output.
+    """Separate thinking tokens from answer tokens in a model's output.
 
-    Handles two formats:
-    1. XML tags:  <thinking>...thinking...</thinking>answer...
-    2. Plain text: the model emits thinking text (e.g. "Here's a thinking sequence")
-       followed by a structured answer. We detect this by looking for common
-       reasoning markers and splitting at the transition point.
+    Handles three formats:
+    1. Qwen3 XML tags:  <antThinking>...thinking...</antThinking>answer...
+    2. Anthropic XML tags: <thinking>...thinking...</thinking>answer...
+    3. Plain-text reasoning: common reasoning markers followed by structured answer.
     """
-    # Format 1: XML tags (Anthropic-style)
-    think_open, think_close = "<think>", "</think>"
+    # Format 1: Qwen3 XML tags (check first — more specific)
+    think_open, think_close = "<antThinking>", "</antThinking>"
     if think_open in text and think_close in text:
         start = text.index(think_open) + len(think_open)
         end = text.index(think_close)
         thinking = text[start:end]
         answer = text[end + len(think_close):]
-    else:
-        # Format 2: Plain-text reasoning (Qwen3)
-        # Pattern: reasoning text contains phrases like "thinking", "thinking
-        # sequence", "Let me analyze", etc. followed by structured answer
-        reasoning_markers = [
-            "here's a thinking",
-            "here is a thinking",
-            "let me think",
-            "let me analyze",
-            "let's think",
-            "step by step",
-            "first,",
-            "firstly,",
-            "to solve",
-            "to analyze",
-            "break this down",
-            "breaking this down",
-        ]
-        split_at = None
-        for marker in reasoning_markers:
-            idx = text.find(marker, 0, min(500, len(text)))  # search first 500 chars
-            if idx > 0:
-                split_at = idx
-                break
+        think_tokens = count_tokens(thinking)
+        answer_tokens = count_tokens(answer)
+        return {
+            "thinking_tokens": think_tokens,
+            "answer_tokens": answer_tokens,
+            "ratio_thinking_to_answer": round(think_tokens / answer_tokens, 3) if answer_tokens else None,
+        }
 
-        if split_at:
-            # Check if this looks like reasoning (has structured elements)
-            after = text[split_at:split_at + 300]
-            has_structure = any(x in after for x in ["\n1.", "**", "* **", "•", "-", "Step", "Phase"])
-            if has_structure and len(text) > split_at + 200:
-                thinking = text[:split_at]
-                answer = text[split_at:]
-            else:
-                thinking = ""
-                answer = text
+    # Format 2: Anthropic XML tags
+    think_open, think_close = "<thinking>", "</thinking>"
+    if think_open in text and think_close in text:
+        start = text.index(think_open) + len(think_open)
+        end = text.index(think_close)
+        thinking = text[start:end]
+        answer = text[end + len(think_close):]
+        think_tokens = count_tokens(thinking)
+        answer_tokens = count_tokens(answer)
+        return {
+            "thinking_tokens": think_tokens,
+            "answer_tokens": answer_tokens,
+            "ratio_thinking_to_answer": round(think_tokens / answer_tokens, 3) if answer_tokens else None,
+        }
+
+    # Format 3: Plain-text reasoning markers
+    reasoning_markers = [
+        "here's a thinking",
+        "here is a thinking",
+        "let me think",
+        "let me analyze",
+        "let's think",
+        "step by step",
+        "first,",
+        "firstly,",
+        "to solve",
+        "to analyze",
+        "break this down",
+        "breaking this down",
+    ]
+    split_at = None
+    for marker in reasoning_markers:
+        idx = text.find(marker, 0, min(500, len(text)))  # search first 500 chars
+        if idx > 0:
+            split_at = idx
+            break
+
+    if split_at:
+        # Check if this looks like reasoning (has structured elements)
+        after = text[split_at:split_at + 300]
+        has_structure = any(x in after for x in ["\n1.", "**", "* **", "•", "-", "Step", "Phase"])
+        if has_structure and len(text) > split_at + 200:
+            thinking = text[:split_at]
+            answer = text[split_at:]
         else:
             thinking = ""
             answer = text
+    else:
+        thinking = ""
+        answer = text
 
     think_tokens = count_tokens(thinking)
     answer_tokens = count_tokens(answer)
@@ -576,16 +595,38 @@ def run_reasoning_benchmark(client: ModelClient, prompts: list[str], max_tokens:
     per_prompt = []
     for p in prompts:
         gen = client.generate(p, max_tokens=max_tokens, temperature=0.0)
-        stats = analyze_reasoning_tokens(gen.output_text)
+
+        # Prefer the client's pre-split reasoning/answer text (for Qwen3-style
+        # reasoning mode where the server returns delta.reasoning separately).
+        # Fall back to re-analyzing the combined output_text for non-chat mode.
+        if gen.reasoning_text or gen.answer_text:
+            stats = {
+                "thinking_tokens": count_tokens(gen.reasoning_text),
+                "answer_tokens": count_tokens(gen.answer_text),
+                "reasoning_text_preview": gen.reasoning_text[:128] if gen.reasoning_text else "",
+                "answer_text_preview": gen.answer_text[:128] if gen.answer_text else "",
+                "ratio_thinking_to_answer": round(
+                    count_tokens(gen.reasoning_text) / count_tokens(gen.answer_text), 3
+                ) if count_tokens(gen.answer_text) else None,
+            }
+        else:
+            stats = analyze_reasoning_tokens(gen.output_text)
+            stats["reasoning_text_preview"] = ""
+            stats["answer_text_preview"] = ""
+
         stats["prompt_preview"] = p[:80]
         per_prompt.append(stats)
 
     think_lens = [r["thinking_tokens"] for r in per_prompt]
+    answer_lens = [r["answer_tokens"] for r in per_prompt]
     return {
         "per_prompt": per_prompt,
         "thinking_tokens_avg": round(statistics.mean(think_lens), 1) if think_lens else None,
         "thinking_tokens_max": max(think_lens) if think_lens else None,
         "thinking_tokens_median": statistics.median(think_lens) if think_lens else None,
+        "answer_tokens_avg": round(statistics.mean(answer_lens), 1) if answer_lens else None,
+        "answer_tokens_max": max(answer_lens) if answer_lens else None,
+        "answer_tokens_median": statistics.median(answer_lens) if answer_lens else None,
     }
 
 

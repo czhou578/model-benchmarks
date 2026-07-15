@@ -703,3 +703,33 @@ The benchmark prompt needs to be a meaningful, non-repetitive prompt that doesn'
 The output_text_preview includes the reasoning preamble. For a cleaner comparison, you'd want to separate the reasoning tokens from the answer tokens in the report. The current runner captures them together. The analyze_reasoning_tokens() function at line 442 looks for <think>... tags, but this model's output is plain text (Here's a thinking thinking sequence), so it won't be detected.
 
 Want me to update the runner to handle this Qwen3-style reasoning output (plain text before the answer) so the report can separately show reasoning vs. answer quality?
+
+
+The Problem
+Your latest run does have reasoning tokens — look at the decode.json:
+
+
+512 tokens: reasoning_tokens: 507, answer_tokens: 0
+1024 tokens: reasoning_tokens: 1000, answer_tokens: 0
+2048 tokens: reasoning_tokens: 2007, answer_tokens: 0
+The model generated massive amounts of reasoning text in the decode benchmark (the creative writing prompts). But in the reasoning.json it shows thinking_tokens_avg: 9, thinking_tokens_max: 54 — essentially nothing.
+
+The reasoning benchmark (those 6 prompts) only captured 54 thinking tokens (on prompt 2, the sheep puzzle) and zero everywhere else. But the decode benchmark captured hundreds to thousands of thinking tokens across the creative writing prompts.
+
+Why the Discrepancy
+Two different code paths:
+
+run_decode_speed() (line 458) — For each output length, generates one creative-writing prompt and calls client.generate(). The client splits delta.reasoning vs delta.content → these thinking tokens are captured correctly.
+
+run_reasoning_benchmark() (line 575) — Takes the 6 reasoning prompts and calls analyze_reasoning_tokens(gen.output_text). This analyzes the combined output text with string matching on markers like "here's a thinking", "let me think", etc. It only found thinking tokens on 1 of 6 prompts.
+
+The issue is that analyze_reasoning_tokens() is a fall-back parser that works on combined text. When the model IS in reasoning mode and the server returns split delta.reasoning/delta.content, the code uses that split directly. But for the reasoning benchmark, the 6 prompts seem to produce output where the parser fails to extract reasoning — likely because the model's reasoning text is being concatenated with answer text differently in the streaming response.
+
+What to Do
+You have two options:
+
+Fix the reasoning benchmark to use the split text — change run_reasoning_benchmark() to count tokens from gen.reasoning_text and gen.answer_text directly (like run_decode_speed() already does for the decode paths), rather than running analyze_reasoning_tokens() on combined output.
+
+Skip the reasoning benchmark for now — since the decode benchmark already captures reasoning tokens correctly. The 6 reasoning prompts in run_reasoning_benchmark() may not be the right test; what matters is whether the model produces thinking tokens across a range of output lengths (which the decode benchmark already shows it does).
+
+Want me to fix #1 by making run_reasoning_benchmark() use the split text approach?
