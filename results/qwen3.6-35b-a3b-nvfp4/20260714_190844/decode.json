@@ -1,0 +1,32 @@
+{
+  "512": {
+    "requested_output_tokens": 512,
+    "actual_output_tokens": 512,
+    "output_tokens_exact": true,
+    "decode_time_s": 6.872,
+    "tok_per_sec_avg": 74.5,
+    "tok_per_sec_peak": null,
+    "tok_per_sec_min": null,
+    "tok_per_sec_median": null
+  },
+  "1024": {
+    "requested_output_tokens": 1024,
+    "actual_output_tokens": 596,
+    "output_tokens_exact": true,
+    "decode_time_s": 1.47,
+    "tok_per_sec_avg": 405.46,
+    "tok_per_sec_peak": 85.44,
+    "tok_per_sec_min": 64.07,
+    "tok_per_sec_median": 75.8
+  },
+  "2048": {
+    "requested_output_tokens": 2048,
+    "actual_output_tokens": 693,
+    "output_tokens_exact": true,
+    "decode_time_s": 1.59,
+    "tok_per_sec_avg": 435.74,
+    "tok_per_sec_peak": 82.68,
+    "tok_per_sec_min": 67.48,
+    "tok_per_sec_median": 75.75
+  }
+}
