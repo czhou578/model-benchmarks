@@ -689,3 +689,17 @@ This roadmap results in a benchmark suite that measures three complementary dime
 * **Efficiency:** reasoning token count, energy per token, and energy per solved task.
 
 Together, those metrics provide a much more complete picture of how practical an open-source model is than any single existing benchmark.
+
+The model is repeating itself — every response starts with nearly the same sentence ("It looks like your message got cut off..."). This is a classic repetition loop that happens when the model has exhausted its meaningful vocabulary and starts cycling through common phrases.
+
+The cutoff is consistent (~500–565 tokens) — the model reliably hits this wall regardless of whether you ask for 1024 or 2048 tokens. That's the EOS probability becoming overwhelming after the repetition starts.
+
+At 512 tokens it completes successfully — which is why the throughput at 512 is so high (1,353 tok/s). The model completes all 512 clean tokens before the repetition loop kicks in. The speculative decoding (MTP, 3 tokens) is working perfectly for those first 512 tokens.
+
+The real problem isn't EOS — it's vocabulary exhaustion. The model runs out of meaningful content at ~500 tokens, enters a repetition loop, and then EOS probability skyrockets and cuts it off. This is a model quality issue, not a benchmarking bug.
+
+The benchmark prompt needs to be a meaningful, non-repetitive prompt that doesn't invite the model to comment on the structure:
+
+The output_text_preview includes the reasoning preamble. For a cleaner comparison, you'd want to separate the reasoning tokens from the answer tokens in the report. The current runner captures them together. The analyze_reasoning_tokens() function at line 442 looks for <think>... tags, but this model's output is plain text (Here's a thinking thinking sequence), so it won't be detected.
+
+Want me to update the runner to handle this Qwen3-style reasoning output (plain text before the answer) so the report can separately show reasoning vs. answer quality?

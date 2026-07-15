@@ -64,18 +64,48 @@ def count_tokens(text: str) -> int:
     return max(1, int(len(text.split()) * 0.75))
 
 
-_BASE_PARAGRAPH = (
-    "The quick brown fox jumps over the lazy dog near the riverbank while "
-    "storm clouds gather over the distant mountains, and engineers debate "
-    "the tradeoffs between throughput and latency in modern inference "
-    "systems. "
-)
-
-
 def build_prompt_of_length(target_tokens: int) -> str:
-    text = _BASE_PARAGRAPH
+    """Build a substantive, non-repetitive prompt that forces creative generation.
+
+    The old approach (repeat a pangram) caused the model to comment on the
+    repetitive structure rather than generating independent content, hitting
+    a ~500-token wall of meta-commentary before EOS killed the stream.
+    """
+    # A single rich prompt — long enough to cover most test cases.
+    # When target is larger, pad with additional creative-direction blocks
+    # that are distinct enough to prevent repetition loops.
+    blocks = [
+        "You are a creative writer. Write a detailed, multi-paragraph story about "
+        "the discovery of an ancient underwater civilization. Describe the ocean "
+        "environment, the architecture of their cities, their technology, their "
+        "beliefs and customs, and what happened to them.",
+
+        "Now add more details about this civilization. Describe how they interacted "
+        "with marine life, their conflicts with surface dwellers, and their "
+        "relationship with deep sea creatures. Be creative and specific.",
+
+        "Continue with more details about this civilization. Describe their "
+        "underground cities, their trade routes through the ocean trenches, "
+        "and how they communicated across vast distances using bioluminescent "
+        "signals and whale songs.",
+
+        "Describe the eventual fall of this civilization. What natural disasters "
+        "or environmental changes led to their decline? How did their final "
+        "generations respond? What artifacts or evidence survived for modern "
+        "archaeologists to find?",
+
+        "Finally, describe the modern scientists who first encountered these "
+        "artifacts. What puzzles remain unsolved? What mysteries does this "
+        "civilization still hold? End with a reflective note about what their "
+        "existence means for our understanding of human history.",
+    ]
+
+    text = blocks[0]
+    idx = 1
     while count_tokens(text) < target_tokens:
-        text += _BASE_PARAGRAPH
+        text += " " + blocks[idx % len(blocks)]
+        idx += 1
+
     if _ENC is not None:
         ids = _ENC.encode(text)[:target_tokens]
         text = _ENC.decode(ids)
@@ -205,6 +235,8 @@ class GenerationResult:
     total_time_s: float
     output_text: str
     output_tokens: int
+    reasoning_text: str = ""          # thinking tokens (Qwen3 plain-text or <thinking> tags)
+    answer_text: str = ""            # post-reasoning answer
     per_token_times: list[float] = field(default_factory=list)
     prompt_tokens_exact: bool = False
     output_tokens_exact: bool = False
@@ -300,9 +332,13 @@ class ModelClient:
         chunks: list[str] = []
         usage: Optional[dict] = None
 
+        reasoning_chunks: list[str] = []
+        answer_chunks: list[str] = []
         with requests.post(url, headers=self.headers, json=payload, stream=True, timeout=300) as resp:
             resp.raise_for_status()
-            for line in resp.iter_lines(decode_unicode=True):
+            for raw_line in resp.iter_lines():
+                # iter_lines() always yields bytes; decode to narrow the type
+                line: str = raw_line.decode("utf-8")
                 if not line or not line.startswith("data:"):
                     continue
                 data = line[len("data:"):].strip()
@@ -317,16 +353,40 @@ class ModelClient:
                     usage = obj["usage"]
 
                 choice = (obj.get("choices") or [{}])[0]
-                delta_text = (choice.get("delta") or {}).get("content") if self.chat else choice.get("text")
+                delta = choice.get("delta") or {}
 
-                if delta_text:
+                # vLLM's Qwen3 reasoning mode emits text in delta.reasoning
+                # (the post-reasoning answer is still in delta.content).
+                # Accumulate both separately so we can measure reasoning vs answer
+                # tokens independently in the decode benchmark.
+                if self.chat:
+                    reasoning_text: Optional[str] = delta.get("reasoning")
+                    content_text: Optional[str] = delta.get("content")
+                else:
+                    reasoning_text = None
+                    content_text = choice.get("text")
+
+                # Track first-token time for any text chunk
+                has_text = False
+                for text_parts in (reasoning_text, content_text):
+                    if text_parts:
+                        has_text = True
+                        break
+
+                if has_text:
                     now = time.time()
                     if first_token_time is None:
                         first_token_time = now
                     else:
                         per_token_gaps.append(now - last_event_time)
                     last_event_time = now
-                    chunks.append(delta_text)
+
+                if reasoning_text:
+                    reasoning_chunks.append(reasoning_text)
+                    chunks.append(reasoning_text)
+                if content_text:
+                    answer_chunks.append(content_text)
+                    chunks.append(content_text)
 
         end = time.time()
         output_text = "".join(chunks)
@@ -340,6 +400,8 @@ class ModelClient:
             total_time_s=end - start,
             output_text=output_text,
             output_tokens=exact_output if exact_output is not None else count_tokens(output_text),
+            reasoning_text="".join(reasoning_chunks),
+            answer_text="".join(answer_chunks),
             per_token_times=per_token_gaps,
             prompt_tokens_exact=exact_prompt is not None,
             output_tokens_exact=exact_output is not None,
@@ -403,6 +465,24 @@ def run_decode_speed(client: ModelClient, output_lengths: list[int],
         tok_per_sec_overall = gen.output_tokens / decode_time if decode_time > 0 else None
         instant_rates = [1.0 / g for g in gen.per_token_times if g > 0]
         output_truncated = gen.output_tokens != n_out
+
+        # Analyze reasoning tokens (thinking vs answer)
+        # Use the already-split reasoning and answer text from the model client
+        reasoning_tokens_count: int = 0
+        answer_tokens_count: int = 0
+        reasoning_ratio: Optional[float] = None
+        if gen.reasoning_text:
+            reasoning_tokens_count = count_tokens(gen.reasoning_text)
+            answer_tokens_count = count_tokens(gen.answer_text)
+            if answer_tokens_count:
+                reasoning_ratio = round(reasoning_tokens_count / answer_tokens_count, 3)
+        elif gen.output_text:
+            # Fall back to analyzing combined output_text for models without split
+            reasoning_stats = analyze_reasoning_tokens(gen.output_text)
+            reasoning_tokens_count = reasoning_stats["thinking_tokens"]
+            answer_tokens_count = reasoning_stats["answer_tokens"]
+            reasoning_ratio = reasoning_stats.get("ratio_thinking_to_answer")
+
         text_preview = gen.output_text if len(gen.output_text) <= 512 else (
             gen.output_text[:512] + f"\n  [truncated, total length: {len(gen.output_text)} chars]"
         )
@@ -417,6 +497,9 @@ def run_decode_speed(client: ModelClient, output_lengths: list[int],
             "tok_per_sec_min": round(min(instant_rates), 2) if instant_rates else None,
             "tok_per_sec_median": round(statistics.median(instant_rates), 2) if instant_rates else None,
             "output_text_preview": text_preview,
+            "reasoning_tokens": reasoning_tokens_count,
+            "answer_tokens": answer_tokens_count,
+            "reasoning_ratio": reasoning_ratio,
         }
     return results
 
@@ -426,6 +509,15 @@ def run_decode_speed(client: ModelClient, output_lengths: list[int],
 # --------------------------------------------------------------------------- #
 
 def analyze_reasoning_tokens(text: str) -> dict[str, Any]:
+    """Separate thinking tokens from answer tokens in a Qwen3 model's output.
+
+    Handles two formats:
+    1. XML tags:  <thinking>...thinking...</thinking>answer...
+    2. Plain text: the model emits thinking text (e.g. "Here's a thinking sequence")
+       followed by a structured answer. We detect this by looking for common
+       reasoning markers and splitting at the transition point.
+    """
+    # Format 1: XML tags (Anthropic-style)
     think_open, think_close = "<think>", "</think>"
     if think_open in text and think_close in text:
         start = text.index(think_open) + len(think_open)
@@ -433,8 +525,43 @@ def analyze_reasoning_tokens(text: str) -> dict[str, Any]:
         thinking = text[start:end]
         answer = text[end + len(think_close):]
     else:
-        thinking = ""
-        answer = text
+        # Format 2: Plain-text reasoning (Qwen3)
+        # Pattern: reasoning text contains phrases like "thinking", "thinking
+        # sequence", "Let me analyze", etc. followed by structured answer
+        reasoning_markers = [
+            "here's a thinking",
+            "here is a thinking",
+            "let me think",
+            "let me analyze",
+            "let's think",
+            "step by step",
+            "first,",
+            "firstly,",
+            "to solve",
+            "to analyze",
+            "break this down",
+            "breaking this down",
+        ]
+        split_at = None
+        for marker in reasoning_markers:
+            idx = text.find(marker, 0, min(500, len(text)))  # search first 500 chars
+            if idx > 0:
+                split_at = idx
+                break
+
+        if split_at:
+            # Check if this looks like reasoning (has structured elements)
+            after = text[split_at:split_at + 300]
+            has_structure = any(x in after for x in ["\n1.", "**", "* **", "•", "-", "Step", "Phase"])
+            if has_structure and len(text) > split_at + 200:
+                thinking = text[:split_at]
+                answer = text[split_at:]
+            else:
+                thinking = ""
+                answer = text
+        else:
+            thinking = ""
+            answer = text
 
     think_tokens = count_tokens(thinking)
     answer_tokens = count_tokens(answer)
