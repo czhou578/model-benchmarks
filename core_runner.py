@@ -671,6 +671,7 @@ def main():
     parser.add_argument("--skip-latency", action="store_true")
     parser.add_argument("--skip-decode", action="store_true")
     parser.add_argument("--skip-reasoning", action="store_true")
+    parser.add_argument("--skip-concurrency", action="store_true")
     args = parser.parse_args()
 
     cfg = load_model_config(Path(args.model))
@@ -722,6 +723,26 @@ def main():
             reasoning_results = run_reasoning_benchmark(client, reasoning_prompts)
             save_json(run_dir / "reasoning.json", reasoning_results)
             summary["reasoning"] = reasoning_results
+
+        if not args.skip_concurrency:
+            # Lazy import to avoid circular import (core_runner <-> benchmarks.concurrency)
+            from benchmarks.concurrency import run_concurrency_test
+
+            concurrency_levels = cfg.get("concurrency_levels", [1, 2, 4, 8, 16])
+            requests_per_level = cfg.get("concurrency_requests_per_level", 5)
+            max_tokens = cfg.get("concurrency_max_tokens", 256)
+            temperature = cfg.get("concurrency_temperature", 0.0)
+            print(
+                f"[core_runner] concurrency test: levels={concurrency_levels} "
+                f"({requests_per_level} reqs/level, {max_tokens} max_tokens, "
+                f"t={temperature})"
+            )
+            concurrency_results = run_concurrency_test(
+                client, concurrency_levels, requests_per_level,
+                max_tokens=max_tokens, temperature=temperature,
+            )
+            save_json(run_dir / "concurrency.json", concurrency_results)
+            summary["concurrency"] = concurrency_results
 
         for name, fn in _REGISTERED_BENCHMARKS.items():
             print(f"[core_runner] running registered benchmark: {name}")

@@ -56,3 +56,9 @@ reasoning_prompts:
     I need to analyze this problem step by step.
     </antThinking>
     Write a Python function that finds the longest palindromic substring in a given string. Explain your algorithm choice and trace through an example like "babad" or "cbbd".
+
+# --- Concurrency benchmark ---
+concurrency_levels: [1, 2, 4, 8, 16]
+concurrency_requests_per_level: 5
+concurrency_max_tokens: 256
+concurrency_temperature: 0.0
