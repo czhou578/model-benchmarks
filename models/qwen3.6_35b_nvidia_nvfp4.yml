@@ -1,0 +1,35 @@
+
+# vllm serve nvidia/Qwen3.6-35B-A3B-NVFP4  \
+#    --host 0.0.0.0 \
+#    --port 8000 \
+#    --tensor-parallel-size 1 \
+#    --trust-remote-code \
+#    --kv-cache-dtype fp8  \
+#    --attention-backend flashinfer  \
+#    --moe-backend marlin \
+#    --gpu-memory-utilization 0.4  \
+#    --max-model-len 262144 \
+#    --max-num-seqs 4 \
+#    --max-num-batched-tokens 8192  \
+#    --enable-chunked-prefill \
+#    --async-scheduling \
+#    --enable-prefix-caching \
+#    --speculative-config '{"method":"mtp","num_speculative_tokens":3,"moe_backend":"triton"}'  \
+#    --load-format fastsafetensors \
+#    --reasoning-parser qwen3 \
+#    --tool-call-parser qwen3_xml \
+#    --enable-auto-tool-choice
+
+name: nvidia-Qwen3.6-35B-A3B-NVFP4
+endpoint:
+  base_url: "http://127.0.0.1:8000"
+  model_name: "nvidia/Qwen3.6-35B-A3B-NVFP4"
+  chat: true
+ready_timeout_s: 600
+monitor_interval_s: 1.0
+prompt_lengths: [32, 128, 512, 2048, 8192, 16384]
+latency_repeats: 10          # bump toward 100 once runtime is validated
+decode_lengths: [512, 1024, 2048]
+reasoning_prompts:
+  - "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show your reasoning."
+  - "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning step by step."

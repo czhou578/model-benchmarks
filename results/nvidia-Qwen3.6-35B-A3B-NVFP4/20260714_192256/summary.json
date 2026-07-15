@@ -1,0 +1,127 @@
+{
+  "model": "nvidia-Qwen3.6-35B-A3B-NVFP4",
+  "run_dir": "results/nvidia-Qwen3.6-35B-A3B-NVFP4/20260714_192256",
+  "latency": {
+    "32": {
+      "requested_prompt_tokens": 32,
+      "prompt_tokens_exact": true,
+      "n": 0,
+      "ttft_avg_s": null,
+      "ttft_median_s": null,
+      "ttft_p95_s": null,
+      "ttft_p99_s": null,
+      "prefill_tps_avg": null
+    },
+    "128": {
+      "requested_prompt_tokens": 128,
+      "prompt_tokens_exact": true,
+      "n": 0,
+      "ttft_avg_s": null,
+      "ttft_median_s": null,
+      "ttft_p95_s": null,
+      "ttft_p99_s": null,
+      "prefill_tps_avg": null
+    },
+    "512": {
+      "requested_prompt_tokens": 512,
+      "prompt_tokens_exact": true,
+      "n": 0,
+      "ttft_avg_s": null,
+      "ttft_median_s": null,
+      "ttft_p95_s": null,
+      "ttft_p99_s": null,
+      "prefill_tps_avg": null
+    },
+    "2048": {
+      "requested_prompt_tokens": 2048,
+      "prompt_tokens_exact": true,
+      "n": 0,
+      "ttft_avg_s": null,
+      "ttft_median_s": null,
+      "ttft_p95_s": null,
+      "ttft_p99_s": null,
+      "prefill_tps_avg": null
+    },
+    "8192": {
+      "requested_prompt_tokens": 8192,
+      "prompt_tokens_exact": true,
+      "n": 0,
+      "ttft_avg_s": null,
+      "ttft_median_s": null,
+      "ttft_p95_s": null,
+      "ttft_p99_s": null,
+      "prefill_tps_avg": null
+    },
+    "16384": {
+      "requested_prompt_tokens": 16384,
+      "prompt_tokens_exact": true,
+      "n": 0,
+      "ttft_avg_s": null,
+      "ttft_median_s": null,
+      "ttft_p95_s": null,
+      "ttft_p99_s": null,
+      "prefill_tps_avg": null
+    }
+  },
+  "decode": {
+    "512": {
+      "requested_output_tokens": 512,
+      "actual_output_tokens": 512,
+      "output_tokens_exact": true,
+      "decode_time_s": 3.012,
+      "tok_per_sec_avg": 169.96,
+      "tok_per_sec_peak": null,
+      "tok_per_sec_min": null,
+      "tok_per_sec_median": null
+    },
+    "1024": {
+      "requested_output_tokens": 1024,
+      "actual_output_tokens": 1024,
+      "output_tokens_exact": true,
+      "decode_time_s": 5.874,
+      "tok_per_sec_avg": 174.33,
+      "tok_per_sec_peak": null,
+      "tok_per_sec_min": null,
+      "tok_per_sec_median": null
+    },
+    "2048": {
+      "requested_output_tokens": 2048,
+      "actual_output_tokens": 2048,
+      "output_tokens_exact": true,
+      "decode_time_s": 11.589,
+      "tok_per_sec_avg": 176.73,
+      "tok_per_sec_peak": null,
+      "tok_per_sec_min": null,
+      "tok_per_sec_median": null
+    }
+  },
+  "reasoning": {
+    "per_prompt": [
+      {
+        "thinking_tokens": 0,
+        "answer_tokens": 0,
+        "ratio_thinking_to_answer": null,
+        "prompt_preview": "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show"
+      },
+      {
+        "thinking_tokens": 0,
+        "answer_tokens": 0,
+        "ratio_thinking_to_answer": null,
+        "prompt_preview": "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning "
+      }
+    ],
+    "thinking_tokens_avg": 0,
+    "thinking_tokens_max": 0,
+    "thinking_tokens_median": 0.0
+  },
+  "gpu": {
+    "samples_csv": "results/nvidia-Qwen3.6-35B-A3B-NVFP4/20260714_192256/gpu_samples.csv",
+    "num_samples": 60,
+    "gpu_power_avg_w": 41.76,
+    "gpu_power_peak_w": 67.34,
+    "gpu_mem_used_avg_mib": null,
+    "gpu_mem_used_peak_mib": null,
+    "energy_wh": 0.6961
+  },
+  "energy_per_token_wh": 0.000194
+}

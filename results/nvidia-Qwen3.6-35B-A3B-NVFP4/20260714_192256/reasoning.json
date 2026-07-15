@@ -1,0 +1,19 @@
+{
+  "per_prompt": [
+    {
+      "thinking_tokens": 0,
+      "answer_tokens": 0,
+      "ratio_thinking_to_answer": null,
+      "prompt_preview": "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show"
+    },
+    {
+      "thinking_tokens": 0,
+      "answer_tokens": 0,
+      "ratio_thinking_to_answer": null,
+      "prompt_preview": "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning "
+    }
+  ],
+  "thinking_tokens_avg": 0,
+  "thinking_tokens_max": 0,
+  "thinking_tokens_median": 0.0
+}
