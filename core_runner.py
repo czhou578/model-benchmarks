@@ -221,18 +221,62 @@ class ModelClient:
             self.headers["Authorization"] = f"Bearer {api_key}"
 
     def wait_until_ready(self, timeout_s: int = 600, poll_s: float = 3.0) -> None:
+        """Wait until the vLLM engine is loaded and can actually process a request.
+
+        The /v1/models HTTP 200 check only verifies the server is listening,
+        not that the model weights have been loaded.  A dummy chat completion
+        forces the engine to respond, which catches the loading period and
+        prevents the latency sweep (which fires immediately after this call)
+        from hitting a still-initialising model — that was why every latency
+        entry showed n=0 (TTFT was NaN).
+        """
         health_url = f"{self.base_url}/v1/models"
         deadline = time.time() + timeout_s
         last_err = None
+
+        # Step 1: wait for the HTTP server to accept connections.
         while time.time() < deadline:
             try:
                 r = requests.get(health_url, headers=self.headers, timeout=5)
                 if r.status_code == 200:
-                    return
+                    break
             except requests.RequestException as e:
                 last_err = e
             time.sleep(poll_s)
-        raise TimeoutError(f"Model endpoint not ready after {timeout_s}s (last error: {last_err})")
+        else:
+            raise TimeoutError(f"HTTP server unreachable after {timeout_s}s (last error: {last_err})")
+
+        # Step 2: drive a real test request to confirm the model engine
+        # is actually able to produce output.  This is what /v1/models
+        # alone cannot tell us.
+        warmup_done = False
+        while time.time() < deadline:
+            try:
+                test_prompt = {"role": "user", "content": "hi"}
+                url = (f"{self.base_url}/v1/chat/completions"
+                       if self.chat else f"{self.base_url}/v1/completions")
+                payload = {
+                    "model": self.model_name,
+                    "messages": [test_prompt],
+                    "max_tokens": 1,
+                    "temperature": 0.0,
+                    "stream": False,
+                }
+                resp = requests.post(url, headers=self.headers, json=payload, timeout=30)
+                if resp.status_code == 200:
+                    warmup_done = True
+                    break
+            except requests.RequestException as e:
+                last_err = e
+            time.sleep(poll_s)
+
+        if not warmup_done:
+            raise TimeoutError(
+                f"Model engine not ready after {timeout_s}s — "
+                f"/v1/models returned 200 but a real chat completion failed "
+                f"(last error: {last_err}). "
+                f"The model weights are likely still being loaded from disk."
+            )
 
     def generate(self, prompt: str, max_tokens: int = 256, temperature: float = 0.0) -> GenerationResult:
         base_payload = {
@@ -358,15 +402,21 @@ def run_decode_speed(client: ModelClient, output_lengths: list[int],
         decode_time = gen.total_time_s - gen.ttft_s if gen.ttft_s == gen.ttft_s else gen.total_time_s
         tok_per_sec_overall = gen.output_tokens / decode_time if decode_time > 0 else None
         instant_rates = [1.0 / g for g in gen.per_token_times if g > 0]
+        output_truncated = gen.output_tokens != n_out
+        text_preview = gen.output_text if len(gen.output_text) <= 512 else (
+            gen.output_text[:512] + f"\n  [truncated, total length: {len(gen.output_text)} chars]"
+        )
         results[str(n_out)] = {
             "requested_output_tokens": n_out,
             "actual_output_tokens": gen.output_tokens,
             "output_tokens_exact": gen.output_tokens_exact,
+            "output_truncated": output_truncated,
             "decode_time_s": round(decode_time, 3),
             "tok_per_sec_avg": round(tok_per_sec_overall, 2) if tok_per_sec_overall else None,
             "tok_per_sec_peak": round(max(instant_rates), 2) if instant_rates else None,
             "tok_per_sec_min": round(min(instant_rates), 2) if instant_rates else None,
             "tok_per_sec_median": round(statistics.median(instant_rates), 2) if instant_rates else None,
+            "output_text_preview": text_preview,
         }
     return results
 

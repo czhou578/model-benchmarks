@@ -1,3 +1,35 @@
+# docker run -d \
+#   --name vllm-qwen36-nvfp4 \
+#   --gpus all \
+#   --ipc=host \
+#   -p 8000:8000 \
+#   -e HF_HUB_DISABLE_XET=1 \
+#   -e HF_HUB_DOWNLOAD_TIMEOUT=60 \
+#   -e HF_HUB_ETAG_TIMEOUT=60 \
+#   -e HF_HOME=/hf \
+#   -v "$HOME/.cache/huggingface:/hf" \
+#   -v "$HOME/.cache/vllm:/root/.cache/vllm" \
+#   -v "$HOME/.cache/flashinfer:/root/.cache/flashinfer" \
+#   ghcr.io/spark-arena/dgx-vllm-eugr-nightly-tf5:latest \
+#   vllm serve RedHatAI/Qwen3.6-35B-A3B-NVFP4 \
+#     --served-model-name qwen3.6-35b-a3b-nvfp4 \
+#     --host 0.0.0.0 \
+#     --port 8000 \
+#     --tensor-parallel-size 1 \
+#     --gpu-memory-utilization 0.70 \
+#     --max-model-len 262144 \
+#     --moe_backend flashinfer_cutlass \
+#     --enable-auto-tool-choice \
+#     --tool-call-parser qwen3_xml \
+#     --reasoning-parser qwen3 \
+#     --speculative-config '{"method":"mtp","num_speculative_tokens":3}' \
+#     --trust-remote-code \
+#     --kv-cache-dtype fp8_e4m3 \
+#     --enable-prefix-caching \
+#     --enable-chunked-prefill \
+#     --max-num-batched-tokens 8192 \
+#     --async-scheduling
+
 name: qwen3.6-35b-a3b-nvfp4
 endpoint:
   base_url: "http://127.0.0.1:8000"

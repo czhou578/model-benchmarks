@@ -133,7 +133,7 @@ All three runs show **null values** for every first-token latency and prefill th
 4. **None of the three models demonstrated reasoning capability** in these trial prompts. This could be due to the reasoning parser not detecting the model's output format, or the models not being in reasoning mode. Further investigation is needed.
 
 5. **Prefill latency was not measured** for any run — this is a critical gap for a complete benchmark picture.
-
+1
 ### Recommended next steps:
 
 1. **Fix the latency sweep** — ensure TTFT and prefill throughput are being captured for all prompt lengths.
