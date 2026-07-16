@@ -1,0 +1,58 @@
+{
+  "per_prompt": [
+    {
+      "thinking_tokens": 128,
+      "answer_tokens": 0,
+      "reasoning_text_preview": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
+      "answer_text_preview": "",
+      "ratio_thinking_to_answer": null,
+      "prompt_preview": "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show"
+    },
+    {
+      "thinking_tokens": 128,
+      "answer_tokens": 0,
+      "reasoning_text_preview": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
+      "answer_text_preview": "",
+      "ratio_thinking_to_answer": null,
+      "prompt_preview": "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning "
+    },
+    {
+      "thinking_tokens": 128,
+      "answer_tokens": 0,
+      "reasoning_text_preview": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
+      "answer_text_preview": "",
+      "ratio_thinking_to_answer": null,
+      "prompt_preview": "<antThinking>\nI'll work through this problem step by step.\n</antThinking>\nSolve:"
+    },
+    {
+      "thinking_tokens": 128,
+      "answer_tokens": 0,
+      "reasoning_text_preview": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
+      "answer_text_preview": "",
+      "ratio_thinking_to_answer": null,
+      "prompt_preview": "<antThinking>\nLet me think through this carefully.\n</antThinking>\nA farmer has 1"
+    },
+    {
+      "thinking_tokens": 128,
+      "answer_tokens": 0,
+      "reasoning_text_preview": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
+      "answer_text_preview": "",
+      "ratio_thinking_to_answer": null,
+      "prompt_preview": "<antThinking>\nLet me break this down systematically.\n</antThinking>\nA bag contai"
+    },
+    {
+      "thinking_tokens": 128,
+      "answer_tokens": 0,
+      "reasoning_text_preview": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
+      "answer_text_preview": "",
+      "ratio_thinking_to_answer": null,
+      "prompt_preview": "<antThinking>\nI need to analyze this problem step by step.\n</antThinking>\nWrite "
+    }
+  ],
+  "thinking_tokens_avg": 128,
+  "thinking_tokens_max": 128,
+  "thinking_tokens_median": 128.0,
+  "answer_tokens_avg": 0,
+  "answer_tokens_max": 0,
+  "answer_tokens_median": 0.0
+}

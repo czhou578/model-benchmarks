@@ -1,0 +1,58 @@
+{
+  "per_prompt": [
+    {
+      "thinking_tokens": 521,
+      "answer_tokens": 135,
+      "reasoning_text_preview": "Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - Problem: A train travels 60 miles in 45 minutes.\n   - Question: Wha",
+      "answer_text_preview": "\n\nTo find the speed in miles per hour (mph), use the formula:\n\n**Speed = Distance \u00f7 Time**\n\n**Step 1: Convert time to hours**  \n",
+      "ratio_thinking_to_answer": 3.859,
+      "prompt_preview": "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show"
+    },
+    {
+      "thinking_tokens": 564,
+      "answer_tokens": 164,
+      "reasoning_text_preview": "Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - Statement: \"A farmer has 17 sheep, all but 9 die.\"\n   - Question: \"",
+      "answer_text_preview": "\n\nThe answer is **9**.\n\nHere's the step-by-step reasoning:\n\n1. **Start with the initial number:** The farmer begins with 17 shee",
+      "ratio_thinking_to_answer": 3.439,
+      "prompt_preview": "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning "
+    },
+    {
+      "thinking_tokens": 495,
+      "answer_tokens": 74,
+      "reasoning_text_preview": "Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - Problem: \"if a train travels 60 miles in 45 minutes, what is its sp",
+      "answer_text_preview": "\n\nTo find the speed in miles per hour (mph), first convert the time to hours:\n45 minutes = 45/60 hours = **0.75 hours**\n\nThen us",
+      "ratio_thinking_to_answer": 6.689,
+      "prompt_preview": "<antThinking>\nI'll work through this problem step by step.\n</antThinking>\nSolve:"
+    },
+    {
+      "thinking_tokens": 317,
+      "answer_tokens": 34,
+      "reasoning_text_preview": "Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - Statement: \"A farmer has 17 sheep, all but 9 die. How many are left",
+      "answer_text_preview": "\n\n**9 sheep are left.** \n\nThe phrase \"all but 9 die\" means that 9 sheep survived, while the rest (8) did not.",
+      "ratio_thinking_to_answer": 9.324,
+      "prompt_preview": "<antThinking>\nLet me think through this carefully.\n</antThinking>\nA farmer has 1"
+    },
+    {
+      "thinking_tokens": 963,
+      "answer_tokens": 0,
+      "reasoning_text_preview": "Here's a thinking process:\n\n1.  **Understand the User's Request:**\n   - **Problem:** A bag contains 3 red marbles and 5 blue mar",
+      "answer_text_preview": "",
+      "ratio_thinking_to_answer": null,
+      "prompt_preview": "<antThinking>\nLet me break this down systematically.\n</antThinking>\nA bag contai"
+    },
+    {
+      "thinking_tokens": 977,
+      "answer_tokens": 0,
+      "reasoning_text_preview": "Here's a thinking process:\n\n1.  **Understand the User Request:**\n   - **Goal:** Write a Python function to find the longest pali",
+      "answer_text_preview": "",
+      "ratio_thinking_to_answer": null,
+      "prompt_preview": "<antThinking>\nI need to analyze this problem step by step.\n</antThinking>\nWrite "
+    }
+  ],
+  "thinking_tokens_avg": 639.5,
+  "thinking_tokens_max": 977,
+  "thinking_tokens_median": 542.5,
+  "answer_tokens_avg": 67.8,
+  "answer_tokens_max": 164,
+  "answer_tokens_median": 54.0
+}
