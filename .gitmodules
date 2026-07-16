@@ -1,3 +1,0 @@
-[submodule "runners/deepswe"]
-	path = runners/deepswe
-	url = https://github.com/datacurve-ai/deep-swe.git
