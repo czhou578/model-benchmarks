@@ -1,0 +1,83 @@
+name: qwen3.6-35b-a3b-unsloth-nvfp4
+server:
+  mode: managed
+  command:
+    - vllm
+    - serve
+    - unsloth/Qwen3.6-35B-A3B-NVFP4-Fast
+    - --host
+    - "127.0.0.1"
+    - --port
+    - "8000"
+    - --tensor-parallel-size
+    - "1"
+    - --gpu-memory-utilization
+    - "0.70"
+    - --max-model-len
+    - "262144"
+    - --max-num-seqs
+    - "16"
+    - --max-num-batched-tokens
+    - "8192"
+    - --kv-cache-dtype
+    - fp8_e4m3
+    - --attention-backend
+    - flashinfer
+    - --enable-chunked-prefill
+    - --async-scheduling
+    - --reasoning-parser
+    - qwen3
+    - --tool-call-parser
+    - qwen3_xml
+    - --enable-auto-tool-choice
+    - --generation-config
+    - vllm
+    - --moe-backend
+    - flashinfer_b12x
+  environment:
+    CUTE_DSL_ARCH: sm_121a
+  startup_timeout_s: 600
+  shutdown_timeout_s: 30
+
+endpoint:
+  base_url: "http://127.0.0.1:8000"
+  model_name: "unsloth/Qwen3.6-35B-A3B-NVFP4-Fast"
+  chat: true
+ready_timeout_s: 600
+monitor_interval_s: 1.0
+prompt_lengths: [32, 128, 512, 2048, 8192, 16384]
+latency_repeats: 10          # bump toward 100 once runtime is validated
+decode_lengths: [512, 1024, 2048]
+reasoning_prompts:
+  # --- Baseline: existing prompts (soft reasoning request, no explicit CoT trigger) ---
+  - "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show your reasoning."
+  - "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning step by step."
+  # --- CoT-triggering: explicit <antThinking> block to activate Qwen3 reasoning mode ---
+  - |
+    <antThinking>
+    I'll work through this problem step by step.
+    </antThinking>
+    Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph?
+  - |
+    <antThinking>
+    Let me think through this carefully.
+    </antThinking>
+    A farmer has 17 sheep, all but 9 die. How many are left?
+  # --- Harder CoT: multi-step reasoning puzzles ---
+  - |
+    <antThinking>
+    Let me break this down systematically.
+    </antThinking>
+    A bag contains 3 red marbles and 5 blue marbles. If you draw two marbles without replacement, what is the probability that both are blue? Show each step of your calculation.
+  - |
+    <antThinking>
+    I need to analyze this problem step by step.
+    </antThinking>
+    Write a Python function that finds the longest palindromic substring in a given string. Explain your algorithm choice and trace through an example like "babad" or "cbbd".
+# --- Concurrency benchmark ---
+concurrency_levels: [1, 2, 4, 8, 16]
+concurrency_requests_per_level: 16
+concurrency_max_tokens: 256
+concurrency_temperature: 0.0
+context_lengths: [32768, 65536]
+context_repeats: 5
