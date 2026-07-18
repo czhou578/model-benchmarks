@@ -37,6 +37,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import signal
 import shutil
 import statistics
 import subprocess
@@ -45,13 +46,19 @@ import threading
 import time
 import requests
 import yaml
-import tiktoken
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-_ENC = tiktoken.get_encoding("cl100k_base")
+from vllm_server import VllmServer
+
+try:
+    import tiktoken
+except ImportError:
+    _ENC = None
+else:
+    _ENC = tiktoken.get_encoding("cl100k_base")
 
 
 # --------------------------------------------------------------------------- #
@@ -253,7 +260,12 @@ class ModelClient:
         if api_key:
             self.headers["Authorization"] = f"Bearer {api_key}"
 
-    def wait_until_ready(self, timeout_s: int = 600, poll_s: float = 3.0) -> None:
+    def wait_until_ready(
+        self,
+        timeout_s: int = 600,
+        poll_s: float = 3.0,
+        process_check: Optional[Callable[[], None]] = None,
+    ) -> None:
         """Wait until the vLLM engine is loaded and can actually process a request.
 
         The /v1/models HTTP 200 check only verifies the server is listening,
@@ -269,6 +281,8 @@ class ModelClient:
 
         # Step 1: wait for the HTTP server to accept connections.
         while time.time() < deadline:
+            if process_check:
+                process_check()
             try:
                 r = requests.get(health_url, headers=self.headers, timeout=5)
                 if r.status_code == 200:
@@ -284,6 +298,8 @@ class ModelClient:
         # alone cannot tell us.
         warmup_done = False
         while time.time() < deadline:
+            if process_check:
+                process_check()
             try:
                 test_prompt = {"role": "user", "content": "hi"}
                 url = (f"{self.base_url}/v1/chat/completions"
@@ -540,6 +556,7 @@ def run_decode_speed(client: ModelClient, output_lengths: list[int],
             "actual_output_tokens": gen.output_tokens,
             "output_tokens_exact": gen.output_tokens_exact,
             "output_truncated": output_truncated,
+            "ttft_s": round(gen.ttft_s, 4) if gen.ttft_s == gen.ttft_s else None,
             "decode_time_s": round(decode_time, 3),
             "tok_per_sec_avg": round(tok_per_sec_overall, 2) if tok_per_sec_overall else None,
             "tok_per_sec_peak": round(max(instant_rates), 2) if instant_rates else None,
@@ -683,11 +700,10 @@ def run_reasoning_benchmark(client: ModelClient, prompts: list[str], max_tokens:
 # Speculative decoding comparison (A2)
 # --------------------------------------------------------------------------- #
 
-def run_spec_decode_comparison(client_spec: ModelClient, client_no_spec: ModelClient,
+def compare_spec_decode_results(spec_results: dict[str, Any],
+                                no_spec_results: dict[str, Any],
                                 output_lengths: list[int]) -> dict[str, Any]:
-    """Run decode benchmark with both spec-dec enabled and disabled, then diff."""
-    spec_results = run_decode_speed(client_spec, output_lengths)
-    no_spec_results = run_decode_speed(client_no_spec, output_lengths)
+    """Compare previously collected speculative and baseline decode results."""
 
     delta: dict[str, Any] = {}
     for key in spec_results:
@@ -695,8 +711,8 @@ def run_spec_decode_comparison(client_spec: ModelClient, client_no_spec: ModelCl
         no_spec_entry = no_spec_results.get(key, {})
         spec_tps = spec_entry.get("tok_per_sec_avg")
         no_spec_tps = no_spec_entry.get("tok_per_sec_avg")
-        spec_ttft = spec_entry.get("ttft_avg_s")
-        no_spec_ttft = no_spec_entry.get("ttft_avg_s")
+        spec_ttft = spec_entry.get("ttft_s")
+        no_spec_ttft = no_spec_entry.get("ttft_s")
 
         tps_pct = None
         if no_spec_tps and no_spec_tps > 0:
@@ -756,6 +772,46 @@ def save_json(path: Path, obj: Any):
         json.dump(obj, f, indent=2, default=str)
 
 
+def make_client(cfg: dict) -> ModelClient:
+    endpoint = cfg["endpoint"]
+    return ModelClient(
+        base_url=endpoint["base_url"],
+        model_name=endpoint.get("model_name", cfg["name"]),
+        api_key=endpoint.get("api_key"),
+        chat=endpoint.get("chat", True),
+    )
+
+
+def make_managed_server(
+    cfg: dict,
+    run_dir: Path,
+    log_name: str = "vllm.log",
+    command: list[str] | None = None,
+) -> VllmServer:
+    server_cfg = cfg.get("server")
+    if not isinstance(server_cfg, dict):
+        raise ValueError("managed server mode requires a server section in the model config")
+    resolved_command = command or server_cfg.get("command")
+    return VllmServer(
+        command=resolved_command,
+        base_url=cfg["endpoint"]["base_url"],
+        log_path=run_dir / log_name,
+        environment=server_cfg.get("environment", {}),
+        shutdown_timeout_s=server_cfg.get("shutdown_timeout_s", 30),
+    )
+
+
+def wait_for_endpoint(client: ModelClient, cfg: dict,
+                      server: VllmServer | None = None) -> None:
+    client.wait_until_ready(
+        timeout_s=cfg.get("server", {}).get(
+            "startup_timeout_s", cfg.get("ready_timeout_s", 600)
+        ),
+        poll_s=cfg.get("ready_poll_s", 3.0),
+        process_check=server.check_running if server else None,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Phase 1 core benchmark runner (simplified)")
     parser.add_argument("--model", required=True, help="Path to model config YAML")
@@ -765,35 +821,69 @@ def main():
     parser.add_argument("--skip-concurrency", action="store_true")
     parser.add_argument("--compare-spec", action="store_true",
                         help="Run decode benchmark with spec-dec enabled and disabled, then compare")
-    parser.add_argument("--vllm-cmd", type=str, default=None,
-                        help="vLLM serve command template (enables runner-managed vLLM lifecycle)")
+    parser.add_argument(
+        "--server-mode",
+        choices=("managed", "external"),
+        default=None,
+        help="Override the server mode from the model config",
+    )
     args = parser.parse_args()
 
-    cfg = load_model_config(Path(args.model))
+    model_config_path = Path(args.model)
+    cfg = load_model_config(model_config_path)
     model_name = cfg["name"]
     run_dir = make_run_dir(model_name)
     print(f"[core_runner] writing results to {run_dir}")
+    shutil.copy2(model_config_path, run_dir / "model_config.yml")
 
     env = collect_environment()
     save_json(run_dir / "environment.json", env)
     print(f"[core_runner] environment: {env.get('gpu_name')}, torch={env.get('torch_version')}, vllm={env.get('vllm_version')}")
 
-    client = ModelClient(
-        base_url=cfg["endpoint"]["base_url"],
-        model_name=cfg["endpoint"].get("model_name", model_name),
-        api_key=cfg["endpoint"].get("api_key"),
-        chat=cfg["endpoint"].get("chat", True),
-    )
-    print("[core_runner] waiting for model endpoint to be ready...")
-    client.wait_until_ready(timeout_s=cfg.get("ready_timeout_s", 600))
-    print("[core_runner] endpoint ready")
+    server_cfg = cfg.get("server", {})
+    server_mode = args.server_mode or server_cfg.get("mode", "external")
+    if server_mode not in ("managed", "external"):
+        raise ValueError(f"unsupported server mode: {server_mode}")
 
-    monitor = GpuMonitor(run_dir, interval_s=cfg.get("monitor_interval_s", 1.0))
-    monitor.start()
+    concurrency_levels = cfg.get("concurrency_levels", [1, 2, 4, 8, 16])
+    requests_per_level = cfg.get("concurrency_requests_per_level", 5)
+    if concurrency_levels and requests_per_level < max(concurrency_levels):
+        print(
+            "[core_runner] warning: concurrency_requests_per_level is below the "
+            "largest concurrency level; high levels will submit fewer requests than workers"
+        )
 
-    summary: dict[str, Any] = {"model": model_name, "run_dir": str(run_dir)}
+    server: VllmServer | None = None
+    monitor: GpuMonitor | None = None
+    summary: dict[str, Any] = {
+        "model": model_name,
+        "run_dir": str(run_dir),
+        "server_mode": server_mode,
+        "status": "running",
+    }
+
+    previous_sigterm_handler = signal.getsignal(signal.SIGTERM)
+
+    def handle_sigterm(signum, frame) -> None:
+        raise KeyboardInterrupt(f"received signal {signum}")
+
+    signal.signal(signal.SIGTERM, handle_sigterm)
 
     try:
+        if server_mode == "managed":
+            server = make_managed_server(cfg, run_dir)
+            print(f"[core_runner] starting managed vLLM: {' '.join(server.command)}")
+            server.start()
+            server.save_metadata(run_dir / "resolved_server.json")
+
+        client = make_client(cfg)
+        print("[core_runner] waiting for model endpoint to be ready...")
+        wait_for_endpoint(client, cfg, server)
+        print("[core_runner] endpoint ready")
+
+        monitor = GpuMonitor(run_dir, interval_s=cfg.get("monitor_interval_s", 1.0))
+        monitor.start()
+
         if not args.skip_latency:
             prompt_lengths = cfg.get("prompt_lengths", [32, 128, 512, 2048, 8192, 16384])
             repeats = cfg.get("latency_repeats", 10)
@@ -832,8 +922,6 @@ def main():
             # Lazy import to avoid circular import (core_runner <-> benchmarks.concurrency)
             from benchmarks.concurrency import run_concurrency_test
 
-            concurrency_levels = cfg.get("concurrency_levels", [1, 2, 4, 8, 16])
-            requests_per_level = cfg.get("concurrency_requests_per_level", 5)
             max_tokens = cfg.get("concurrency_max_tokens", 256)
             temperature = cfg.get("concurrency_temperature", 0.0)
             print(
@@ -856,119 +944,78 @@ def main():
 
         # A2: Speculative decoding comparison
         if args.compare_spec:
-            vllm_cmd = args.vllm_cmd or cfg.get("vllm_cmd")
-            if not vllm_cmd:
-                print("[core_runner] --compare-spec requires either --vllm-cmd or vllm_cmd in config")
-                sys.exit(1)
+            if server_mode != "managed" or server is None:
+                raise ValueError("--compare-spec requires managed server mode")
+            spec_config = cfg.get("speculative_config")
+            if not spec_config:
+                raise ValueError("--compare-spec requires speculative_config in the model YAML")
 
-            # Start vLLM with spec-dec enabled, run decode, then restart without spec
-            import subprocess
-
-            model_id = cfg["endpoint"].get("model_name", cfg["name"])
-            base_url = cfg["endpoint"]["base_url"]
-            port = base_url.split(":")[-1].rstrip("/") if "://" in base_url else "8000"
-
-            # Build spec-enabled command
-            spec_flag = cfg.get("speculative_config", "")
-            if spec_flag:
-                spec_cmd = vllm_cmd.format(
-                    model_id=model_id, port=port,
-                    spec_flag=f"--speculative-config '{spec_flag}'",
-                )
-            else:
-                spec_cmd = vllm_cmd.format(
-                    model_id=model_id, port=port,
-                    spec_flag="",
-                )
-
-            # Build non-spec command (remove speculative-config)
-            non_spec_cmd = spec_cmd.replace(
-                f"--speculative-config '{spec_flag}' ", ""
-            ).replace(
-                f"--speculative-config '{spec_flag}'", ""
-            ) if spec_flag else spec_cmd
-
-            print(f"[core_runner] starting vLLM (spec-enabled): {spec_cmd}")
-            spec_proc = subprocess.Popen(
-                spec_cmd.split(),
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            )
-
-            # Wait for server to be ready
-            print("[core_runner] waiting for vLLM endpoint...")
-            spec_client = ModelClient(
-                base_url=base_url,
-                model_name=model_id,
-                api_key=cfg["endpoint"].get("api_key"),
-                chat=cfg["endpoint"].get("chat", True),
-            )
-            spec_client.wait_until_ready(
-                timeout_s=cfg.get("ready_timeout_s", 600),
-                poll_s=cfg.get("ready_poll_s", 3.0),
-            )
-            print("[core_runner] spec-enabled endpoint ready")
-
-            # Run reduced decode benchmark
             output_lengths = cfg.get("decode_lengths", [512, 1024, 2048])
-            print(f"[core_runner] spec-enabled decode over {output_lengths}")
-            spec_results = run_decode_speed(spec_client, output_lengths)
+            base_command = list(server.command)
+            server.stop()
+            server.save_metadata(run_dir / "resolved_server.json")
+            server = None
+
+            def run_variant(label: str, command: list[str]) -> dict[str, Any]:
+                variant_server = make_managed_server(
+                    cfg, run_dir, log_name=f"vllm_{label}.log", command=command
+                )
+                try:
+                    print(f"[core_runner] starting vLLM variant: {label}")
+                    variant_server.start()
+                    variant_client = make_client(cfg)
+                    wait_for_endpoint(variant_client, cfg, variant_server)
+                    return run_decode_speed(variant_client, output_lengths)
+                finally:
+                    variant_server.stop()
+                    variant_server.save_metadata(
+                        run_dir / f"resolved_server_{label}.json"
+                    )
+
+            spec_results = run_variant(
+                "spec_enabled",
+                base_command + ["--speculative-config", str(spec_config)],
+            )
             save_json(run_dir / "spec_enabled.json", spec_results)
-
-            # Restart vLLM without spec-dec
-            print(f"[core_runner] stopping vLLM and restarting without spec-dec...")
-            spec_proc.terminate()
-            spec_proc.wait(timeout=30)
-
-            print(f"[core_runner] starting vLLM (spec-disabled): {non_spec_cmd}")
-            non_spec_proc = subprocess.Popen(
-                non_spec_cmd.split(),
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            )
-
-            non_spec_client = ModelClient(
-                base_url=base_url,
-                model_name=model_id,
-                api_key=cfg["endpoint"].get("api_key"),
-                chat=cfg["endpoint"].get("chat", True),
-            )
-            non_spec_client.wait_until_ready(
-                timeout_s=cfg.get("ready_timeout_s", 600),
-                poll_s=cfg.get("ready_poll_s", 3.0),
-            )
-            print("[core_runner] spec-disabled endpoint ready")
-
-            print(f"[core_runner] spec-disabled decode over {output_lengths}")
-            non_spec_results = run_decode_speed(non_spec_client, output_lengths)
+            non_spec_results = run_variant("spec_disabled", base_command)
             save_json(run_dir / "spec_disabled.json", non_spec_results)
 
-            # Compare
-            comparison = run_spec_decode_comparison(
-                spec_client, non_spec_client, output_lengths
+            comparison = compare_spec_decode_results(
+                spec_results, non_spec_results, output_lengths
             )
             save_json(run_dir / "spec_comparison.json", comparison)
             summary["spec_comparison"] = comparison
 
-            # Clean up
-            print("[core_runner] stopping vLLM")
-            non_spec_proc.terminate()
-            non_spec_proc.wait(timeout=30)
-
+        summary["status"] = "completed"
+    except BaseException as exc:
+        summary["status"] = "failed"
+        summary["error"] = f"{type(exc).__name__}: {exc}"
+        raise
     finally:
-        print("[core_runner] stopping GPU monitor")
-        gpu_summary = monitor.stop()
-        summary["gpu"] = gpu_summary
+        if monitor is not None:
+            print("[core_runner] stopping GPU monitor")
+            gpu_summary = monitor.stop()
+            summary["gpu"] = gpu_summary
 
-        total_output_tokens = 0
-        if "decode" in summary:
-            total_output_tokens += sum(
-                v["actual_output_tokens"] for v in summary["decode"].values()
-                if v.get("actual_output_tokens")
-            )
-        if total_output_tokens and gpu_summary.get("energy_wh") is not None:
-            summary["energy_per_token_wh"] = round(gpu_summary["energy_wh"] / total_output_tokens, 6)
+            total_output_tokens = 0
+            if "decode" in summary:
+                total_output_tokens += sum(
+                    v["actual_output_tokens"] for v in summary["decode"].values()
+                    if v.get("actual_output_tokens")
+                )
+            if total_output_tokens and gpu_summary.get("energy_wh") is not None:
+                summary["energy_per_token_wh"] = round(
+                    gpu_summary["energy_wh"] / total_output_tokens, 6
+                )
 
-    save_json(run_dir / "summary.json", summary)
-    print(f"[core_runner] done. Summary written to {run_dir / 'summary.json'}")
+        if server is not None:
+            print("[core_runner] stopping managed vLLM")
+            server.stop()
+            server.save_metadata(run_dir / "resolved_server.json")
+
+        signal.signal(signal.SIGTERM, previous_sigterm_handler)
+        save_json(run_dir / "summary.json", summary)
+        print(f"[core_runner] summary written to {run_dir / 'summary.json'}")
 
 
 if __name__ == "__main__":

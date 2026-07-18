@@ -1,24 +1,45 @@
-# vllm serve nvidia/Qwen3.6-35B-A3B-NVFP4  \
-#     --host 0.0.0.0 \
-#     --port 8001 \
-#     --tensor-parallel-size 1 \
-#     --trust-remote-code \
-#     --kv-cache-dtype fp8  \
-#     --attention-backend flashinfer  \
-#     --moe-backend marlin \
-#     --gpu-memory-utilization 0.4  \
-#     --max-model-len 262144 \
-#     --max-num-seqs 4 \
-#     --max-num-batched-tokens 8192  \
-#     --enable-chunked-prefill \
-#     --async-scheduling \
-#     --enable-prefix-caching \
-#     --load-format fastsafetensors \
-#     --reasoning-parser qwen3 \
-#     --tool-call-parser qwen3_xml \
-#     --enable-auto-tool-choice
-
 name: nvidia-Qwen3.6-35B-A3B-NVFP4-no-spec
+server:
+  mode: managed
+  command:
+    - vllm
+    - serve
+    - nvidia/Qwen3.6-35B-A3B-NVFP4
+    - --host
+    - "127.0.0.1"
+    - --port
+    - "8001"
+    - --tensor-parallel-size
+    - "1"
+    - --gpu-memory-utilization
+    - "0.70"
+    - --max-model-len
+    - "262144"
+    - --max-num-seqs
+    - "16"
+    - --max-num-batched-tokens
+    - "8192"
+    - --kv-cache-dtype
+    - fp8_e4m3
+    - --attention-backend
+    - flashinfer
+    - --enable-chunked-prefill
+    - --async-scheduling
+    - --reasoning-parser
+    - qwen3
+    - --tool-call-parser
+    - qwen3_xml
+    - --enable-auto-tool-choice
+    - --generation-config
+    - vllm
+    - --moe-backend
+    - marlin
+    - --load-format
+    - fastsafetensors
+  environment: {}
+  startup_timeout_s: 600
+  shutdown_timeout_s: 30
+
 endpoint:
   base_url: "http://127.0.0.1:8001"
   model_name: "nvidia/Qwen3.6-35B-A3B-NVFP4"
@@ -53,7 +74,7 @@ reasoning_prompts:
     Write a Python function that finds the longest palindromic substring in a given string. Explain your algorithm choice and trace through an example like "babad" or "cbbd".
 
 concurrency_levels: [1, 2, 4, 8, 16]
-concurrency_requests_per_level: 5
+concurrency_requests_per_level: 16
 concurrency_max_tokens: 256
 concurrency_temperature: 0.0
 context_lengths: [32768, 65536]
