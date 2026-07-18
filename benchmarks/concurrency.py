@@ -66,7 +66,7 @@ def _stat_summary(values: list[float]) -> dict[str, Any]:
 def run_concurrency_test(
     client: ModelClient,
     concurrency_levels: list[int] | None = None,
-    requests_per_level: int = 5,
+    requests_per_level: int = 16,
     max_tokens: int = 256,
     temperature: float = 0.0,
 ) -> dict[str, Any]:
