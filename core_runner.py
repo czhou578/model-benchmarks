@@ -237,6 +237,12 @@ class GpuMonitor:
 # --------------------------------------------------------------------------- #
 
 @dataclass
+class TokenizedPrompt:
+    count: int
+    tokens: list[int]
+
+
+@dataclass
 class GenerationResult:
     prompt_tokens: int
     ttft_s: float
@@ -326,6 +332,36 @@ class ModelClient:
                 f"(last error: {last_err}). "
                 f"The model weights are likely still being loaded from disk."
             )
+
+    def tokenize_prompt(self, prompt: str) -> TokenizedPrompt:
+        if self.chat:
+            payload = {
+                "model": self.model_name,
+                "messages": [{"role": "user", "content": prompt}],
+                # Match normal chat-completion rendering.
+                "add_generation_prompt": True,
+            }
+        else:
+            payload = {
+                "model": self.model_name,
+                "prompt": prompt,
+                "add_special_tokens": True,
+            }
+
+        response = requests.post(
+            f"{self.base_url}/tokenize",
+            headers=self.headers,
+            json=payload,
+            timeout=300,
+        )
+
+        response.raise_for_status()
+        data = response.json()
+
+        tokens = data.get("tokens", [])
+        count = data.get("count", len(tokens))
+
+        return TokenizedPrompt(count=count, tokens=tokens)
 
     def generate(self, prompt: str, max_tokens: int = 256, temperature: float = 0.0) -> GenerationResult:
         base_payload = {
