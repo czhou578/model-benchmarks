@@ -129,11 +129,6 @@ Add: - GSM8K - AIME-lite - GPQA-lite
 
 Measure: - Accuracy - Reasoning tokens - Latency
 
-## 17. Quality-per-Speed
-
-Report metrics such as: - HumanEval solved/minute - GSM8K
-correct/minute - DeepSWE score/hour
-
 # Phase 7 --- Hardware Instrumentation
 
 Collect alongside every benchmark: - SM utilization - Tensor Core

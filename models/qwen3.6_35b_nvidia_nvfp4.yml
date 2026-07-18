@@ -62,3 +62,25 @@ concurrency_levels: [1, 2, 4, 8, 16]
 concurrency_requests_per_level: 5
 concurrency_max_tokens: 256
 concurrency_temperature: 0.0
+
+# --- A1: Extended context benchmark ---
+# TTFT and prefill throughput at 32K/64K context lengths.
+# With FP8 KV cache on GB10 (32GB): 32K ~1.8GB, 64K ~3.6GB.
+# OOM will be captured gracefully if limits are exceeded.
+context_lengths: [32768, 65536]
+context_repeats: 5
+
+# --- A2: Speculative decoding comparison ---
+# vLLM serve command for runner-managed lifecycle (--compare-spec flag).
+# Placeholders: {model_id}, {port}, {spec_flag} (replaced with MTP config or empty).
+vllm_cmd: >
+  vllm serve {model_id} --port {port} --tensor-parallel-size 1
+  --trust-remote-code --kv-cache-dtype fp8 --attention-backend flashinfer
+  --moe-backend marlin --gpu-memory-utilization 0.4 --max-model-len 262144
+  --max-num-seqs 4 --max-num-batched-tokens 8192 --enable-chunked-prefill
+  --async-scheduling --enable-prefix-caching {spec_flag}
+  --load-format fastsafetensors --reasoning-parser qwen3 --tool-call-parser qwen3_xml
+  --enable-auto-tool-choice
+
+# MTP spec-dec config (extracted for reuse by vllm_cmd)
+speculative_config: '{"method":"mtp","num_speculative_tokens":3,"moe_backend":"triton"}'

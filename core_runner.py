@@ -11,6 +11,7 @@ decode speed, GPU memory + power + energy/token, and reasoning-token ratio.
 Captures:
   - environment: GPU name/driver/CUDA/torch/vLLM versions (just enough to
     know what you ran against)
+  - deep context (32K/64K): TTFT and prefill throughput at extended contexts
   - first-token latency + prefill throughput, swept across prompt lengths
   - decode speed (avg/peak/min/median tok/sec) at several output lengths
   - GPU memory + power sampled at 1 Hz -> avg/peak + energy (Wh) + energy/token
@@ -409,6 +410,54 @@ class ModelClient:
 
 
 # --------------------------------------------------------------------------- #
+# Deep context benchmark (A1) — TTFT and prefill at extended contexts
+# --------------------------------------------------------------------------- #
+
+def run_deep_context(client: ModelClient, context_lengths: list[int],
+                      output_tokens: int = 64, repeats: int = 5) -> dict[str, Any]:
+    """Measure TTFT and prefill throughput at extended context lengths.
+
+    For each context length, builds a prompt of that length and generates
+    a small decode (``output_tokens``). Captures TTFT and prefill TPS.
+    On OOM: records ``status: "oom"`` and continues to next length.
+    """
+    results = {}
+    for ctx_len in context_lengths:
+        label = str(ctx_len)
+        prompt = build_prompt_of_length(ctx_len)
+        ttfts: list[float] = []
+        prefill_tps: list[float] = []
+        exact = None
+        oom_detected = False
+        for i in range(repeats):
+            try:
+                gen = client.generate(prompt, max_tokens=output_tokens, temperature=0.0)
+                exact = gen.prompt_tokens_exact
+                if gen.ttft_s == gen.ttft_s and gen.ttft_s > 0:
+                    ttfts.append(gen.ttft_s)
+                    prefill_tps.append(gen.prompt_tokens / gen.ttft_s)
+            except requests.exceptions.ConnectionError:
+                oom_detected = True
+                break
+            except requests.exceptions.HTTPError as e:
+                if "memory" in str(e).lower() or "oom" in str(e).lower():
+                    oom_detected = True
+                    break
+                raise
+        results[label] = {
+            "requested_context_tokens": ctx_len,
+            "prompt_tokens_exact": exact,
+            "n": len(ttfts),
+            "ttft_avg_s": round(statistics.mean(ttfts), 4) if ttfts else None,
+            "ttft_median_s": round(statistics.median(ttfts), 4) if ttfts else None,
+            "ttft_p95_s": round(_percentile(ttfts, 95), 4) if ttfts else None,
+            "prefill_tps_avg": round(statistics.mean(prefill_tps), 1) if prefill_tps else None,
+            "status": "oom" if oom_detected else "success",
+        }
+    return results
+
+
+# --------------------------------------------------------------------------- #
 # Latency + prefill throughput sweep
 # --------------------------------------------------------------------------- #
 
@@ -631,6 +680,48 @@ def run_reasoning_benchmark(client: ModelClient, prompts: list[str], max_tokens:
 
 
 # --------------------------------------------------------------------------- #
+# Speculative decoding comparison (A2)
+# --------------------------------------------------------------------------- #
+
+def run_spec_decode_comparison(client_spec: ModelClient, client_no_spec: ModelClient,
+                                output_lengths: list[int]) -> dict[str, Any]:
+    """Run decode benchmark with both spec-dec enabled and disabled, then diff."""
+    spec_results = run_decode_speed(client_spec, output_lengths)
+    no_spec_results = run_decode_speed(client_no_spec, output_lengths)
+
+    delta: dict[str, Any] = {}
+    for key in spec_results:
+        spec_entry = spec_results[key]
+        no_spec_entry = no_spec_results.get(key, {})
+        spec_tps = spec_entry.get("tok_per_sec_avg")
+        no_spec_tps = no_spec_entry.get("tok_per_sec_avg")
+        spec_ttft = spec_entry.get("ttft_avg_s")
+        no_spec_ttft = no_spec_entry.get("ttft_avg_s")
+
+        tps_pct = None
+        if no_spec_tps and no_spec_tps > 0:
+            tps_pct = round((spec_tps - no_spec_tps) / no_spec_tps * 100, 2) if spec_tps else None
+
+        ttft_pct = None
+        if no_spec_ttft and no_spec_ttft > 0:
+            ttft_pct = round((spec_ttft - no_spec_ttft) / no_spec_ttft * 100, 2) if spec_ttft else None
+
+        delta[key] = {
+            "tok_s_improvement_pct": tps_pct,
+            "ttft_change_pct": ttft_pct,
+        }
+
+    return {
+        "config": {
+            "output_lengths": output_lengths,
+        },
+        "spec_enabled": spec_results,
+        "spec_disabled": no_spec_results,
+        "delta": delta,
+    }
+
+
+# --------------------------------------------------------------------------- #
 # Plugin hook for future phases (code correctness, Deep-SWE, HLE, ...)
 # --------------------------------------------------------------------------- #
 
@@ -672,6 +763,10 @@ def main():
     parser.add_argument("--skip-decode", action="store_true")
     parser.add_argument("--skip-reasoning", action="store_true")
     parser.add_argument("--skip-concurrency", action="store_true")
+    parser.add_argument("--compare-spec", action="store_true",
+                        help="Run decode benchmark with spec-dec enabled and disabled, then compare")
+    parser.add_argument("--vllm-cmd", type=str, default=None,
+                        help="vLLM serve command template (enables runner-managed vLLM lifecycle)")
     args = parser.parse_args()
 
     cfg = load_model_config(Path(args.model))
@@ -706,6 +801,15 @@ def main():
             latency_results = run_latency_sweep(client, prompt_lengths, repeats)
             save_json(run_dir / "latency.json", latency_results)
             summary["latency"] = latency_results
+
+        # A1: Deep context benchmark
+        context_lengths = cfg.get("context_lengths")
+        if context_lengths:
+            context_repeats = cfg.get("context_repeats", 5)
+            print(f"[core_runner] deep context benchmark over {context_lengths} ({context_repeats} reps each)")
+            deep_context_results = run_deep_context(client, context_lengths, output_tokens=64, repeats=context_repeats)
+            save_json(run_dir / "deep_context.json", deep_context_results)
+            summary["deep_context"] = deep_context_results
 
         if not args.skip_decode:
             output_lengths = cfg.get("decode_lengths", [512, 1024, 2048])
@@ -749,6 +853,105 @@ def main():
             plugin_results = fn(client, cfg)
             save_json(run_dir / f"{name}.json", plugin_results)
             summary[name] = plugin_results
+
+        # A2: Speculative decoding comparison
+        if args.compare_spec:
+            vllm_cmd = args.vllm_cmd or cfg.get("vllm_cmd")
+            if not vllm_cmd:
+                print("[core_runner] --compare-spec requires either --vllm-cmd or vllm_cmd in config")
+                sys.exit(1)
+
+            # Start vLLM with spec-dec enabled, run decode, then restart without spec
+            import subprocess
+
+            model_id = cfg["endpoint"].get("model_name", cfg["name"])
+            base_url = cfg["endpoint"]["base_url"]
+            port = base_url.split(":")[-1].rstrip("/") if "://" in base_url else "8000"
+
+            # Build spec-enabled command
+            spec_flag = cfg.get("speculative_config", "")
+            if spec_flag:
+                spec_cmd = vllm_cmd.format(
+                    model_id=model_id, port=port,
+                    spec_flag=f"--speculative-config '{spec_flag}'",
+                )
+            else:
+                spec_cmd = vllm_cmd.format(
+                    model_id=model_id, port=port,
+                    spec_flag="",
+                )
+
+            # Build non-spec command (remove speculative-config)
+            non_spec_cmd = spec_cmd.replace(
+                f"--speculative-config '{spec_flag}' ", ""
+            ).replace(
+                f"--speculative-config '{spec_flag}'", ""
+            ) if spec_flag else spec_cmd
+
+            print(f"[core_runner] starting vLLM (spec-enabled): {spec_cmd}")
+            spec_proc = subprocess.Popen(
+                spec_cmd.split(),
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            )
+
+            # Wait for server to be ready
+            print("[core_runner] waiting for vLLM endpoint...")
+            spec_client = ModelClient(
+                base_url=base_url,
+                model_name=model_id,
+                api_key=cfg["endpoint"].get("api_key"),
+                chat=cfg["endpoint"].get("chat", True),
+            )
+            spec_client.wait_until_ready(
+                timeout_s=cfg.get("ready_timeout_s", 600),
+                poll_s=cfg.get("ready_poll_s", 3.0),
+            )
+            print("[core_runner] spec-enabled endpoint ready")
+
+            # Run reduced decode benchmark
+            output_lengths = cfg.get("decode_lengths", [512, 1024, 2048])
+            print(f"[core_runner] spec-enabled decode over {output_lengths}")
+            spec_results = run_decode_speed(spec_client, output_lengths)
+            save_json(run_dir / "spec_enabled.json", spec_results)
+
+            # Restart vLLM without spec-dec
+            print(f"[core_runner] stopping vLLM and restarting without spec-dec...")
+            spec_proc.terminate()
+            spec_proc.wait(timeout=30)
+
+            print(f"[core_runner] starting vLLM (spec-disabled): {non_spec_cmd}")
+            non_spec_proc = subprocess.Popen(
+                non_spec_cmd.split(),
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            )
+
+            non_spec_client = ModelClient(
+                base_url=base_url,
+                model_name=model_id,
+                api_key=cfg["endpoint"].get("api_key"),
+                chat=cfg["endpoint"].get("chat", True),
+            )
+            non_spec_client.wait_until_ready(
+                timeout_s=cfg.get("ready_timeout_s", 600),
+                poll_s=cfg.get("ready_poll_s", 3.0),
+            )
+            print("[core_runner] spec-disabled endpoint ready")
+
+            print(f"[core_runner] spec-disabled decode over {output_lengths}")
+            non_spec_results = run_decode_speed(non_spec_client, output_lengths)
+            save_json(run_dir / "spec_disabled.json", non_spec_results)
+
+            # Compare
+            comparison = run_spec_decode_comparison(
+                spec_client, non_spec_client, output_lengths
+            )
+            save_json(run_dir / "spec_comparison.json", comparison)
+            summary["spec_comparison"] = comparison
+
+            # Clean up
+            print("[core_runner] stopping vLLM")
+            non_spec_proc.terminate()
+            non_spec_proc.wait(timeout=30)
 
     finally:
         print("[core_runner] stopping GPU monitor")
