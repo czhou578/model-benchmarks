@@ -32,7 +32,7 @@ Current vLLM metrics distinguish queue time, prefill time, TTFT, and newly compu
 
 ## Implementation plan
 
-### 1. Add a dedicated benchmark module
+### 1. Add a dedicated benchmark module [✓]
 
 Create `benchmarks/prefill.py` with responsibility for:
 
@@ -45,7 +45,7 @@ Create `benchmarks/prefill.py` with responsibility for:
 
 Keep general HTTP functionality and GPU monitoring in [core_runner.py](/home/colin-spark/Projects/model-benchmarks/core_runner.py:240).
 
-### 2. Generate exact model-token lengths
+### 2. Generate exact model-token lengths [✓]
 
 The existing `build_prompt_of_length()` uses `cl100k_base` or a word-count estimate. That is useful for rough sizing but cannot guarantee Qwen token counts.
 
@@ -60,7 +60,7 @@ vLLM provides `/tokenize`; account for the chat template when calibrating chat r
 
 Prefer a document-like workload—several differently worded passages—over repeated copies of the current creative-writing instructions. Repetition can create unrealistic attention and compression behavior.
 
-### 3. Guarantee a cold prefill
+### 3. Guarantee a cold prefill [✓]
 
 Give every measured request a unique `cache_salt`. This preserves the prompt itself while preventing prefix-cache reuse between repetitions and lengths. vLLM documents `cache_salt` specifically as a prefix-cache isolation mechanism. [Automatic Prefix Caching](https://docs.vllm.ai/en/v0.15.0/design/prefix_caching/)
 
@@ -72,7 +72,7 @@ Preflight the feature because external or older servers may reject it. Fallback 
 
 Do not merely append a nonce: most of the earlier prefix could still be reusable.
 
-### 4. Minimize decode contamination
+### 4. Minimize decode contamination [✓]
 
 Request one output token per trial. That is enough to observe TTFT while keeping the benchmark focused on prefill.
 
@@ -90,7 +90,7 @@ For each length:
 - Leave a short stabilization gap between requests.
 - Stop progressing to larger sizes if the server dies or a genuine memory boundary is reached.
 
-### 5. Capture raw request data
+### 5. Capture raw request data [✓]
 
 Store every repetition, not only averages:
 
@@ -108,7 +108,7 @@ Store every repetition, not only averages:
 
 This lets you recalculate summaries later and identify outliers such as the existing 32-token latency result.
 
-### 6. Add per-length GPU telemetry
+### 6. Add per-length GPU telemetry [ ]
 
 The current `GpuMonitor` produces one summary for the entire suite, so it cannot attribute power, memory, or energy to a prompt length.
 
@@ -126,25 +126,7 @@ For short prompts, a 1 Hz sampler is too coarse. Either sample closer to 100–2
 
 Also record vLLM KV-cache utilization when available. `nvidia-smi memory.used` alone may remain nearly constant because vLLM commonly reserves its KV-cache allocation at startup.
 
-### 7. Handle configured limits before OOM
-
-The managed NVIDIA configurations currently specify `--max-model-len 262144`, so:
-
-- 512K is unsupported without restarting the server with a larger limit.
-- A full 256K request may also exceed the limit after chat-template and output-token overhead.
-
-Parse the resolved server configuration and classify lengths as:
-
-- `success`
-- `unsupported_model_limit`
-- `oom`
-- `server_unavailable`
-- `request_error`
-- `skipped_after_oom`
-
-Do not classify every connection error as OOM, as `run_deep_context()` currently does.
-
-### 8. Define the output schema
+### 7. Define the output schema [ ]
 
 Write `prefill_scaling.json` with metadata plus per-length records:
 
@@ -161,7 +143,7 @@ Write `prefill_scaling.json` with metadata plus per-length records:
 
 Add a compact reference to this object in `summary.json`; avoid duplicating all raw samples there.
 
-### 9. Integrate configuration and orchestration
+### 8. Integrate configuration and orchestration [ ]
 
 Add a dedicated configuration section to each model YAML, conceptually containing:
 
@@ -177,7 +159,7 @@ Add a `--skip-prefill` runner option consistent with the existing CLI. The bench
 
 Once validated, treat `prefill_tps_avg` in `latency.json` and `deep_context.json` as legacy estimates. Keeping three competing prefill implementations will make reports ambiguous.
 
-### 10. Validate in stages
+### 10. Validate in stages [ ]
 
 1. Unit-test exact-length calibration, unique cache salts, aggregation, telemetry-window selection, and status classification.
 2. Run a smoke test at 512 and 2K with two repetitions.
@@ -199,3 +181,26 @@ Consider the benchmark complete when:
 - Unsupported lengths differ from OOM and server crashes.
 - A repeated curve produces similar median throughput.
 - The roadmap is updated to clarify that the old latency/deep-context numbers were preliminary effective-prefill estimates, while `prefill_scaling.json` is the canonical curve.
+
+## Why do we calibrate_prompt function?
+
+It takes a long text document and a target token count, and finds the exact character index where the document, when tokenized, contains precisely target_tokens tokens.
+
+The algorithm: binary search + local scan
+
+1. Binary search over the document's character positions. For each midpoint, it calls client.tokenize_prompt(source[:midpoint]).count to learn the token count. If it's exact, great — return immediately. If it's too low, the answer is somewhere to the right; if too high, to the left. This narrows down to a small window near the boundary.
+2. Local scan around that window (±boundary_scan_chars, default 64). Why? Because tokenizers are discrete — the boundary between "N tokens" and "N+1 tokens" might not fall exactly at the binary-search midpoint. A small linear scan catches the exact character offset.
+
+Why we need it (and what breaks if you remove it)
+
+Without this function, you'd be stuck with approximate lengths. Consider:
+
+- You generate 256KB of text, expecting ~32K tokens. The model tokenizer might render it as 34K.
+- Without calibration, you can't know whether your "32K benchmark point" was actually 32K, 34K, or 29K.
+- That noise defeats the purpose: the whole point of the benchmark is to cleanly attmpt length, not to a mixture of lengths with unknown error bars.
+
+In short: if you removed calibrate_prompt, you'd need an equally precise way to find the character boundary that yields exactly target_tokens. There isn't one. The tokenizer is a black box — you can't inverse it. You have to search.
+
+The one constraint to be aware of
+
+The function only trims — it finds a prefix of the document that is at or below targ prepare_exact_prompt (line 144) generates progressively larger documents until one is big enough to trim down to target. This avoids synthetic padding that could look unrealistic.

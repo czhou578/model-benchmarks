@@ -6,8 +6,15 @@ benchmark lengths must use the tokenizer and chat template of the running model.
 
 from __future__ import annotations
 
+import statistics
+import time
+import uuid
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Any, Protocol
+
+import requests
+
+from core_runner import ModelClient
 
 
 class TokenCount(Protocol):
@@ -169,3 +176,261 @@ def prepare_exact_prompt(
         f"could not build a document of {target_tokens} tokens after "
         f"{max_growth_attempts} attempts; largest candidate was {last_count} tokens"
     )
+
+
+# --------------------------------------------------------------------------- #
+# Benchmark helpers
+# --------------------------------------------------------------------------- #
+
+
+def _stat_summary(values: list[float]) -> dict[str, Any]:
+    """Compute avg, median, p95, min, max for a list of floats."""
+    if not values:
+        return {"avg_s": None, "median_s": None, "p95_s": None, "min_s": None, "max_s": None}
+    s = sorted(values)
+    k = (len(s) - 1) * 0.95
+    f, c = int(k), min(int(k) + 1, len(s) - 1)
+    p95 = s[f] + (s[c] - s[f]) * (k - f) if f != c else s[f]
+    return {
+        "avg_s": round(statistics.mean(values), 4),
+        "median_s": round(statistics.median(values), 4),
+        "p95_s": round(p95, 4),
+        "min_s": round(min(values), 4),
+        "max_s": round(max(values), 4),
+    }
+
+
+@dataclass(frozen=True)
+class PrefillRequestResult:
+    """Result from a single prefill request."""
+
+    index: int
+    success: bool
+    prompt_tokens: int
+    prompt_tokens_exact: bool
+    client_ttft_s: float
+    total_time_s: float
+    effective_prefill_tps: float | None
+    cache_isolation_method: str
+    error: str = ""
+    start_time: float | None = None
+    end_time: float | None = None
+    # vLLM server-side metrics
+    cached_tokens: int = 0
+    server_ttft_s: float | None = None
+    queue_time_s: float | None = None
+    prefill_time_s: float | None = None
+    engine_prefill_tps: float | None = None
+
+
+# --------------------------------------------------------------------------- #
+# Main benchmark function
+# --------------------------------------------------------------------------- #
+
+def run_prefill_scaling(
+    client: ModelClient,
+    target_lengths: list[int] = None,
+    repetitions: int = 5,
+) -> dict[str, Any]:
+    """Measure cold-prefill throughput across a range of prompt lengths.
+
+    Each request uses ``max_tokens=1`` to minimize decode contamination.
+    A unique ``cache_salt`` per request guarantees no prefix-cache reuse.
+
+    Args:
+        client: ModelClient connected to a running vLLM endpoint.
+        target_lengths: Prompt lengths to benchmark (default 512, 2K, 8K, 32K, 64K).
+        repetitions: Measured requests per length.
+
+    Returns:
+        Dict with ``config`` metadata and per-length ``per_length`` results.
+    """
+    if target_lengths is None:
+        target_lengths = [512, 2048, 8192, 32768, 65536]
+
+    # Detect cache isolation method
+    is_header = client.preflight_cache_salt()
+    cache_isolation_method = "cache_salt" if is_header else "text_salt"
+
+    results: dict[str, Any] = {
+        "config": {
+            "benchmark_version": "1.0",
+            "target_lengths": target_lengths,
+            "cache_isolation_method": cache_isolation_method,
+            "repetitions": repetitions,
+            "max_tokens": 1,
+            "temperature": 0.0,
+        },
+        "per_length": {},
+    }
+
+    stopped = False
+    for length in target_lengths:
+        length_key = str(length)
+
+        if stopped:
+            results["per_length"][length_key] = {"status": "skipped_after_oom"}
+            continue
+
+        # Calibrate prompt to exact length
+        try:
+            calibrated = prepare_exact_prompt(client, length)
+        except Exception as exc:
+            results["per_length"][length_key] = {
+                "status": "request_error",
+                "error": str(exc),
+            }
+            continue
+
+        # Warmup
+        warmup_salt = f"warmup_{length}"
+        try:
+            client.generate(calibrated.text, max_tokens=1, cache_salt=warmup_salt)
+        except Exception:
+            pass  # warmup errors are excluded from results
+
+        time.sleep(0.5)
+
+        # Measured requests
+        length_results: list[PrefillRequestResult] = []
+        length_status = "success"
+
+        for req_idx in range(repetitions):
+            req_salt = uuid.uuid4().hex
+            req_start = time.monotonic()
+            req_result: PrefillRequestResult | None = None
+
+            try:
+                gen = client.generate(
+                    calibrated.text, max_tokens=1, cache_salt=req_salt
+                )
+                tps = (gen.prompt_tokens / gen.ttft_s) if gen.ttft_s > 0 else None
+                engine_tps = None
+                if gen.prefill_time_s is not None and gen.prefill_time_s > 0:
+                    engine_tps = round(gen.prompt_tokens / gen.prefill_time_s, 2)
+                req_result = PrefillRequestResult(
+                    index=req_idx,
+                    success=True,
+                    prompt_tokens=gen.prompt_tokens,
+                    prompt_tokens_exact=gen.prompt_tokens_exact,
+                    client_ttft_s=gen.ttft_s,
+                    total_time_s=gen.total_time_s,
+                    effective_prefill_tps=round(tps, 2) if tps else None,
+                    cache_isolation_method=cache_isolation_method,
+                    start_time=req_start,
+                    end_time=time.monotonic(),
+                    cached_tokens=gen.cached_tokens,
+                    server_ttft_s=gen.time_to_first_token_s,
+                    engine_prefill_tps=engine_tps,
+                    queue_time_s=gen.queue_time_s,
+                    prefill_time_s=gen.prefill_time_s,
+                )
+            except requests.exceptions.ConnectionError:
+                length_status = "server_unavailable"
+                stopped = True
+                req_result = PrefillRequestResult(
+                    index=req_idx,
+                    success=False,
+                    prompt_tokens=0,
+                    prompt_tokens_exact=False,
+                    client_ttft_s=0.0,
+                    total_time_s=0.0,
+                    effective_prefill_tps=None,
+                    cache_isolation_method=cache_isolation_method,
+                    error="server_unreachable",
+                    start_time=req_start,
+                    end_time=time.monotonic(),
+                    cached_tokens=0,
+                    server_ttft_s=None,
+                    queue_time_s=None,
+                    prefill_time_s=None,
+                )
+            except requests.exceptions.HTTPError as exc:
+                msg = str(exc).lower()
+                if "memory" in msg or "oom" in msg:
+                    length_status = "oom"
+                    stopped = True
+                req_result = PrefillRequestResult(
+                    index=req_idx,
+                    success=False,
+                    prompt_tokens=0,
+                    prompt_tokens_exact=False,
+                    client_ttft_s=0.0,
+                    total_time_s=0.0,
+                    effective_prefill_tps=None,
+                    cache_isolation_method=cache_isolation_method,
+                    error=str(exc),
+                    start_time=req_start,
+                    end_time=time.monotonic(),
+                    cached_tokens=0,
+                    server_ttft_s=None,
+                    queue_time_s=None,
+                    prefill_time_s=None,
+                )
+            except Exception as exc:
+                req_result = PrefillRequestResult(
+                    index=req_idx,
+                    success=False,
+                    prompt_tokens=0,
+                    prompt_tokens_exact=False,
+                    client_ttft_s=0.0,
+                    total_time_s=0.0,
+                    effective_prefill_tps=None,
+                    cache_isolation_method=cache_isolation_method,
+                    error=str(exc),
+                    start_time=req_start,
+                    end_time=time.monotonic(),
+                    cached_tokens=0,
+                    server_ttft_s=None,
+                    queue_time_s=None,
+                    prefill_time_s=None,
+                )
+
+            if req_result is not None:
+                length_results.append(req_result)
+
+            # Stabilization gap between requests (not after last)
+            if req_idx < repetitions - 1:
+                time.sleep(0.5)
+
+        # Aggregate
+        successes = [r for r in length_results if r.success]
+        ttfts = [r.client_ttft_s for r in successes]
+        tps = [r.effective_prefill_tps for r in successes if r.effective_prefill_tps is not None]
+        engine_tps = [r.engine_prefill_tps for r in successes if r.engine_prefill_tps is not None]
+
+        results["per_length"][length_key] = {
+            "status": length_status,
+            "requested_tokens": length,
+            "actual_tokens": calibrated.actual_tokens,
+            "n_requests": len(length_results),
+            "n_success": len(successes),
+            "per_request": [
+                {
+                    "index": r.index,
+                    "success": r.success,
+                    "prompt_tokens": r.prompt_tokens,
+                    "prompt_tokens_exact": r.prompt_tokens_exact,
+                    "client_ttft_s": round(r.client_ttft_s, 4),
+                    "total_time_s": round(r.total_time_s, 4),
+                    "effective_prefill_tps": r.effective_prefill_tps,
+                    "engine_prefill_tps": r.engine_prefill_tps,
+                    "cached_tokens": r.cached_tokens,
+                    "server_ttft_s": r.server_ttft_s,
+                    "queue_time_s": r.queue_time_s,
+                    "prefill_time_s": r.prefill_time_s,
+                    "cache_isolation_method": r.cache_isolation_method,
+                    "start_time": r.start_time,
+                    "end_time": r.end_time,
+                    "error": r.error,
+                }
+                for r in length_results
+            ],
+            "aggregated": {
+                "ttft": _stat_summary(ttfts),
+                "effective_prefill_tps": _stat_summary(tps) if tps else {"avg_s": None, "median_s": None, "p95_s": None, "min_s": None, "max_s": None},
+                "engine_prefill_tps": _stat_summary(engine_tps) if engine_tps else {"avg_s": None, "median_s": None, "p95_s": None, "min_s": None, "max_s": None},
+            },
+        }
+
+    return results

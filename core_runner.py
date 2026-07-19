@@ -254,6 +254,11 @@ class GenerationResult:
     per_token_times: list[float] = field(default_factory=list)
     prompt_tokens_exact: bool = False
     output_tokens_exact: bool = False
+    # vLLM server-side metrics (available when the response includes them)
+    cached_tokens: int = 0
+    queue_time_s: float | None = None
+    time_to_first_token_s: float | None = None
+    prefill_time_s: float | None = None
 
 
 class ModelClient:
@@ -363,7 +368,20 @@ class ModelClient:
 
         return TokenizedPrompt(count=count, tokens=tokens)
 
-    def generate(self, prompt: str, max_tokens: int = 256, temperature: float = 0.0) -> GenerationResult:
+    def generate(
+        self,
+        prompt: str,
+        max_tokens: int = 256,
+        temperature: float = 0.0,
+        cache_salt: str | None = None,
+    ) -> GenerationResult:
+        """Send a generation request, optionally isolating it from prefix cache.
+
+        If *cache_salt* is given the request carries it via ``extra_body`` so
+        vLLM's prefix cache is prevented from reusing KV blocks.  On a 400
+        response from the server the request is retried with a text-based salt
+        appended to the prompt (ensures the content itself is unique).
+        """
         base_payload = {
             "model": self.model_name,
             "max_tokens": max_tokens,
@@ -371,75 +389,152 @@ class ModelClient:
             "stream": True,
             "stream_options": {"include_usage": True},
         }
+
         if self.chat:
             url = f"{self.base_url}/v1/chat/completions"
-            payload = {**base_payload, "messages": [{"role": "user", "content": prompt}]}
+            base_payload["messages"] = [{"role": "user", "content": prompt}]
         else:
             url = f"{self.base_url}/v1/completions"
-            payload = {**base_payload, "prompt": prompt}
+            base_payload["prompt"] = prompt
 
+        # Try 1: cache_salt via extra_body (preferred — content unchanged)
+        if cache_salt is not None:
+            result = self._execute_request(url, {
+                **base_payload,
+                "extra_body": {"cache_salt": cache_salt},
+            })
+            if result is not None:
+                return result
+
+        # Fallback: server rejected cache_salt → append salt to prompt text
+        salt = f" salt={cache_salt}" if cache_salt is not None else ""
+        if self.chat:
+            base_payload["messages"] = [{"role": "user", "content": prompt + salt}]
+        else:
+            base_payload["prompt"] = prompt + salt
+        return self._execute_request(url, base_payload)
+
+    def preflight_cache_salt(self) -> bool | None:
+        """Test whether the server supports the cache_salt header.
+
+        Sends one minimal request with ``extra_body={"cache_salt": "preflight"}``.
+        Returns ``True`` if the server accepts it, ``False`` on 400, ``None`` on
+        connection failure.
+        """
+        try:
+            url = (f"{self.base_url}/v1/chat/completions"
+                   if self.chat else f"{self.base_url}/v1/completions")
+            payload = {
+                "model": self.model_name,
+                "max_tokens": 1,
+                "temperature": 0.0,
+                "stream": False,
+                "extra_body": {"cache_salt": "preflight"},
+            }
+            if self.chat:
+                payload["messages"] = [{"role": "user", "content": "hi"}]
+            else:
+                payload["prompt"] = "hi"
+
+            resp = requests.post(
+                url, headers=self.headers, json=payload, timeout=30
+            )
+            return resp.status_code == 200
+        except (requests.RequestException, ValueError):
+            return None
+
+    def _execute_request(
+        self,
+        url: str,
+        payload: dict,
+    ) -> GenerationResult | None:
+        """Send one streaming request and return the result, or None on 400."""
         start = time.time()
         first_token_time = None
         last_event_time = start
-        per_token_gaps = []
+        per_token_gaps: list[float] = []
         chunks: list[str] = []
         usage: Optional[dict] = None
+        server_ttft: float | None = None
+        queue_time: float | None = None
+        prefill_time: float | None = None
+        cached_tokens: int = 0
 
         reasoning_chunks: list[str] = []
         answer_chunks: list[str] = []
-        with requests.post(url, headers=self.headers, json=payload, stream=True, timeout=300) as resp:
-            resp.raise_for_status()
-            for raw_line in resp.iter_lines():
-                # iter_lines() always yields bytes; decode to narrow the type
-                line: str = raw_line.decode("utf-8")
-                if not line or not line.startswith("data:"):
-                    continue
-                data = line[len("data:"):].strip()
-                if data == "[DONE]":
-                    break
-                try:
-                    obj = json.loads(data)
-                except json.JSONDecodeError:
-                    continue
-
-                if obj.get("usage"):
-                    usage = obj["usage"]
-
-                choice = (obj.get("choices") or [{}])[0]
-                delta = choice.get("delta") or {}
-
-                # vLLM's Qwen3 reasoning mode emits text in delta.reasoning
-                # (the post-reasoning answer is still in delta.content).
-                # Accumulate both separately so we can measure reasoning vs answer
-                # tokens independently in the decode benchmark.
-                if self.chat:
-                    reasoning_text: Optional[str] = delta.get("reasoning")
-                    content_text: Optional[str] = delta.get("content")
-                else:
-                    reasoning_text = None
-                    content_text = choice.get("text")
-
-                # Track first-token time for any text chunk
-                has_text = False
-                for text_parts in (reasoning_text, content_text):
-                    if text_parts:
-                        has_text = True
+        with requests.post(
+            url, headers=self.headers, json=payload, stream=True, timeout=300
+        ) as resp:
+                # If the server rejects the cache_salt param, bail so the
+                # caller can retry with the text-based fallback.
+                if resp.status_code == 400:
+                    return None
+                resp.raise_for_status()
+                for raw_line in resp.iter_lines():
+                    line: str = raw_line.decode("utf-8")
+                    if not line or not line.startswith("data:"):
+                        continue
+                    data = line[len("data:"):].strip()
+                    if data == "[DONE]":
                         break
+                    try:
+                        obj = json.loads(data)
+                    except json.JSONDecodeError:
+                        continue
 
-                if has_text:
-                    now = time.time()
+                    if obj.get("usage"):
+                        usage = obj["usage"]
+
+                    # vLLM server-side timing metrics (on the first chunk that carries them)
                     if first_token_time is None:
-                        first_token_time = now
-                    else:
-                        per_token_gaps.append(now - last_event_time)
-                    last_event_time = now
+                        metrics = obj.get("request_metrics")
+                        if metrics:
+                            ttf = metrics.get("time_to_first_token_s")
+                            if ttf is not None:
+                                server_ttft = float(ttf)
+                            qt = metrics.get("queue_time_s")
+                            if qt is not None:
+                                queue_time = float(qt)
+                            pt = metrics.get("prompt_time_s")
+                            if pt is not None:
+                                prefill_time = float(pt)
+                    # vLLM cached tokens (prefill cache hits)
+                    details = obj.get("completion_tokens_details")
+                    if details:
+                        ct = details.get("cached_tokens")
+                        if ct is not None:
+                            cached_tokens = int(ct)
 
-                if reasoning_text:
-                    reasoning_chunks.append(reasoning_text)
-                    chunks.append(reasoning_text)
-                if content_text:
-                    answer_chunks.append(content_text)
-                    chunks.append(content_text)
+                    choice = (obj.get("choices") or [{}])[0]
+                    delta = choice.get("delta") or {}
+
+                    if self.chat:
+                        reasoning_text: Optional[str] = delta.get("reasoning")
+                        content_text: Optional[str] = delta.get("content")
+                    else:
+                        reasoning_text = None
+                        content_text = choice.get("text")
+
+                    has_text = False
+                    for text_parts in (reasoning_text, content_text):
+                        if text_parts:
+                            has_text = True
+                            break
+
+                    if has_text:
+                        now = time.time()
+                        if first_token_time is None:
+                            first_token_time = now
+                        else:
+                            per_token_gaps.append(now - last_event_time)
+                        last_event_time = now
+
+                    if reasoning_text:
+                        reasoning_chunks.append(reasoning_text)
+                        chunks.append(reasoning_text)
+                    if content_text:
+                        answer_chunks.append(content_text)
+                        chunks.append(content_text)
 
         end = time.time()
         output_text = "".join(chunks)
@@ -448,7 +543,7 @@ class ModelClient:
         exact_output = usage.get("completion_tokens") if usage else None
 
         return GenerationResult(
-            prompt_tokens=exact_prompt if exact_prompt is not None else count_tokens(prompt),
+            prompt_tokens=exact_prompt if exact_prompt is not None else count_tokens(payload.get("prompt", "")),
             ttft_s=(first_token_time - start) if first_token_time else float("nan"),
             total_time_s=end - start,
             output_text=output_text,
@@ -458,6 +553,10 @@ class ModelClient:
             per_token_times=per_token_gaps,
             prompt_tokens_exact=exact_prompt is not None,
             output_tokens_exact=exact_output is not None,
+            cached_tokens=cached_tokens,
+            queue_time_s=queue_time,
+            time_to_first_token_s=server_ttft,
+            prefill_time_s=prefill_time,
         )
 
 
@@ -855,6 +954,7 @@ def main():
     parser.add_argument("--skip-decode", action="store_true")
     parser.add_argument("--skip-reasoning", action="store_true")
     parser.add_argument("--skip-concurrency", action="store_true")
+    parser.add_argument("--skip-prefill", action="store_true")
     parser.add_argument("--compare-spec", action="store_true",
                         help="Run decode benchmark with spec-dec enabled and disabled, then compare")
     parser.add_argument(
@@ -971,6 +1071,22 @@ def main():
             )
             save_json(run_dir / "concurrency.json", concurrency_results)
             summary["concurrency"] = concurrency_results
+
+        if not args.skip_prefill:
+            from benchmarks.prefill import run_prefill_scaling
+
+            target_lengths = cfg.get(
+                "prefill_target_lengths",
+                [512, 2048, 8192, 32768, 65536],
+            )
+            repetitions = cfg.get("prefill_repetitions", 5)
+            print(f"[core_runner] prefill scaling benchmark over {target_lengths} ({repetitions} reps)")
+            prefill_results = run_prefill_scaling(client, target_lengths, repetitions=repetitions)
+            save_json(run_dir / "prefill_scaling.json", prefill_results)
+            summary["prefill_scaling"] = {
+                k: {"status": v.get("status"), "n_success": v.get("n_success")}
+                for k, v in prefill_results.get("per_length", {}).items()
+            }
 
         for name, fn in _REGISTERED_BENCHMARKS.items():
             print(f"[core_runner] running registered benchmark: {name}")
