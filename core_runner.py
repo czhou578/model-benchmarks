@@ -163,10 +163,74 @@ def collect_environment() -> dict[str, Any]:
 # GPU resource monitor — memory + power only, sampled at 1 Hz
 # --------------------------------------------------------------------------- #
 
+
+def _window_summary(
+    samples: list[dict[str, Any]],
+    interval_s: float,
+    idle_samples: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Compute per-window GPU telemetry.
+
+    Args:
+        samples: list of samples collected during the window.
+        interval_s: seconds between samples.
+        idle_samples: baseline samples recorded before the benchmark started.
+
+    Returns a dict with avg/peak/min/max power, utilization, memory,
+    energy (Wh), energy-per-token (Wh/token), and incremental energy
+    above idle.
+    """
+    if not samples:
+        return {}
+
+    def _vals(key: str) -> list[float]:
+        return [s[key] for s in samples if s.get(key) is not None]
+
+    powers = _vals("gpu_power_w")
+    utils = _vals("gpu_util_pct")
+    mem_utils = _vals("gpu_mem_util_pct")
+    mems = _vals("gpu_mem_used_mib")
+
+    idle_powers = _vals("gpu_power_w") if idle_samples else []
+    idle_base = round(statistics.mean(idle_powers), 2) if idle_powers else None
+
+    duration_h = (len(samples) * interval_s) / 3600.0
+    energy_wh = round(statistics.mean(powers) * duration_h, 6) if powers else None
+    energy_above_wh = None
+    if idle_base is not None and idle_base < max(powers):
+        energy_above_wh = round(
+            (statistics.mean(powers) - idle_base) * duration_h, 6
+        )
+
+    result: dict[str, Any] = {
+        "num_samples": len(samples),
+        "duration_s": round(len(samples) * interval_s, 2),
+        "gpu_util_avg_pct": round(statistics.mean(utils), 2) if utils else None,
+        "gpu_util_peak_pct": round(max(utils), 2) if utils else None,
+        "gpu_power_avg_w": round(statistics.mean(powers), 2) if powers else None,
+        "gpu_power_peak_w": round(max(powers), 2) if powers else None,
+        "gpu_mem_util_avg_pct": round(statistics.mean(mem_utils), 2) if mem_utils else None,
+        "gpu_mem_util_peak_pct": round(max(mem_utils), 2) if mem_utils else None,
+        "gpu_mem_used_avg_mib": round(statistics.mean(mems), 1) if mems else None,
+        "gpu_mem_used_peak_mib": round(max(mems), 1) if mems else None,
+        "energy_wh": energy_wh,
+    }
+    if idle_base is not None:
+        result["idle_base_power_w"] = idle_base
+        result["energy_above_idle_wh"] = energy_above_wh
+    return result
+
+
+# --------------------------------------------------------------------------- #
+# GPU resource monitor — memory + power only, sampled at 1 Hz
+# --------------------------------------------------------------------------- #
+
 class GpuMonitor:
     """Background thread sampling GPU memory + power draw once per second."""
 
-    FIELDS = "memory.used,memory.total,power.draw"
+    FIELDS = "utilization.gpu,utilization.memory,memory.used,memory.total,power.draw"
+    # Keys that map to the CSV fields above
+    KEYS = ("gpu_util_pct", "gpu_mem_util_pct", "gpu_mem_used_mib", "gpu_mem_total_mib", "gpu_power_w")
 
     def __init__(self, out_dir: Path, interval_s: float = 1.0):
         self.out_dir = out_dir
@@ -175,6 +239,20 @@ class GpuMonitor:
         self._thread: Optional[threading.Thread] = None
         self.samples: list[dict[str, Any]] = []
         self.has_nvidia_smi = shutil.which("nvidia-smi") is not None
+        # Per-length window tracking
+        self._windows: dict[str, list[dict[str, Any]]] = {}
+        self._idle_samples: list[dict[str, Any]] = []
+
+    def _parse_row(self, out: str) -> dict[str, Any]:
+        """Parse one nvidia-smi CSV line into a row dict."""
+        parts = [p.strip() for p in out.splitlines()[0].split(",")]
+        row: dict[str, Any] = {}
+        for k, v in zip(self.KEYS, parts):
+            try:
+                row[k] = float(v)
+            except (ValueError, TypeError):
+                row[k] = None
+        return row
 
     def _sample_once(self) -> dict[str, Any]:
         row: dict[str, Any] = {"t": time.time()}
@@ -185,23 +263,48 @@ class GpuMonitor:
                 "--format=csv,noheader,nounits",
             ])
             if out:
-                parts = [p.strip() for p in out.splitlines()[0].split(",")]
-                keys = ["gpu_mem_used_mib", "gpu_mem_total_mib", "gpu_power_w"]
-                for k, v in zip(keys, parts):
-                    try:
-                        row[k] = float(v)
-                    except ValueError:
-                        row[k] = None
+                parsed = self._parse_row(out)
+                row.update(parsed)
         return row
 
     def _loop(self):
         while not self._stop.is_set():
-            self.samples.append(self._sample_once())
+            sample = self._sample_once()
+            self.samples.append(sample)
+            # Also record in every active window
+            for window in self._windows.values():
+                window.append(sample)
             self._stop.wait(self.interval_s)
 
     def start(self):
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
+
+    # ------------------------------------------------------------------ #
+    # Window management for per-length telemetry
+    # ------------------------------------------------------------------ #
+
+    def start_idle(self) -> None:
+        """Begin recording an idle baseline before benchmark work."""
+        self._idle_samples = []
+
+    def record_idle(self) -> None:
+        """Capture one sample into the idle baseline (caller must hold lock or schedule)."""
+        sample = self._sample_once()
+        self._idle_samples.append(sample)
+
+    def start_window(self, name: str) -> None:
+        """Start a new telemetry window by name."""
+        self._windows[name] = []
+
+    def stop_window(self, name: str) -> dict[str, Any] | None:
+        """Stop the named window and return a summary.  Returns ``None`` if the
+        window is empty (e.g. the benchmark loop was short and no sample was
+        taken)."""
+        window = self._windows.pop(name, None)
+        if not window:
+            return None
+        return _window_summary(window, self.interval_s, self._idle_samples)
 
     def stop(self) -> dict[str, Any]:
         self._stop.set()
@@ -218,13 +321,19 @@ class GpuMonitor:
 
         powers = [s["gpu_power_w"] for s in self.samples if s.get("gpu_power_w") is not None]
         mem = [s["gpu_mem_used_mib"] for s in self.samples if s.get("gpu_mem_used_mib") is not None]
-        summary = {
+        util = [s["gpu_util_pct"] for s in self.samples if s.get("gpu_util_pct") is not None]
+        mem_util = [s["gpu_mem_util_pct"] for s in self.samples if s.get("gpu_mem_util_pct") is not None]
+        summary: dict[str, Any] = {
             "samples_csv": str(csv_path) if self.samples else None,
             "num_samples": len(self.samples),
+            "gpu_util_avg_pct": round(statistics.mean(util), 2) if util else None,
+            "gpu_util_peak_pct": round(max(util), 2) if util else None,
             "gpu_power_avg_w": round(statistics.mean(powers), 2) if powers else None,
             "gpu_power_peak_w": round(max(powers), 2) if powers else None,
             "gpu_mem_used_avg_mib": round(statistics.mean(mem), 1) if mem else None,
             "gpu_mem_used_peak_mib": round(max(mem), 1) if mem else None,
+            "gpu_mem_util_avg_pct": round(statistics.mean(mem_util), 2) if mem_util else None,
+            "gpu_mem_util_peak_pct": round(max(mem_util), 2) if mem_util else None,
         }
         if powers:
             duration_h = (len(powers) * self.interval_s) / 3600.0
@@ -1080,8 +1189,18 @@ def main():
                 [512, 2048, 8192, 32768, 65536],
             )
             repetitions = cfg.get("prefill_repetitions", 5)
+            # Start idle baseline for GPU telemetry
+            gpu_interval = cfg.get("monitor_interval_s", 1.0)
+            if gpu_interval > 0.2:
+                print("[core_runner] capturing GPU idle baseline...")
+            monitor.start_idle()
+            for _ in range(int(5.0 / gpu_interval)):
+                monitor.record_idle()
+                time.sleep(gpu_interval)
+            print("[core_runner] idle baseline captured, starting prefill benchmark")
+
             print(f"[core_runner] prefill scaling benchmark over {target_lengths} ({repetitions} reps)")
-            prefill_results = run_prefill_scaling(client, target_lengths, repetitions=repetitions)
+            prefill_results = run_prefill_scaling(client, target_lengths, repetitions=repetitions, gpu_monitor=monitor)
             save_json(run_dir / "prefill_scaling.json", prefill_results)
             summary["prefill_scaling"] = {
                 k: {"status": v.get("status"), "n_success": v.get("n_success")}

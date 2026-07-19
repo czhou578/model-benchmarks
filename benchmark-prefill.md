@@ -108,7 +108,7 @@ Store every repetition, not only averages:
 
 This lets you recalculate summaries later and identify outliers such as the existing 32-token latency result.
 
-### 6. Add per-length GPU telemetry [ ]
+### 6. Add per-length GPU telemetry [✓]
 
 The current `GpuMonitor` produces one summary for the entire suite, so it cannot attribute power, memory, or energy to a prompt length.
 
