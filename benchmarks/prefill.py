@@ -10,6 +10,7 @@ import statistics
 import time
 import uuid
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Protocol
 
 import requests
@@ -257,11 +258,17 @@ def run_prefill_scaling(
     results: dict[str, Any] = {
         "config": {
             "benchmark_version": "1.0",
+            "definition": "cold-cached prefill throughput across a geometric progression of prompt lengths",
             "target_lengths": target_lengths,
             "cache_isolation_method": cache_isolation_method,
+            "cache_preflight_supported": is_header,
             "repetitions": repetitions,
             "max_tokens": 1,
             "temperature": 0.0,
+            "max_output_tokens": 1,
+            "prompt_workload": "document-like passages with field-record headers (deterministic)",
+            "server_cache_settings": {"prefix_caching": True, "cache_salt_enabled": is_header},
+            "start_time": datetime.utcnow().isoformat() + "Z",
         },
         "per_length": {},
     }
@@ -399,41 +406,7 @@ def run_prefill_scaling(
             if req_idx < repetitions - 1:
                 time.sleep(0.5)
 
-        # Aggregate
-        successes = [r for r in length_results if r.success]
-        ttfts = [r.client_ttft_s for r in successes]
-        tps = [r.effective_prefill_tps for r in successes if r.effective_prefill_tps is not None]
-        engine_tps = [r.engine_prefill_tps for r in successes if r.engine_prefill_tps is not None]
-
-        results["per_length"][length_key] = {
-            "status": length_status,
-            "requested_tokens": length,
-            "actual_tokens": calibrated.actual_tokens,
-            "n_requests": len(length_results),
-            "n_success": len(successes),
-            "per_request": [
-                {
-                    "index": r.index,
-                    "success": r.success,
-                    "prompt_tokens": r.prompt_tokens,
-                    "prompt_tokens_exact": r.prompt_tokens_exact,
-                    "client_ttft_s": round(r.client_ttft_s, 4),
-                    "total_time_s": round(r.total_time_s, 4),
-                    "effective_prefill_tps": r.effective_prefill_tps,
-                    "engine_prefill_tps": r.engine_prefill_tps,
-                    "cached_tokens": r.cached_tokens,
-                    "server_ttft_s": r.server_ttft_s,
-                    "queue_time_s": r.queue_time_s,
-                    "prefill_time_s": r.prefill_time_s,
-                    "cache_isolation_method": r.cache_isolation_method,
-                    "start_time": r.start_time,
-                    "end_time": r.end_time,
-                    "error": r.error,
-                }
-                for r in length_results
-            ],
-        }
-            # Stop GPU telemetry window for this length
+        # Stop GPU telemetry window for this length
         gpu_summary = None
         if gpu_monitor is not None:
             gpu_summary = gpu_monitor.stop_window(f"length_{length_key}")
@@ -444,10 +417,17 @@ def run_prefill_scaling(
                 gpu_summary["energy_wh"] / calibrated.actual_tokens, 8
             )
 
+        # Aggregate
+        successes = [r for r in length_results if r.success]
+        ttfts = [r.client_ttft_s for r in successes]
+        tps = [r.effective_prefill_tps for r in successes if r.effective_prefill_tps is not None]
+        engine_tps = [r.engine_prefill_tps for r in successes if r.engine_prefill_tps is not None]
+
         results["per_length"][length_key] = {
             "status": length_status,
             "requested_tokens": length,
             "actual_tokens": calibrated.actual_tokens,
+            "prompt_length_tolerance": length - calibrated.actual_tokens,
             "n_requests": len(length_results),
             "n_success": len(successes),
             "per_request": [
@@ -479,4 +459,5 @@ def run_prefill_scaling(
             },
         }
 
+    results["config"]["end_time"] = datetime.utcnow().isoformat() + "Z"
     return results

@@ -126,38 +126,31 @@ For short prompts, a 1 Hz sampler is too coarse. Either sample closer to 100–2
 
 Also record vLLM KV-cache utilization when available. `nvidia-smi memory.used` alone may remain nearly constant because vLLM commonly reserves its KV-cache allocation at startup.
 
-### 7. Define the output schema [ ]
+### 7. Define the output schema [✓]
 
-Write `prefill_scaling.json` with metadata plus per-length records:
+Output written to `prefill_scaling.json` with the following structure:
 
-- Benchmark version and definition.
-- Server/cache settings.
-- Sampling configuration.
-- Prompt workload identifier.
-- Raw repetitions.
-- Aggregated TTFT: mean, median, P95, standard deviation.
-- Effective prefill TPS: mean, median, P95.
-- Engine prefill TPS when supported.
-- GPU utilization, memory, power, and energy.
-- Status and failure details.
+- `config`: Benchmark version, definition, server/cache settings, sampling config, prompt workload identifier, cache isolation method + preflight result, start/end timestamps.
+- `per_length.<length>`: Per-length record containing:
+  - `status`: "success", "oom", "server_unavailable", "skipped_after_oom", "request_error"
+  - `requested_tokens`, `actual_tokens`, `prompt_length_tolerance`
+  - `n_requests`, `n_success`
+  - `per_request[]`: Each repetition with all raw fields (tokens, TTFT, cached tokens, server timing, queue time, prefill time, cache isolation, timestamps, errors)
+  - `aggregated`: TTFT (avg, median, p95, min, max), effective prefill TPS, engine prefill TPS, GPU telemetry (util, memory, power, energy, energy per token)
 
 Add a compact reference to this object in `summary.json`; avoid duplicating all raw samples there.
 
-### 8. Integrate configuration and orchestration [ ]
+### 8. Integrate configuration and orchestration [✓]
 
-Add a dedicated configuration section to each model YAML, conceptually containing:
+Implemented in `core_runner.py`:
 
-- Enabled flag.
-- Target lengths.
-- Repetitions and warmups.
-- Output token count.
-- Cache isolation policy.
-- Telemetry sampling interval.
-- Stop-after-OOM behavior.
+- YAML config keys: `prefill_target_lengths` (default `[512, 2048, 8192, 32768, 65536]`), `prefill_repetitions` (default 5).
+- GPU idle baseline captured before benchmark (5 seconds at the configured `monitor_interval_s`).
+- `--skip-prefill` CLI flag present (consistent with existing `--skip-*` flags).
+- Compact summary written to `summary.json`: per-length status and `n_success` only.
+- The benchmark runs independently of `prompt_lengths`, `context_lengths`, and `concurrency_levels`.
 
-Add a `--skip-prefill` runner option consistent with the existing CLI. The benchmark should execute independently of `prompt_lengths` and `context_lengths`.
-
-Once validated, treat `prefill_tps_avg` in `latency.json` and `deep_context.json` as legacy estimates. Keeping three competing prefill implementations will make reports ambiguous.
+Not yet done: treating `prefill_tps_avg` in `latency.json` / `deep_context.json` as legacy — three competing prefill implementations remain.
 
 ### 10. Validate in stages [ ]
 
