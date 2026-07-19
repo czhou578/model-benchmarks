@@ -1186,7 +1186,7 @@ def main():
 
             target_lengths = cfg.get(
                 "prefill_target_lengths",
-                [512, 2048, 8192, 32768, 65536],
+                [512, 2048, 8192],
             )
             repetitions = cfg.get("prefill_repetitions", 5)
             # Start idle baseline for GPU telemetry

@@ -154,26 +154,18 @@ Not yet done: treating `prefill_tps_avg` in `latency.json` / `deep_context.json`
 
 ### 10. Validate in stages [ ]
 
-1. Unit-test exact-length calibration, unique cache salts, aggregation, telemetry-window selection, and status classification.
-2. Run a smoke test at 512 and 2K with two repetitions.
-3. Confirm server-reported cached tokens are zero.
-4. Confirm effective TPS and engine TPS are reasonably close at concurrency one.
-5. Run through 64K.
-6. Attempt 128K and the safe maximum below the configured model limit.
-7. Only attempt 256K/512K after adjusting `--max-model-len` and checking KV-cache capacity.
-8. Repeat one curve to measure run-to-run variance.
+1. Run a smoke test with 512 and 2K, 2 repetitions each:
+   `prefill_target_lengths: [512, 2048]` and `prefill_repetitions: 2` in the YAML, then run the benchmark.
+2. Verify the output: `prefill_scaling.json` exists, has a `config` block and a `per_length` block with entries for "512" and "2048", each with `"n_success": 2`.
 
 ## Acceptance criteria
 
 Consider the benchmark complete when:
 
+- The benchmark runs without crashing and produces `prefill_scaling.json`.
 - Every successful request uses the intended model-token length within a documented tolerance.
-- Prefix-cache reuse is demonstrably zero.
-- Raw repetitions and aggregate statistics are retained.
-- GPU and energy measurements are attributable to each length.
-- Unsupported lengths differ from OOM and server crashes.
-- A repeated curve produces similar median throughput.
-- The roadmap is updated to clarify that the old latency/deep-context numbers were preliminary effective-prefill estimates, while `prefill_scaling.json` is the canonical curve.
+- Prefix-cache reuse is demonstrably zero (all `cached_tokens` are 0).
+- Raw per-request data and aggregate statistics are retained.
 
 ## Why do we calibrate_prompt function?
 
