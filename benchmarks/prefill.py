@@ -231,6 +231,7 @@ def run_prefill_scaling(
     client: ModelClient,
     target_lengths: list[int] = None,
     repetitions: int = 5,
+    gpu_monitor=None,
 ) -> dict[str, Any]:
     """Measure cold-prefill throughput across a range of prompt lengths.
 
@@ -241,6 +242,7 @@ def run_prefill_scaling(
         client: ModelClient connected to a running vLLM endpoint.
         target_lengths: Prompt lengths to benchmark (default 512, 2K, 8K, 32K, 64K).
         repetitions: Measured requests per length.
+        gpu_monitor: Optional ``GpuMonitor`` for per-length GPU telemetry.
 
     Returns:
         Dict with ``config`` metadata and per-length ``per_length`` results.
@@ -271,6 +273,10 @@ def run_prefill_scaling(
         if stopped:
             results["per_length"][length_key] = {"status": "skipped_after_oom"}
             continue
+
+        # Start GPU telemetry window for this length
+        if gpu_monitor is not None:
+            gpu_monitor.start_window(f"length_{length_key}")
 
         # Calibrate prompt to exact length
         try:
@@ -426,10 +432,50 @@ def run_prefill_scaling(
                 }
                 for r in length_results
             ],
+        }
+            # Stop GPU telemetry window for this length
+        gpu_summary = None
+        if gpu_monitor is not None:
+            gpu_summary = gpu_monitor.stop_window(f"length_{length_key}")
+
+        # Compute energy-per-token (available if GPU telemetry is active)
+        if gpu_summary and gpu_summary.get("energy_wh") is not None:
+            gpu_summary["energy_per_input_token_wh"] = round(
+                gpu_summary["energy_wh"] / calibrated.actual_tokens, 8
+            )
+
+        results["per_length"][length_key] = {
+            "status": length_status,
+            "requested_tokens": length,
+            "actual_tokens": calibrated.actual_tokens,
+            "n_requests": len(length_results),
+            "n_success": len(successes),
+            "per_request": [
+                {
+                    "index": r.index,
+                    "success": r.success,
+                    "prompt_tokens": r.prompt_tokens,
+                    "prompt_tokens_exact": r.prompt_tokens_exact,
+                    "client_ttft_s": round(r.client_ttft_s, 4),
+                    "total_time_s": round(r.total_time_s, 4),
+                    "effective_prefill_tps": r.effective_prefill_tps,
+                    "engine_prefill_tps": r.engine_prefill_tps,
+                    "cached_tokens": r.cached_tokens,
+                    "server_ttft_s": r.server_ttft_s,
+                    "queue_time_s": r.queue_time_s,
+                    "prefill_time_s": r.prefill_time_s,
+                    "cache_isolation_method": r.cache_isolation_method,
+                    "start_time": r.start_time,
+                    "end_time": r.end_time,
+                    "error": r.error,
+                }
+                for r in length_results
+            ],
             "aggregated": {
                 "ttft": _stat_summary(ttfts),
                 "effective_prefill_tps": _stat_summary(tps) if tps else {"avg_s": None, "median_s": None, "p95_s": None, "min_s": None, "max_s": None},
                 "engine_prefill_tps": _stat_summary(engine_tps) if engine_tps else {"avg_s": None, "median_s": None, "p95_s": None, "min_s": None, "max_s": None},
+                "gpu": gpu_summary if gpu_summary else {},
             },
         }
 
