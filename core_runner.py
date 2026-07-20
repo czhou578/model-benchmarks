@@ -1066,6 +1066,7 @@ def main():
     parser.add_argument("--skip-reasoning", action="store_true")
     parser.add_argument("--skip-concurrency", action="store_true")
     parser.add_argument("--skip-prefill", action="store_true")
+    parser.add_argument("--skip-roofline", action="store_true")
     parser.add_argument("--skip-ttft", action="store_true")
     parser.add_argument("--compare-spec", action="store_true",
                         help="Run decode benchmark with spec-dec enabled and disabled, then compare")
@@ -1226,6 +1227,31 @@ def main():
                 k: {"status": v.get("status"), "n_success": v.get("n_success")}
                 for k, v in prefill_results.get("per_length", {}).items()
             }
+
+        if not args.skip_roofline:
+            from benchmarks.roofline import run_roofline_analysis
+
+            # Collect prefill lengths from available benchmarks for analysis
+            prefill_lengths = cfg.get(
+                "prefill_target_lengths",
+                [512, 2048, 8192, 32768],
+            )
+            print(f"[core_runner] running roofline analysis (lengths={prefill_lengths})")
+            roofline_results = run_roofline_analysis(
+                cfg, client, gpu_monitor=monitor,
+                prefill_lengths=prefill_lengths,
+            )
+            save_json(run_dir / "roofline.json", roofline_results)
+            # Extract key metrics for summary
+            summary["roofline"] = {}
+            for key in ("bound", "theoretical_tps"):
+                per_len = roofline_results.get("per_length", {})
+                first_key = next(iter(per_len), None)
+                if first_key:
+                    summary["roofline"][f"{key}_at_{first_key}"] = per_len[first_key].get(key)
+            if "decode" in roofline_results:
+                for key in ("bound", "theoretical_tps"):
+                    summary["roofline"][f"decode_{key}"] = roofline_results["decode"].get(key)
 
         for name, fn in _REGISTERED_BENCHMARKS.items():
             print(f"[core_runner] running registered benchmark: {name}")
