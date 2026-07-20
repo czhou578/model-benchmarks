@@ -691,7 +691,7 @@ def run_deep_context(client: ModelClient, context_lengths: list[int],
         prefill_tps: list[float] = []
         exact = None
         oom_detected = False
-        for i in range(repeats):
+        for _ in range(repeats):
             try:
                 gen = client.generate(prompt, max_tokens=output_tokens, temperature=0.0)
                 exact = gen.prompt_tokens_exact
@@ -1066,6 +1066,8 @@ def main():
     parser.add_argument("--skip-reasoning", action="store_true")
     parser.add_argument("--skip-concurrency", action="store_true")
     parser.add_argument("--skip-prefill", action="store_true")
+    parser.add_argument("--skip-attention", action="store_true",
+                        help="Skip attention backend sweep benchmark")
     parser.add_argument("--skip-ttft", action="store_true")
     parser.add_argument("--compare-spec", action="store_true",
                         help="Run decode benchmark with spec-dec enabled and disabled, then compare")
@@ -1112,7 +1114,7 @@ def main():
 
     previous_sigterm_handler = signal.getsignal(signal.SIGTERM)
 
-    def handle_sigterm(signum, frame) -> None:
+    def handle_sigterm(signum, _frame) -> None:
         raise KeyboardInterrupt(f"received signal {signum}")
 
     signal.signal(signal.SIGTERM, handle_sigterm)
@@ -1132,8 +1134,9 @@ def main():
         monitor = GpuMonitor(run_dir, interval_s=cfg.get("monitor_interval_s", 1.0))
         monitor.start()
 
+        prompt_lengths = cfg.get("prompt_lengths", [32, 128, 512, 2048, 8192, 16384])
+
         if not args.skip_latency:
-            prompt_lengths = cfg.get("prompt_lengths", [32, 128, 512, 2048, 8192, 16384])
             repeats = cfg.get("latency_repeats", 10)
             print(f"[core_runner] latency sweep over {prompt_lengths} ({repeats} reps each)")
             latency_results = run_latency_sweep(client, prompt_lengths, repeats)
@@ -1226,6 +1229,25 @@ def main():
                 k: {"status": v.get("status"), "n_success": v.get("n_success")}
                 for k, v in prefill_results.get("per_length", {}).items()
             }
+
+        # Attention backend sweep
+        if not args.skip_attention:
+            if server_mode != "managed" or server is None:
+                print("[core_runner] skipping attention backend sweep: managed server mode required")
+            else:
+                from benchmarks.attention_backend import run_attention_backend_sweep
+
+                backends = cfg.get("attention_backends", None)
+                print(f"[core_runner] attention backend sweep: backends={backends}")
+                attention_results = run_attention_backend_sweep(
+                    client, server, cfg, run_dir, gpu_monitor=monitor,
+                    backends=backends,
+                    prompt_lengths=prompt_lengths,
+                    decode_lengths=cfg.get("decode_lengths", [512, 1024, 2048]),
+                    repetitions=cfg.get("attention_repetitions", 5),
+                )
+                save_json(run_dir / "attention_backend.json", attention_results)
+                summary["attention_backend"] = attention_results
 
         for name, fn in _REGISTERED_BENCHMARKS.items():
             print(f"[core_runner] running registered benchmark: {name}")

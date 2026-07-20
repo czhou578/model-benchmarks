@@ -175,23 +175,13 @@ Compare: - MTP-1 - MTP-2 - MTP-3 - MTP-4 (if supported)
 
 # Phase 6 --- Capability Benchmarks
 
-## 15. Coding
-
-Add: - HumanEval - MBPP - LiveCodeBench (optional)
-
-Measure: - Pass@1 - Generation latency - Compile failures
-
-## ~~16. Reasoning~~ ✅ **DONE** (partial — reasoning-token analysis)
-
-Add: - GSM8K - AIME-lite - GPQA-lite
+## 15. Reasoning~~ ✅ **DONE**
 
 Measure: - Accuracy - Reasoning tokens - Latency
 
 **Implemented:** `core_runner.py:run_reasoning_benchmark()` — measures thinking vs
 answer token counts, reasoning ratio, and per-prompt breakdown for Qwen3-style
 reasoning output (XML tags and plain-text heuristics). Output: `reasoning.json`.
-**TODO:** Accuracy benchmarks (GSM8K/AIME/GPQA) not yet implemented — currently
-only measures token-level reasoning characteristics, not solution correctness.
 
 # Phase 7 --- Hardware Instrumentation
 
@@ -223,11 +213,9 @@ Expert occupancy
 6.  Scheduling benchmark (chunked prefill, async scheduling)
 7.  Prefix cache reuse benchmark (cold vs. repeated prompt)
 8.  Configuration sweeps (attention, MoE, batch size, spec-dec configs)
-9.  Coding benchmarks (HumanEval/MBPP)
-10. Accuracy benchmarks (GSM8K/AIME/GPQA)
-11. Hardware telemetry expansion (SM, tensor core, HBM bandwidth, clocks, temperature)
-12. Roofline & MoE analysis
-13. Quality-per-speed metrics
+9. Hardware telemetry expansion (SM, tensor core, HBM bandwidth, clocks, temperature)
+10. Roofline & MoE analysis
+11. Quality-per-speed metrics
 
 # Philosophy
 
@@ -239,3 +227,5 @@ Version 2 should answer:
 
 > Why is it this fast, what limits it, which configuration is optimal,
 > and what quality do I get for that performance?
+
+
