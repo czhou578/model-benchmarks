@@ -133,7 +133,9 @@ def _run(cmd: list[str]) -> Optional[str]:
 
 
 def collect_environment() -> dict[str, Any]:
-    env: dict[str, Any] = {"timestamp": datetime.utcnow().isoformat() + "Z"}
+    env: dict[str, Any] = {
+        "timestamp": datetime.now(datetime.timezone.utc).isoformat()
+    }
 
     gpu_query = _run([
         "nvidia-smi",
@@ -1064,6 +1066,7 @@ def main():
     parser.add_argument("--skip-reasoning", action="store_true")
     parser.add_argument("--skip-concurrency", action="store_true")
     parser.add_argument("--skip-prefill", action="store_true")
+    parser.add_argument("--skip-ttft", action="store_true")
     parser.add_argument("--compare-spec", action="store_true",
                         help="Run decode benchmark with spec-dec enabled and disabled, then compare")
     parser.add_argument(
@@ -1145,6 +1148,23 @@ def main():
             deep_context_results = run_deep_context(client, context_lengths, output_tokens=64, repeats=context_repeats)
             save_json(run_dir / "deep_context.json", deep_context_results)
             summary["deep_context"] = deep_context_results
+
+        if not args.skip_ttft:
+            from benchmarks.ttft_breakdown import run_ttft_breakdown
+
+            ttft_lengths = cfg.get(
+                "ttft_prompt_lengths", [128, 512, 2048, 8192, 32768]
+            )
+            ttft_reps = cfg.get("ttft_repetitions", 10)
+            print(
+                f"[core_runner] TTFT breakdown over {ttft_lengths} "
+                f"({ttft_reps} reps each)"
+            )
+            ttft_results = run_ttft_breakdown(
+                client, prompt_lengths=ttft_lengths, repetitions=ttft_reps, gpu_monitor=monitor
+            )
+            save_json(run_dir / "ttft_breakdown.json", ttft_results)
+            summary["ttft_breakdown"] = ttft_results
 
         if not args.skip_decode:
             output_lengths = cfg.get("decode_lengths", [512, 1024, 2048])

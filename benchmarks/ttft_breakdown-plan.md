@@ -50,7 +50,7 @@ class TtftRequestResult:
 
     # Client wall-clock (ms)
     ttft_ms: float
-    total_time_ms: float
+    total_time_ms: float1
 
     # Server-side (s) — None if unsupported
     queue_time_s: float | None
