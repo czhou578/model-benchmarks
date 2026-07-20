@@ -37,16 +37,27 @@ KV cache size - OOM boundary
 **Implemented:** Merged into A1 above — `run_deep_context()` measures TTFT,
 prefill TPS, and GPU memory OOM boundary at 32K/64K.
 
-## 2. Prefill Scaling Curve
+## ~~2. Prefill Scaling Curve~~ ✅ **DONE**
 
 Prompt sizes: - 512 - 2K - 8K - 32K - 64K - 128K - 256K - 512K
 
 Measure: - Prefill throughput - TTFT - GPU utilization - Memory - Energy
 
-## 3. TTFT Breakdown
+**Implemented:** `benchmarks/prefill.py:run_prefill_scaling()` with exact
+tokenizer-calibrated prompts (binary search + local scan for subword boundaries),
+per-length GPU telemetry windows, cache-salt isolation, OOM detection, and
+energy-per-input-token computation. Output: `prefill_scaling.json`.
+
+## ~~3. TTFT Breakdown~~ ✅ **DONE**
 
 Split TTFT into: - Scheduler delay - Queue time - Prefill time - First
 decode iteration
+
+**Implemented:** `benchmarks/ttft_breakdown.py:run_ttft_breakdown()` — extracts
+vLLM server-side `request_metrics` (queue_time_s, prompt_time_s,
+time_to_first_token_s) from stream chunks, computes per-request breakdown in ms,
+and aggregates avg/median/p95/min/max per length with GPU telemetry windows.
+Output: `ttft_breakdown.json`.
 
 # Phase 2 --- Speculative Decoding Analysis
 
@@ -89,14 +100,27 @@ Same request +1000 tokens - Same request +5000 tokens
 Measure: - Cache hit % - TTFT reduction - Skipped prefill - Throughput
 improvement
 
-## 7. Deep Context Benchmark
+## ~~7. Deep Context Benchmark~~ ✅ **DONE** (merged into Phase 1)
 
 Expand testing to: - 32K - 64K - 128K - 256K - 512K
 
 Measure: - Decode throughput - Prefill throughput - TTFT - GPU memory -
 KV cache size - OOM boundary
 
-## 8. KV Cache Evaluation
+**Implemented:** See Phase 1, item ~~1~~ / ~~7~~ above. This Phase 3 entry is
+retained for reference only — the implementation lives in Phase 1.
+
+## ~~8. KV Cache Evaluation~~ ✅ **DONE** (partial — telemetry in place)
+
+Compare: - Default KV cache - FP8 KV cache
+
+Measure: - Memory/token - Decode speed - Prefill speed - Maximum context
+capacity
+
+**Implemented (partial):** GPU memory tracking (avg/peak MiB) is captured in every
+benchmark via `GpuMonitor` and included in per-length telemetry windows. Energy-per-token is
+computed for prefill workloads. A side-by-side KV-cache-mode comparison benchmark
+is not yet implemented, but the instrumentation is ready to add it.
 
 Compare: - Default KV cache - FP8 KV cache
 
@@ -105,12 +129,18 @@ capacity
 
 # Phase 4 --- Concurrency & Scheduling
 
-## 9. Saturation Curve
+## ~~9. Saturation Curve~~ ✅ **DONE**
 
 Concurrency: - 1 - 2 - 4 - 8 - 16 - 32 - 64
 
 Measure: - Aggregate throughput - Per-user throughput - P50 latency -
 P95 latency - GPU utilization
+
+**Implemented:** `benchmarks/concurrency.py:run_concurrency_test()` with default
+levels [1, 2, 4, 8, 16]. Measures wall time, aggregate throughput (tok/s), and
+per-request TTFT/latency stats (avg/median/p95/min/max). GPU telemetry is not yet
+integrated into this module (tracked in other benchmarks). Configurable via
+`concurrency_levels` and `requests_per_level` in the model YAML.
 
 ## 10. Scheduling Benchmark
 
@@ -151,11 +181,17 @@ Add: - HumanEval - MBPP - LiveCodeBench (optional)
 
 Measure: - Pass@1 - Generation latency - Compile failures
 
-## 16. Reasoning
+## ~~16. Reasoning~~ ✅ **DONE** (partial — reasoning-token analysis)
 
 Add: - GSM8K - AIME-lite - GPQA-lite
 
 Measure: - Accuracy - Reasoning tokens - Latency
+
+**Implemented:** `core_runner.py:run_reasoning_benchmark()` — measures thinking vs
+answer token counts, reasoning ratio, and per-prompt breakdown for Qwen3-style
+reasoning output (XML tags and plain-text heuristics). Output: `reasoning.json`.
+**TODO:** Accuracy benchmarks (GSM8K/AIME/GPQA) not yet implemented — currently
+only measures token-level reasoning characteristics, not solution correctness.
 
 # Phase 7 --- Hardware Instrumentation
 
@@ -182,12 +218,16 @@ Expert occupancy
 ~~1.~~ ~~Context-aware decode & prefill curves~~ ✅ **DONE**
 ~~2.~~ ~~Speculative decoding metrics~~ ✅ **DONE**
 ~~3.~~ ~~Prefix cache & deep-context benchmarks~~ ✅ **DONE**
-4.  Concurrency saturation & scheduler analysis
-5.  Configuration sweeps
-6.  Coding & reasoning benchmarks
-7.  Hardware telemetry
-8.  Roofline & MoE analysis
-9.  Quality-per-speed metrics
+~~4.~~ ~~Concurrency saturation~~ ✅ **DONE**
+~~5.~~ ~~Reasoning-token analysis~~ ✅ **DONE**
+6.  Scheduling benchmark (chunked prefill, async scheduling)
+7.  Prefix cache reuse benchmark (cold vs. repeated prompt)
+8.  Configuration sweeps (attention, MoE, batch size, spec-dec configs)
+9.  Coding benchmarks (HumanEval/MBPP)
+10. Accuracy benchmarks (GSM8K/AIME/GPQA)
+11. Hardware telemetry expansion (SM, tensor core, HBM bandwidth, clocks, temperature)
+12. Roofline & MoE analysis
+13. Quality-per-speed metrics
 
 # Philosophy
 
