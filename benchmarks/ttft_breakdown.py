@@ -17,16 +17,12 @@ Output file: ttft_breakdown.json
 
 from __future__ import annotations
 
-import json
 import statistics
 import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
-
-import requests
-
 from core_runner import ModelClient, GpuMonitor
 
 
@@ -56,8 +52,6 @@ class TtftRequestResult:
     scheduler_delay_ms: float | None = None
     prefill_ms: float | None = None
     first_decode_ms: float | None = None
-    # Cache
-    cached_tokens: int = 0
     # Error
     error: str = ""
 
@@ -94,52 +88,6 @@ def _stat_summary(values: list[float]) -> dict[str, Any]:
         "max_ms": round(max(values), 4),
     }
 
-
-def _probe_server_metrics(client: ModelClient) -> bool:
-    """Send a probe request to check if the server emits request_metrics.
-
-    Returns True if request_metrics is found in a streamed response chunk,
-    False otherwise (or on connection failure).
-    """
-    try:
-        probe_payload: dict[str, Any] = {
-            "model": client.model_name,
-            "max_tokens": 1,
-            "temperature": 0.0,
-            "stream": True,
-        }
-        if client.chat:
-            probe_payload["messages"] = [{"role": "user", "content": "hello"}]
-        else:
-            probe_payload["prompt"] = "hello"
-
-        url = (
-            f"{client.base_url}/v1/chat/completions"
-            if client.chat
-            else f"{client.base_url}/v1/completions"
-        )
-        resp = requests.post(
-            url, headers=client.headers, json=probe_payload, stream=True, timeout=30
-        )
-        resp.raise_for_status()
-        for raw_line in resp.iter_lines():
-            line = raw_line.decode("utf-8")
-            if not line or not line.startswith("data:"):
-                continue
-            data = line[5:].strip()
-            if data == "[DONE]":
-                return False  # never saw request_metrics
-            try:
-                obj = json.loads(data)
-            except json.JSONDecodeError:
-                continue
-            if obj.get("request_metrics"):
-                return True
-        return False
-    except requests.RequestException:
-        return False
-
-
 # --------------------------------------------------------------------------- #
 # Main benchmark function
 # --------------------------------------------------------------------------- #
@@ -172,15 +120,6 @@ def run_ttft_breakdown(
     # Detect cache isolation
     is_header = client.preflight_cache_salt()
 
-    # Probe server-side metrics availability
-    server_metrics_supported = _probe_server_metrics(client)
-    if not server_metrics_supported:
-        print(
-            "[ttft_breakdown] WARNING: server does not emit request_metrics. "
-            "Sub-components will be null. "
-            "Ensure vLLM >= 0.6.0 with --disable-log-requests off."
-        )
-
     # Build a simple text-based prompt for each length.
     # We use a simple repetition so the prompt is guaranteed to be at least
     # the target token count.  The prefill.py module uses a proper tokenizer
@@ -199,7 +138,6 @@ def run_ttft_breakdown(
             "prompt_lengths": prompt_lengths,
             "repetitions": repetitions,
             "cache_isolation_method": "cache_salt" if is_header else "text_salt",
-            "server_metrics_supported": server_metrics_supported,
             "max_tokens": 1,
             "temperature": 0.0,
             "start_time": datetime.now(datetime.timezone.utc).isoformat(),
@@ -260,15 +198,14 @@ def run_ttft_breakdown(
             pref_s = None
             first_dec_s = None
 
-            if server_metrics_supported and queue_s is not None:
+            if queue_s is not None:
                 sched_delay_s = queue_s
-            if server_metrics_supported and prefill_s is not None:
+            if prefill_s is not None:
                 pref_s = prefill_s
 
             # first_decode = TTFT − queue − prefill
             if (
-                server_metrics_supported
-                and queue_s is not None
+                queue_s is not None
                 and prefill_s is not None
                 and server_ttft is not None
             ):
@@ -294,7 +231,6 @@ def run_ttft_breakdown(
                     scheduler_delay_ms=_ms(sched_delay_s),
                     prefill_ms=_ms(pref_s),
                     first_decode_ms=_ms(first_dec_s),
-                    cached_tokens=gen.cached_tokens,
                     error="",
                 )
             )
@@ -322,9 +258,6 @@ def run_ttft_breakdown(
             r.first_decode_ms for r in successes if r.first_decode_ms is not None
         ]
 
-        # Cache hit rate among successes
-        cache_hits = sum(1 for r in successes if r.cached_tokens > 0)
-
         # Serialize per-request data for JSON output
         per_request_serialized = [
             {
@@ -339,9 +272,7 @@ def run_ttft_breakdown(
                 "prefill_time_s": r.prefill_time_s,
                 "server_ttft_s": r.server_ttft_s,
                 "scheduler_delay_ms": r.scheduler_delay_ms,
-                "prefill_ms": r.prefill_ms,
                 "first_decode_ms": r.first_decode_ms,
-                "cached_tokens": r.cached_tokens,
                 "error": r.error,
             }
             for r in length_results
@@ -357,7 +288,6 @@ def run_ttft_breakdown(
             "n_requests": len(length_results),
             "n_success": n_success,
             "n_failed": n_failed,
-            "cache_hit_rate": round(cache_hits / n_success, 3) if n_success else None,
             "per_request": per_request_serialized,
             "aggregated": {
                 "ttft": _stat_summary(ttfts),
