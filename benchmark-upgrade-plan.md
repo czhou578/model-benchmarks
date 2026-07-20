@@ -149,7 +149,7 @@ No chunked prefill
 
 Measure: - Queue delay - Fairness - Throughput - Latency
 
-# Phase 5 --- Configuration Optimization
+# Phase 5 --- Configuration Optimization (Roadmap 2)
 
 ## 11. Attention Backend Sweep
 
@@ -173,27 +173,7 @@ Measure: - Throughput - Latency - P95 latency - GPU utilization
 
 Compare: - MTP-1 - MTP-2 - MTP-3 - MTP-4 (if supported)
 
-# Phase 6 --- Capability Benchmarks
-
-## 15. Coding
-
-Add: - HumanEval - MBPP - LiveCodeBench (optional)
-
-Measure: - Pass@1 - Generation latency - Compile failures
-
-## ~~16. Reasoning~~ ✅ **DONE** (partial — reasoning-token analysis)
-
-Add: - GSM8K - AIME-lite - GPQA-lite
-
-Measure: - Accuracy - Reasoning tokens - Latency
-
-**Implemented:** `core_runner.py:run_reasoning_benchmark()` — measures thinking vs
-answer token counts, reasoning ratio, and per-prompt breakdown for Qwen3-style
-reasoning output (XML tags and plain-text heuristics). Output: `reasoning.json`.
-**TODO:** Accuracy benchmarks (GSM8K/AIME/GPQA) not yet implemented — currently
-only measures token-level reasoning characteristics, not solution correctness.
-
-# Phase 7 --- Hardware Instrumentation
+# Phase 6 --- Hardware Instrumentation
 
 Collect alongside every benchmark: - SM utilization - Tensor Core
 utilization - HBM bandwidth - GPU clocks - Power - Temperature - VRAM
@@ -201,7 +181,7 @@ usage - PCIe/NVLink traffic (where applicable)
 
 Correlate hardware telemetry with performance changes.
 
-# Phase 8 --- Systems Analysis
+# Phase 7 --- Systems Analysis
 
 ## 18. Roofline Analysis
 
