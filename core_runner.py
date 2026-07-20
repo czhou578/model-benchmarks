@@ -134,7 +134,7 @@ def _run(cmd: list[str]) -> Optional[str]:
 
 def collect_environment() -> dict[str, Any]:
     env: dict[str, Any] = {
-        "timestamp": datetime.now(datetime.timezone.utc).isoformat()
+        "timestamp": datetime.now().astimezone().isoformat()
     }
 
     gpu_query = _run([
@@ -1239,13 +1239,27 @@ def main():
 
                 backends = cfg.get("attention_backends", None)
                 print(f"[core_runner] attention backend sweep: backends={backends}")
-                attention_results = run_attention_backend_sweep(
-                    client, server, cfg, run_dir, gpu_monitor=monitor,
-                    backends=backends,
-                    prompt_lengths=prompt_lengths,
-                    decode_lengths=cfg.get("decode_lengths", [512, 1024, 2048]),
-                    repetitions=cfg.get("attention_repetitions", 5),
-                )
+                sweep_server = server
+                sweep_server.stop()
+                sweep_server.save_metadata(run_dir / "resolved_server.json")
+                server = None
+                try:
+                    attention_results = run_attention_backend_sweep(
+                        client, sweep_server, cfg, run_dir, gpu_monitor=monitor,
+                        backends=backends,
+                        prompt_lengths=prompt_lengths,
+                        decode_lengths=cfg.get("decode_lengths", [512, 1024, 2048]),
+                        repetitions=cfg.get("attention_repetitions", 5),
+                    )
+                finally:
+                    # The sweep owns the endpoint while it runs. Restore the
+                    # baseline server before registered or speculative tests.
+                    server = make_managed_server(
+                        cfg, run_dir, log_name="vllm_restored_after_attention.log"
+                    )
+                    print("[core_runner] restoring managed vLLM after attention sweep")
+                    server.start()
+                    wait_for_endpoint(client, cfg, server)
                 save_json(run_dir / "attention_backend.json", attention_results)
                 summary["attention_backend"] = attention_results
 

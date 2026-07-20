@@ -140,7 +140,7 @@ def run_ttft_breakdown(
             "cache_isolation_method": "cache_salt" if is_header else "text_salt",
             "max_tokens": 1,
             "temperature": 0.0,
-            "start_time": datetime.now(datetime.timezone.utc).isoformat(),
+            "start_time": datetime.now().astimezone().isoformat(),
         },
         "per_length": {},
     }
@@ -298,5 +298,5 @@ def run_ttft_breakdown(
             },
         }
 
-    result["config"]["end_time"] = datetime.now(datetime.timezone.utc).isoformat()
+    result["config"]["end_time"] = datetime.now().astimezone().isoformat()
     return result

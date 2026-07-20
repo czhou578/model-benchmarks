@@ -83,3 +83,15 @@ context_lengths: [32768, 65536]
 context_repeats: 5
 prefill_target_lengths: [512, 2048]
 prefill_repetitions: 2
+
+cpu attention
+cutlass_mla 
+flash attn diffkv
+flash attn mla sparse
+backend custom
+FLASH_ATTN_MLA
+FLASH_ATTN
+FLASHINFER_MLA_SPARSE_DSV4
+FLASHINFER_MLA_SPARSE_SM120
+FLASHINFER_MLA_SPARSE
+FLASHINFER_MLA

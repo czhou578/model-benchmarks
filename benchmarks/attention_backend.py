@@ -201,102 +201,119 @@ def run_attention_backend_sweep(
             backend_client.wait_until_ready(
                 timeout_s=cfg.get("server", {}).get("startup_timeout_s", 600),
                 poll_s=cfg.get("ready_poll_s", 3.0),
+                process_check=backend_server.check_running,
             )
-        except TimeoutError as exc:
+        except BaseException as exc:
             results["per_backend"][backend_key] = {
                 "status": "server_not_ready",
                 "error": str(exc),
             }
+            print(f"[attention_backend] WARNING: backend {backend} did not become ready: {exc}")
+            backend_server.stop()
+            backend_server.save_metadata(
+                run_dir / f"resolved_server_{label}.json"
+            )
+            if not isinstance(exc, Exception):
+                raise
             continue
 
-        # GPU telemetry window for this backend
-        if gpu_monitor is not None:
-            gpu_monitor.start_window(f"attention_{backend_key}")
+        gpu_window_started = False
+        try:
+            # GPU telemetry window for this backend
+            if gpu_monitor is not None:
+                gpu_monitor.start_window(f"attention_{backend_key}")
+                gpu_window_started = True
 
-        # --- Latency sweep ---
-        latency_results: dict[str, Any] = {}
-        for plen in prompt_lengths:
-            prompt = build_prompt_of_length(plen)
-            ttfts: list[float] = []
-            for i in range(repetitions):
+            # --- Latency sweep ---
+            latency_results: dict[str, Any] = {}
+            for plen in prompt_lengths:
+                prompt = build_prompt_of_length(plen)
+                ttfts: list[float] = []
+                for i in range(repetitions):
+                    try:
+                        gen = backend_client.generate(
+                            prompt, max_tokens=8, temperature=0.0
+                        )
+                        if gen.ttft_s > 0:
+                            ttfts.append(gen.ttft_s)
+                    except Exception:
+                        pass
+                    if i < repetitions - 1:
+                        time.sleep(0.25)
+
+                latency_results[str(plen)] = {
+                    "requested_tokens": plen,
+                    "n_success": len(ttfts),
+                    "ttft": (
+                        _stat_summary(ttfts)
+                        if ttfts
+                        else {
+                            "avg_s": None,
+                            "median_s": None,
+                            "p95_s": None,
+                            "min_s": None,
+                            "max_s": None,
+                        }
+                    ),
+                }
+
+            # --- Decode sweep ---
+            decode_results: dict[str, Any] = {}
+            fixed_prompt = build_prompt_of_length(128)
+            for n_out in decode_lengths:
                 try:
                     gen = backend_client.generate(
-                        prompt, max_tokens=8, temperature=0.0
+                        fixed_prompt, max_tokens=n_out, temperature=0.0
                     )
-                    if gen.ttft_s > 0:
-                        ttfts.append(gen.ttft_s)
-                except Exception:
-                    pass
-                if i < repetitions - 1:
-                    time.sleep(0.25)
-
-            latency_results[str(plen)] = {
-                "requested_tokens": plen,
-                "n_success": len(ttfts),
-                "ttft": (
-                    _stat_summary(ttfts)
-                    if ttfts
-                    else {
-                        "avg_s": None,
-                        "median_s": None,
-                        "p95_s": None,
-                        "min_s": None,
-                        "max_s": None,
+                    decode_time = (
+                        gen.total_time_s - gen.ttft_s
+                        if gen.ttft_s == gen.ttft_s
+                        else gen.total_time_s
+                    )
+                    tok_per_sec = (
+                        gen.output_tokens / decode_time if decode_time > 0 else None
+                    )
+                    instant_rates = [
+                        1.0 / g for g in gen.per_token_times if g > 0
+                    ]
+                    decode_results[str(n_out)] = {
+                        "requested_output_tokens": n_out,
+                        "actual_output_tokens": gen.output_tokens,
+                        "tok_per_sec_avg": (
+                            round(tok_per_sec, 2) if tok_per_sec else None
+                        ),
+                        "tok_per_sec_peak": (
+                            round(max(instant_rates), 2) if instant_rates else None
+                        ),
+                        "n": 1,
                     }
-                ),
+                except Exception as exc:
+                    decode_results[str(n_out)] = {
+                        "status": "error",
+                        "error": str(exc),
+                    }
+
+            # Stop GPU window
+            gpu_summary = None
+            if gpu_monitor is not None:
+                gpu_summary = gpu_monitor.stop_window(f"attention_{backend_key}")
+                gpu_window_started = False
+
+            results["per_backend"][backend_key] = {
+                "command": command,
+                "status": "success",
+                "gpu": gpu_summary or {},
+                "latency": latency_results,
+                "decode": decode_results,
             }
 
-        # --- Decode sweep ---
-        decode_results: dict[str, Any] = {}
-        fixed_prompt = build_prompt_of_length(128)
-        for n_out in decode_lengths:
-            try:
-                gen = backend_client.generate(
-                    fixed_prompt, max_tokens=n_out, temperature=0.0
-                )
-                decode_time = (
-                    gen.total_time_s - gen.ttft_s
-                    if gen.ttft_s == gen.ttft_s
-                    else gen.total_time_s
-                )
-                tok_per_sec = (
-                    gen.output_tokens / decode_time if decode_time > 0 else None
-                )
-                instant_rates = [
-                    1.0 / g for g in gen.per_token_times if g > 0
-                ]
-                decode_results[str(n_out)] = {
-                    "requested_output_tokens": n_out,
-                    "actual_output_tokens": gen.output_tokens,
-                    "tok_per_sec_avg": (
-                        round(tok_per_sec, 2) if tok_per_sec else None
-                    ),
-                    "tok_per_sec_peak": (
-                        round(max(instant_rates), 2) if instant_rates else None
-                    ),
-                    "n": 1,
-                }
-            except Exception as exc:
-                decode_results[str(n_out)] = {
-                    "status": "error",
-                    "error": str(exc),
-                }
-
-        # Stop GPU window
-        gpu_summary = None
-        if gpu_monitor is not None:
-            gpu_summary = gpu_monitor.stop_window(f"attention_{backend_key}")
-
-        results["per_backend"][backend_key] = {
-            "command": command,
-            "status": "success",
-            "gpu": gpu_summary or {},
-            "latency": latency_results,
-            "decode": decode_results,
-        }
-
-        backend_server.stop()
-        backend_server.save_metadata(run_dir / f"resolved_server_{label}.json")
+        finally:
+            if gpu_window_started and gpu_monitor is not None:
+                gpu_monitor.stop_window(f"attention_{backend_key}")
+            backend_server.stop()
+            backend_server.save_metadata(
+                run_dir / f"resolved_server_{label}.json"
+            )
 
     results["config"]["end_time"] = datetime.now(timezone.utc).isoformat()
     return results
