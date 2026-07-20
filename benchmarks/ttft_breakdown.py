@@ -58,13 +58,8 @@ class TtftRequestResult:
     first_decode_ms: float | None = None
     # Cache
     cached_tokens: int = 0
-    cache_isolation_method: str = ""
-    # GPU per-window summary
-    gpu_summary: dict[str, Any] = None  # type: ignore[assignment]
     # Error
     error: str = ""
-    start_time: float | None = None
-    end_time: float | None = None
 
 
 # --------------------------------------------------------------------------- #
@@ -176,14 +171,13 @@ def run_ttft_breakdown(
 
     # Detect cache isolation
     is_header = client.preflight_cache_salt()
-    cache_method = "cache_salt" if is_header else "text_salt"
 
     # Probe server-side metrics availability
     server_metrics_supported = _probe_server_metrics(client)
     if not server_metrics_supported:
         print(
             "[ttft_breakdown] WARNING: server does not emit request_metrics. "
-            "Scheduler delay and prefill time will be NaN. "
+            "Sub-components will be null. "
             "Ensure vLLM >= 0.6.0 with --disable-log-requests off."
         )
 
@@ -204,8 +198,7 @@ def run_ttft_breakdown(
             "definition": "TTFT decomposition into scheduler delay, prefill time, and first decode overhead",
             "prompt_lengths": prompt_lengths,
             "repetitions": repetitions,
-            "cache_isolation_method": cache_method,
-            "cache_preflight_supported": is_header,
+            "cache_isolation_method": "cache_salt" if is_header else "text_salt",
             "server_metrics_supported": server_metrics_supported,
             "max_tokens": 1,
             "temperature": 0.0,
@@ -233,7 +226,6 @@ def run_ttft_breakdown(
 
         for req_idx in range(repetitions):
             req_salt = uuid.uuid4().hex
-            req_start = time.monotonic()
 
             # Send generation with cache isolation
             try:
@@ -254,8 +246,6 @@ def run_ttft_breakdown(
                         ttft_ms=0.0,
                         total_time_ms=0.0,
                         error=str(exc),
-                        start_time=req_start,
-                        end_time=time.monotonic(),
                     )
                 )
                 continue
@@ -305,9 +295,7 @@ def run_ttft_breakdown(
                     prefill_ms=_ms(pref_s),
                     first_decode_ms=_ms(first_dec_s),
                     cached_tokens=gen.cached_tokens,
-                    cache_isolation_method=cache_method,
-                    start_time=req_start,
-                    end_time=time.monotonic(),
+                    error="",
                 )
             )
 
@@ -354,18 +342,18 @@ def run_ttft_breakdown(
                 "prefill_ms": r.prefill_ms,
                 "first_decode_ms": r.first_decode_ms,
                 "cached_tokens": r.cached_tokens,
-                "cache_isolation_method": r.cache_isolation_method,
-                "start_time": r.start_time,
-                "end_time": r.end_time,
                 "error": r.error,
             }
             for r in length_results
         ]
 
+        # Use first success's prompt_tokens as actual_tokens
+        actual_tokens = successes[0].prompt_tokens if successes else length
+
         result["per_length"][length_key] = {
             "status": length_status,
             "requested_tokens": length,
-            "actual_tokens": len(prompt_text.split()),  # rough approximation
+            "actual_tokens": actual_tokens,
             "n_requests": len(length_results),
             "n_success": n_success,
             "n_failed": n_failed,
