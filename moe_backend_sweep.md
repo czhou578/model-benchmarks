@@ -18,14 +18,14 @@ MoE (Mixture of Experts) models route each token through a small subset of exper
 |---------|-------------|-------------|-----------|
 | `auto` | vLLM auto-selects | — | Baseline (implicit) |
 | `triton` | Generic Triton kernels | Limited | Reference/compatibility |
-| `deep_gemm` | DeepGEMM (FP8 block-quantized) | No | NVIDIA Hopper/B200 |
-| `deep_gemm_mega_moe` | DeepGEMM Mega-MoE | No | NVIDIA Hopper/B200 |
 | `cutlass` | vLLM CUTLASS kernels | Yes | CUDA 12+ |
 | `flashinfer_trtllm` | FlashInfer + TRTLLM-GEN | Yes | High perf |
 | `flashinfer_cutlass` | FlashInfer + CUTLASS | Yes | High perf |
 | `flashinfer_cutedsl` | FlashInfer + CuteDSL (FP4 only) | Yes | FP4 models |
 | `flashinfer_b12x` | FlashInfer b12x batch kernels | Yes | FP4 (current unsloth config) |
 | `marlin` | Marlin INT4/FP4 quantized kernel | Yes | Current default (nvidia config) |
+
+Excluded on H100 Hopper (SM 90): `deep_gemm` and `deep_gemm_mega_moe` require Blackwell (SM 100+).
 
 **Default sweep for FP4 NVIDIA**: `[marlin, triton, flashinfer_b12x, flashinfer_cutlass, cutlass, flashinfer_cutedsl]` (skip backends incompatible with hardware via detection).
 
@@ -179,9 +179,13 @@ def _stat_summary(values: list[float]) -> dict[str, Any]:
 def _detect_available_backends() -> list[str]:
     """Return a list of MoE backends available on this hardware.
 
-    Filters out backends that require unsupported GPUs (e.g. deep_gemm
-    requires Hopper/B200; marlin requires FP4-capable hardware).
+    Filters out backends that require unsupported GPU architectures.
+    deep_gemm backends require Blackwell (SM 100+) — skipped on Hopper (SM 90).
     """
+    import torch
+    major = torch.cuda.get_device_properties(0).major
+    # SM 90 = Hopper (H100), SM 100 = Blackwell (B200), SM 80 = Ampere (A100)
+
     backends = [
         "marlin",
         "triton",
@@ -191,8 +195,10 @@ def _detect_available_backends() -> list[str]:
         "flashinfer_b12x",
         "flashinfer_trtllm",
     ]
-    # TODO: query torch.cuda.get_device_properties() to filter more precisely
-    # deep_gemm requires SM 100+ (Hopper/B200), skip on Ada
+
+    if major >= 100:
+        backends.extend(["deep_gemm", "deep_gemm_mega_moe"])
+
     return backends
 
 

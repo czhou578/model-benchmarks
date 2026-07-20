@@ -151,7 +151,7 @@ Measure: - Queue delay - Fairness - Throughput - Latency
 
 # Phase 5 --- Configuration Optimization
 
-## 11. Attention Backend Sweep
+## 11. Attention Backend Sweep ✅ **DONE**
 
 Compare supported attention backends.
 
@@ -168,10 +168,6 @@ Measure: - Routing overhead - Throughput - Memory - Expert dispatch cost
 Sweep: - 1024 - 4096 - 8192 - 16384 - 32768
 
 Measure: - Throughput - Latency - P95 latency - GPU utilization
-
-## 14. Speculative Configuration Sweep
-
-Compare: - MTP-1 - MTP-2 - MTP-3 - MTP-4 (if supported)
 
 # Phase 6 --- Capability Benchmarks
 
