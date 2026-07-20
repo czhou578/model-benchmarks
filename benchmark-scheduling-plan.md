@@ -9,7 +9,9 @@
 
 The existing concurrency benchmark ([`benchmarks/concurrency.py`](benchmarks/concurrency.py)) fires concurrent requests at different levels and measures aggregate throughput and per-request TTFT/latency — but it does **not** vary the scheduler configuration.
 
-This benchmark compares **how vLLM's scheduling modes affect performance** by restarting the vLLM server with different scheduling flags and running the same concurrency sweep under each configuration.
+This benchmark compares **how vLLM's scheduling modes affect performance** by running the concurrency sweep under different configurations.
+
+To minimize vLLM boot overhead (300–600s per restart), the benchmark uses vLLM's **runtime `/config` API** for flags that support runtime toggling, reducing the number of server boots.
 
 | Metric | What it tells you |
 |--------|-------------------|
@@ -20,40 +22,58 @@ This benchmark compares **how vLLM's scheduling modes affect performance** by re
 
 ---
 
-## 2. Where it lives
+## 2. Scheduling configurations (v1)
 
-```
-benchmarks/scheduling.py   # new — standalone benchmark module
-core_runner.py             # updated — --skip-scheduling flag, integration in main()
-```
+vLLM flags are split into two categories: those togglable at runtime via the `/config` API, and those requiring a full server restart.
 
-Follows the existing module pattern: standalone module in `benchmarks/`, imports `ModelClient` from `core_runner`.
+| Config | vLLM flags | Toggle method |
+|--------|-----------|---------------|
+| **sync_baseline** | *(default)* | Initial server boot |
+| **chunked_on** | `enable_chunked_prefill=true`, `max_num_batched_tokens=N` | Runtime `/config` API |
+| **chunked_off** | `enable_chunked_prefill=false`, `max_num_batched_tokens=null` | Runtime `/config` API |
+
+### Why not async?
+
+Async scheduling (`--async-scheduling`) is a **hard-start flag** — vLLM does not expose it via `/config`. Adding it would require a full server restart and add 300–600s of boot time.
+
+**Plan:** ship v1 with sync_baseline + chunked toggles (one boot, 3 configs). Add async as a "manual" entry in the results that requires a separate server restart. This gives meaningful scheduling insights — chunked prefill vs no-chunked is the practical decision most users care about.
 
 ---
 
-## 3. Scheduling configurations to compare
+## 3. Runtime config toggling
 
-vLLM exposes these scheduling-relevant flags:
+vLLM exposes a `/config` endpoint:
 
-| Config | Flags | Description |
-|--------|-------|-------------|
-| **Sync scheduling** | (default — no `--async-scheduling`) | Batch scheduling: requests are scheduled together at synchronization barriers. Simple, predictable, but can cause queue-up under burst load. |
-| **Async scheduling** | `--async-scheduling` | Scheduler runs asynchronously: each request is scheduled independently without barriers. Better for bursty workloads but can introduce scheduling overhead. |
-| **Chunked prefill (on)** | `--enable-chunked-prefill --max-num-batched-tokens N` | Prefill work is split into chunks of `max-num-batched-tokens` tokens, allowing interleaving with decode. Reduces TTFT for late arrivals in a batch. |
-| **Chunked prefill (off)** | *(default — no flag)* | Prefill runs as a single contiguous block. Blocks the GPU until the full prefill is done. |
+```bash
+# GET current config
+curl -X GET http://localhost:8000/config
 
-These are toggled via flags on the vLLM command line. The benchmark restarts the server for each configuration using `VllmServer`.
+# PUT runtime config changes
+curl -X PUT http://localhost:8000/config \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enable_chunked_prefill": true,
+    "max_num_batched_tokens": 2048
+  }'
+```
 
-### Recommended test matrix
+After each `/config` change, the server needs a **brief stabilization period** (~2–3 seconds) before the next benchmark request fires. This is much faster than a full server restart.
 
-| Config | async-scheduling | chunked-prefill | max-num-batched-tokens |
-|--------|-----------------|-----------------|------------------------|
-| sync_baseline | off (default) | off (default) | — |
-| async | on | off (default) | — |
-| chunked_on | off (default) | on | 2048 (configurable) |
-| chunked_off | off (default) | off (default) | — |
+### Toggle sequence
 
-Start with these four. A full 2×2 cross-combination (async + chunked together) is a follow-up.
+```
+1. Boot vLLM with sync_baseline flags (default)
+2. Wait for ready
+3. Run concurrency sweep → sync_baseline results
+4. PUT config: enable_chunked_prefill=true, max_num_batched_tokens=2048
+5. Wait ~3s for stabilization
+6. Run concurrency sweep → chunked_on results
+7. PUT config: enable_chunked_prefill=false, max_num_batched_tokens=null
+8. Wait ~3s for stabilization
+9. Run concurrency sweep → chunked_off results
+```
+
+Total time: **~6 min boot + ~20 min benchmark** ≈ **26 min total** (down from 44 min with serial restarts).
 
 ---
 
@@ -61,7 +81,7 @@ Start with these four. A full 2×2 cross-combination (async + chunked together) 
 
 ### 4.1 Request pattern
 
-Each scheduling config gets a **full concurrency sweep**, identical to the existing concurrency benchmark:
+Identical to the existing concurrency benchmark:
 
 ```
 Concurrency levels: [1, 2, 4, 8, 16]
@@ -69,21 +89,21 @@ Requests per level: 16
 Same content-deterministic prompt (salted), max_tokens=256, temperature=0.0
 ```
 
-This fires requests simultaneously and measures how the scheduler handles contention.
+This fires requests simultaneously and measures how the scheduler handles contention under each scheduling config.
 
 ### 4.2 Per-config output
 
-One JSON file per config: `scheduling_sync_baseline.json`, `scheduling_async.json`, `scheduling_chunked_on.json`, `scheduling_chunked_off.json`.
+One JSON file per config: `scheduling_sync_baseline.json`, `scheduling_chunked_on.json`, `scheduling_chunked_off.json`.
 
 Structure mirrors `concurrency.json` with added fairness and queue-delay breakdown:
 
 ```json
 {
   "config": {
-    "name": "async",
-    "async_scheduling": true,
-    "chunked_prefill": false,
-    "max_num_batched_tokens": null,
+    "name": "chunked_on",
+    "async_scheduling": false,
+    "chunked_prefill": true,
+    "max_num_batched_tokens": 2048,
     "concurrency_levels": [1, 2, 4, 8, 16],
     "requests_per_level": 16,
     "max_tokens": 256,
@@ -131,31 +151,27 @@ Structure mirrors `concurrency.json` with added fairness and queue-delay breakdo
 
 ```json
 {
-  "configs": ["sync_baseline", "async", "chunked_on", "chunked_off"],
+  "configs": ["sync_baseline", "chunked_on", "chunked_off"],
   "summary": {
     "16_concurrency": {
       "aggregate_throughput_tok_s": {
         "sync_baseline": 780,
-        "async": 853,
-        "chunked_on": 820,
+        "chunked_on": 853,
         "chunked_off": 765
       },
       "ttft_p50_s": {
         "sync_baseline": 0.11,
-        "async": 0.09,
         "chunked_on": 0.08,
         "chunked_off": 0.12
       },
       "ttft_p95_s": {
         "sync_baseline": 0.22,
-        "async": 0.18,
         "chunked_on": 0.14,
         "chunked_off": 0.24
       },
       "fairness_score": {
         "sync_baseline": 1.0,
-        "async": 1.15,
-        "chunked_on": 1.4,
+        "chunked_on": 1.1,
         "chunked_off": 1.0
       }
     }
@@ -209,53 +225,73 @@ For each config, aggregate queue delay from server-side `queue_time_s` across al
 }
 ```
 
-This shows how each scheduler handles queuing under load. Async schedulers should show lower queue delay at high concurrency.
+This shows how each scheduler handles queuing under load.
 
 ---
 
-## 7. Server restart strategy
+## 7. Runtime config management
 
-The benchmark requires restarting vLLM with different scheduling flags. This follows the `--compare-spec` pattern (core_runner.py:1237-1278): stop server → modify command → restart → run benchmark → stop server.
+The benchmark uses vLLM's `/config` API to toggle settings between runs. This is a simple HTTP PUT:
 
 ```python
-def run_scheduling_test(
+def toggle_scheduling_config(
+    client: ModelClient,
+    config_name: str,
+    enable_chunked: bool | None = None,
+    max_num_batched_tokens: int | None = None,
+    stabilization_seconds: float = 3.0,
+) -> None:
+    """Toggle vLLM runtime scheduling config via /config API.
+
+    Args:
+        client: ModelClient connected to the running vLLM endpoint.
+        config_name: Human-readable name of the target config (for logging).
+        enable_chunked: If True, enable chunked prefill. If False, disable.
+                        If None, leave current value unchanged.
+        max_num_batched_tokens: New max_num_batched_tokens value. None = use default.
+        stabilization_seconds: Seconds to wait after toggle before returning.
+    """
+    payload = {}
+    if enable_chunked is not None:
+        payload["enable_chunked_prefill"] = enable_chunked
+    if max_num_batched_tokens is not None:
+        payload["max_num_batched_tokens"] = max_num_batched_tokens
+
+    if payload:
+        config_url = f"{client.base_url.rstrip('/')}/config"
+        resp = requests.put(config_url, json=payload, timeout=30)
+        resp.raise_for_status()
+        print(f"[scheduling] toggled config ({config_name}): {payload}")
+        time.sleep(stabilization_seconds)
+```
+
+After each toggle, the benchmark sleeps for `stabilization_seconds` (default 3.0s) to ensure vLLM's scheduler state has settled before firing the next batch of requests.
+
+### Handling unsupported runtime toggles
+
+Not all scheduling flags can be toggled at runtime. If the user specifies a config that requires restart, fall back to the restart approach:
+
+```python
+def apply_scheduling_config(
+    server: VllmServer | None,
     model_config: dict,
     run_dir: Path,
-    configs: list[dict],     # scheduling config specs (name, flags)
-    concurrency_levels: list[int],
-    requests_per_level: int,
-    max_tokens: int,
-    temperature: float,
-) -> dict:
-    base_command = extract_base_command(model_config)
-    results = {"configs": {}, "summary": {}}
+    spec: dict,
+) -> tuple[ModelClient, VllmServer | None]:
+    """Apply a scheduling config. May reuse existing server (runtime toggle)
+    or restart it (hard flags). Returns (client, server)."""
 
-    for cfg_spec in configs:
-        config_name = cfg_spec["name"]
-        print(f"[scheduling] testing: {config_name}")
+    requires_restart = spec.get("async_scheduling")  # --async-scheduling needs restart
 
-        # Build vLLM command with scheduling flags
-        new_command = apply_scheduling_flags(base_command, cfg_spec)
-
-        # Stop current server, start new one with these flags
-        server = make_managed_server(model_config, run_dir,
-                                     log_name=f"scheduling_{config_name}")
-        server.command = new_command
-        server.start()
-        client = make_client(model_config)
-        wait_for_endpoint(client, model_config, server)
-
-        # Run concurrency sweep
-        sweep = run_concurrency_sweep(client, ...)
-
-        # Stop server
-        server.stop()
-
-        results["configs"][config_name] = sweep
-
-    results["summary"] = build_summary(results["configs"])
-    return results
+    if requires_restart:
+        # Fall back to server restart (slow path)
+        ...
+    else:
+        # Runtime toggle (fast path)
+        ...
 ```
+
+For v1, all configs in the default matrix use runtime toggle, so this is dead code that future-proofs the design.
 
 ---
 
@@ -275,9 +311,6 @@ parser.add_argument("--skip-scheduling", action="store_true",
 scheduling_configs:
   - name: sync_baseline
     async_scheduling: false
-    chunked_prefill: false
-  - name: async
-    async_scheduling: true
     chunked_prefill: false
   - name: chunked_on
     async_scheduling: false
@@ -314,7 +347,7 @@ if not args.skip_scheduling:
 
         print(f"[core_runner] scheduling benchmark: {len(sched_cfgs)} configs")
         sched_results = run_scheduling_test(
-            cfg, run_dir, sched_cfgs, levels, reqs,
+            cfg, run_dir, server, sched_cfgs, levels, reqs,
             max_tokens=max_tokens, temperature=temperature,
         )
         save_json(run_dir / "scheduling.json", sched_results["summary"])
@@ -327,15 +360,19 @@ if not args.skip_scheduling:
 
 | Step | Task | Files |
 |------|------|-------|
-| 1 | Create `benchmarks/scheduling.py` with `apply_scheduling_flags()` — takes base vLLM command and returns new command with scheduling flags added/removed | `benchmarks/scheduling.py` (new) |
-| 2 | Implement `run_concurrency_sweep()` — reuses concurrency logic (could be shared from `benchmarks/concurrency.py` via a refactored common helper) | `benchmarks/scheduling.py` |
+| 1 | Create `benchmarks/scheduling.py` with `toggle_scheduling_config()` — runtime `/config` API toggle | `benchmarks/scheduling.py` (new) |
+| 2 | Implement `run_concurrency_sweep()` — reuses concurrency logic (shared with `benchmarks/concurrency.py`) | `benchmarks/scheduling.py` |
 | 3 | Implement `compute_fairness()` — P95/P50 and max/min ratios for TTFT and total time | `benchmarks/scheduling.py` |
-| 4 | Implement `build_summary()` — cross-config aggregated comparison | `benchmarks/scheduling.py` |
-| 5 | Implement `run_scheduling_test()` — orchestrates server restarts, runs sweeps, aggregates results | `benchmarks/scheduling.py` |
-| 6 | Add `--skip-scheduling` CLI flag + YAML config loading in `core_runner.py` | `core_runner.py` |
-| 7 | Wire up in `main()` after concurrency benchmark | `core_runner.py` |
-| 8 | Test with 2 configs (sync baseline + async) first | Run against test model |
-| 9 | Add chunked_on and chunked_off configs | Run against test model |
+| 4 | Implement `run_scheduling_test()` — toggles runtime config between runs, aggregates results | `benchmarks/scheduling.py` |
+| 5 | Add `--skip-scheduling` CLI flag + YAML config loading in `core_runner.py` | `core_runner.py` |
+| 6 | Wire up in `main()` after concurrency benchmark | `core_runner.py` |
+| 7 | Test with 2 configs (sync baseline + chunked_on toggle) first | Run against test model |
+| 8 | Add chunked_off toggle after sync+chunked works | Run against test model |
+
+### Dependencies
+
+- No new Python dependencies. Uses existing `requests` import (already used in `core_runner.py`), `VllmServer` for managed lifecycle.
+- Requires managed server mode (`server.mode: managed` in YAML).
 
 ---
 
@@ -343,9 +380,8 @@ if not args.skip_scheduling:
 
 | Scenario | Handling |
 |----------|----------|
-| vLLM flag not recognized (e.g., `--async-scheduling` on old version) | Log warning, skip that config, continue with others |
-| Server fails to start with new flags | Log error with vLLM log tail, skip config, continue |
-| Port still in use after restart | Retry loop: stop → sleep(1) → check port → retry up to 3 times |
+| vLLM rejects runtime `/config` toggle | Log warning, skip that config, continue (fall back to restart path if async is needed) |
+| Runtime toggle doesn't take effect after stabilization | Log warning, add longer stabilization (5s), continue |
 | Concurrent requests fail under high load | Record failures, include in fairness metric |
 | OOM at high concurrency | Existing OOM detection in concurrency benchmark; record and continue |
 
@@ -359,7 +395,8 @@ Not required for this benchmark. The primary question is scheduler behavior, not
 
 ## 12. Future extensions
 
-- **Full 2×2 cross-combination**: async + chunked prefill together (4 configs → 16 configs).
+- **Async scheduling**: Add as a "manual" entry that requires full server restart. Document in results that it was not tested.
+- **Full 2×2 cross-combination**: async + chunked prefill together. Requires restart for async.
 - **Queue depth analysis**: Vary the number of queued requests vs GPU capacity.
 - **Heterogeneous requests**: Mix short and long prompts in the same batch — how does the scheduler prioritize?
 - **Priority scheduling**: If vLLM supports priority queues, benchmark priority enforcement.
