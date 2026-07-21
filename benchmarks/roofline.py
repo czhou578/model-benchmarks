@@ -14,11 +14,6 @@ The module computes:
 
 Output file: ``roofline.json``
 
-References
-----------
-- Liposic et al., *An in-depth look at the GPT-2 model*
-  (arXiv:2106.15641) — FLOP counting methodology
-- HPL / LINPACK — Roofline methodology
 """
 
 from __future__ import annotations
@@ -88,8 +83,6 @@ def estimate_flops_per_token(model_config: dict[str, Any],
                               sequence_length: int) -> dict[str, float]:
     """Estimate FLOPs per token for inference (decode or prefill).
 
-    Uses the methodology from Liposic et al. (arXiv:2106.15641).
-
     Args:
         model_config: dict with keys hidden_size, num_hidden_layers,
             intermediate_size, num_attention_heads, vocab_size.
@@ -111,9 +104,9 @@ def estimate_flops_per_token(model_config: dict[str, Any],
     s = sequence_length
 
     # Per-layer FLOPs (2 FLOPs per multiply-add)
-    ffn = 2 * l * d * m              # GELU/activation: ~2× more
+    ffn = 4 * l * d * m              # GELU/activation: ~2× more
     attn_proj = 2 * l * 3 * d * d    # Q, K, V projections
-    attn_score = l * 2 * d * s       # QK^T (softmax is negligible)
+    attn_score = l * 2 * d * s + 2 * d * s     # QK^T (softmax is negligible)
     attn_out = 2 * l * d * d         # output projection
 
     total = ffn + attn_proj + attn_score + attn_out + 2 * l * d * v
@@ -124,7 +117,7 @@ def estimate_flops_per_token(model_config: dict[str, Any],
         "attn_proj": attn_proj,
         "attn_score": attn_score,
         "attn_out_proj": attn_out,
-        "lm_head": 2 * l * d * v,
+        "lm_head": 2 * d * v,
     }
 
 
