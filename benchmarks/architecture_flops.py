@@ -1312,47 +1312,102 @@ def _model_label(raw: dict[str, Any]) -> str:
     return model_type.replace("_", "-")
 
 
+def _is_complete_config(config: Mapping[str, Any]) -> bool:
+    """Check whether *config* already contains all required fields (no lookup needed).
+
+    ``head_dim`` is excluded because it may be derived from
+    ``hidden_size/num_attention_heads``.
+    """
+    required = (
+        "hidden_size",
+        "num_hidden_layers",
+        "vocab_size",
+        "num_attention_heads",
+        "num_key_value_heads",
+    )
+    return all(k in config and config[k] is not None for k in required)
+
+
 def run_flops_analysis(
     model_config: dict[str, Any],
     *,
+    server_config: dict[str, Any] | None = None,
+    auto_config_loader: Callable[[str], Any] | None = None,
     context_lengths: list[int] | None = None,
     prefill_lengths: list[int] | None = None,
 ) -> dict[str, Any]:
     """Return a complete FLOPs analysis document for the Qwen3.6-35B config.
 
-    Runs decode and prefill estimates across a range of sequence lengths and
-    returns a JSON-serialisable dict with the documented output schema.
+    If the config already contains all required architecture fields (as in
+    tests or a complete server response) it is used directly.  Otherwise the
+    function resolves the config from local files, HuggingFace, or the vLLM
+    server.
+
+    Args:
+        model_config: the benchmark YAML config dict or a complete model config.
+        server_config: optional complete model config from the vLLM server.
+        auto_config_loader: optional callable(str) -> config for HF resolution.
+        context_lengths: decode context lengths to analyze.
+        prefill_lengths: prefill prompt lengths to analyze.
     """
     if context_lengths is None:
         context_lengths = [512, 2048, 8192, 32768]
     if prefill_lengths is None:
         prefill_lengths = [512, 2048, 8192, 32768]
 
-    normalized = normalize_config(model_config)
-    missing = missing_required_fields(normalized)
-    if missing:
+    # If the config already has all required fields, use it directly
+    if _is_complete_config(model_config):
+        normalized = normalize_config(model_config)
+        missing = missing_required_fields(normalized)
+        if missing:
+            return {
+                "estimate_status": "unsupported",
+                "architecture": {"model": _model_label(model_config)},
+                "flops": {"decode": {}, "prefill": {}},
+                "assumptions": [],
+                "warnings": ["missing configuration fields: " + ", ".join(missing)],
+            }
+        dimension_errors = validate_fixed_dimensions(normalized)
+        if dimension_errors:
+            return {
+                "estimate_status": "unsupported",
+                "architecture": {"model": _model_label(model_config)},
+                "flops": {"decode": {}, "prefill": {}},
+                "assumptions": [],
+                "warnings": [
+                    "config dimensions do not match Qwen3.6-35B: "
+                    + "; ".join(dimension_errors)
+                ],
+            }
+        features = detect_features(normalized)
+        config_result = ConfigLoadResult(
+            status="exact_from_config",
+            config_source="provided_config",
+            raw_config=dict(model_config),
+            normalized_config=normalized,
+            features=features,
+        )
+    else:
+        config_result = load_architecture_config(
+            model_config,
+            server_config=server_config,
+            auto_config_loader=auto_config_loader,
+        )
+
+    if config_result.status == "unsupported":
         return {
             "estimate_status": "unsupported",
-            "architecture": {"model": _model_label(normalized.raw_text_config)},
+            "architecture": {"model": _model_label(model_config) if isinstance(model_config, dict) else "unknown"},
             "flops": {"decode": {}, "prefill": {}},
             "assumptions": [],
-            "warnings": ["missing configuration fields: " + ", ".join(missing)],
+            "warnings": list(config_result.warnings),
         }
 
-    dimension_errors = validate_fixed_dimensions(normalized)
-    if dimension_errors:
-        return {
-            "estimate_status": "unsupported",
-            "architecture": {"model": _model_label(normalized.raw_text_config)},
-            "flops": {"decode": {}, "prefill": {}},
-            "assumptions": [],
-            "warnings": [
-                "config dimensions do not match Qwen3.6-35B: "
-                + "; ".join(dimension_errors)
-            ],
-        }
+    assert config_result.normalized_config is not None
+    assert config_result.features is not None
+    normalized = config_result.normalized_config
+    features = config_result.features
 
-    features = detect_features(normalized)
     try:
         estimator = ModelFlopsEstimator(normalized, features)
     except ValueError as exc:
