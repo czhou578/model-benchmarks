@@ -19,7 +19,7 @@ from benchmarks.architecture_flops import (
 def primary_text_config():
     """Exact text_config dimensions from nvidia/Qwen3.6-35B-A3B-NVFP4."""
     return {
-        "model_type": "qwen3_5_moe_text",
+        "model_type": "qwen3_6_moe_text",
         "hidden_size": 2048,
         "num_hidden_layers": 40,
         "vocab_size": 248320,

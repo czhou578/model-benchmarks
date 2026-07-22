@@ -47,7 +47,7 @@ import time
 import requests
 import yaml
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -134,7 +134,7 @@ def _run(cmd: list[str]) -> Optional[str]:
 
 def collect_environment() -> dict[str, Any]:
     env: dict[str, Any] = {
-        "timestamp": datetime.now(datetime.timezone.utc).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
     gpu_query = _run([
@@ -523,7 +523,10 @@ class ModelClient:
             base_payload["messages"] = [{"role": "user", "content": prompt + salt}]
         else:
             base_payload["prompt"] = prompt + salt
-        return self._execute_request(url, base_payload)
+        result = self._execute_request(url, base_payload)
+        if result is not None:
+            return result
+        raise RuntimeError("generation request failed (cache_salt fallback)")
 
     def preflight_cache_salt(self) -> bool | None:
         """Test whether the server supports the cache_salt header.
@@ -1042,7 +1045,7 @@ def make_managed_server(
     server_cfg = cfg.get("server")
     if not isinstance(server_cfg, dict):
         raise ValueError("managed server mode requires a server section in the model config")
-    resolved_command = command or server_cfg.get("command")
+    resolved_command = command or server_cfg.get("command") or []
     return VllmServer(
         command=resolved_command,
         base_url=cfg["endpoint"]["base_url"],
@@ -1233,30 +1236,17 @@ def main():
                 for k, v in prefill_results.get("per_length", {}).items()
             }
 
-        if not args.skip_roofline:
-            from benchmarks.roofline import run_roofline_analysis
+        # Architecture-based FLOP estimation — standalone, no client needed
+        print("[core_runner] running FLOP analysis")
+        from benchmarks.architecture_flops import run_flops_analysis
 
-            # Collect prefill lengths from available benchmarks for analysis
-            prefill_lengths = cfg.get(
-                "prefill_target_lengths",
-                [512, 2048, 8192, 32768],
-            )
-            print(f"[core_runner] running roofline analysis (lengths={prefill_lengths})")
-            roofline_results = run_roofline_analysis(
-                cfg, client, gpu_monitor=monitor,
-                prefill_lengths=prefill_lengths,
-            )
-            save_json(run_dir / "roofline.json", roofline_results)
-            # Extract key metrics for summary
-            summary["roofline"] = {}
-            for key in ("bound", "theoretical_tps"):
-                per_len = roofline_results.get("per_length", {})
-                first_key = next(iter(per_len), None)
-                if first_key:
-                    summary["roofline"][f"{key}_at_{first_key}"] = per_len[first_key].get(key)
-            if "decode" in roofline_results:
-                for key in ("bound", "theoretical_tps"):
-                    summary["roofline"][f"decode_{key}"] = roofline_results["decode"].get(key)
+        flop_lengths = cfg.get("flop_analysis_lengths", [512, 2048, 8192, 32768])
+        flops_result = run_flops_analysis(cfg, prefill_lengths=flop_lengths, context_lengths=flop_lengths)
+        save_json(run_dir / "flops_analysis.json", flops_result)
+        summary["flops_analysis"] = {
+            "status": flops_result.get("estimate_status"),
+            "model": flops_result.get("architecture", {}).get("model", "unknown"),
+        }
 
         for name, fn in _REGISTERED_BENCHMARKS.items():
             print(f"[core_runner] running registered benchmark: {name}")

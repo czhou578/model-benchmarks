@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Literal, Mapping, cast
 
 
 @dataclass(frozen=True)
@@ -319,6 +319,40 @@ def detect_features(config: NormalizedConfig) -> ArchitectureFeatures:
     )
 
 
+# Fixed dimensions that every accepted Qwen3.6-35B MoE config must match.
+_FIXED_DIMENSIONS: dict[str, int] = {
+    "hidden_size": 2048,
+    "num_layers": 40,
+    "vocab_size": 248320,
+    "head_dim": 256,
+    "num_attention_heads": 16,
+    "num_key_value_heads": 2,
+    "num_experts": 256,
+    "experts_per_token": 8,
+    "expert_intermediate_size": 512,
+    "shared_expert_intermediate_size": 512,
+}
+
+
+def validate_fixed_dimensions(config: NormalizedConfig) -> list[str]:
+    """Return a list of dimension mismatches for the Qwen3.6-35B checkpoint.
+
+    Returns an empty list when all fixed dimensions match.  Mismatches
+    indicate that the config describes a different model variant and must
+    be rejected rather than silently accepted.
+    """
+    mismatches: list[str] = []
+    for field_name, expected in _FIXED_DIMENSIONS.items():
+        actual = getattr(config, field_name, None)
+        if actual is None:
+            continue  # already reported by missing_required_fields
+        if actual != expected:
+            mismatches.append(
+                f"{field_name}: expected {expected}, got {actual}"
+            )
+    return mismatches
+
+
 def missing_required_fields(config: NormalizedConfig) -> list[str]:
     """Return fields required to safely dispatch architecture estimators."""
     required = (
@@ -416,12 +450,12 @@ def load_architecture_config(
             warnings.append(f"could not load local model config {local_path}: {exc}")
 
     model_reference = _model_reference(benchmark_config)
-    local_complete = bool(
-        candidates
-        and not missing_required_fields(
-            normalize_config(candidates[0][1], config_source=candidates[0][0])
-        )
-    )
+    local_complete = False
+    if candidates:
+        first_norm = normalize_config(candidates[0][1], config_source=candidates[0][0])
+        local_complete = not missing_required_fields(
+            first_norm
+        ) and not validate_fixed_dimensions(first_norm)
     if model_reference and not local_complete:
         try:
             if auto_config_loader is None:
@@ -448,6 +482,13 @@ def load_architecture_config(
         normalized = normalize_config(raw, config_source=source)
         missing = missing_required_fields(normalized)
         if not missing:
+            dimension_errors = validate_fixed_dimensions(normalized)
+            if dimension_errors:
+                warnings.append(
+                    f"{source} config dimensions do not match "
+                    f"Qwen3.6-35B: {'; '.join(dimension_errors)}"
+                )
+                continue
             features = detect_features(normalized)
             return ConfigLoadResult(
                 status="exact_from_config",
@@ -531,6 +572,7 @@ class GatedDeltaNetEstimator:
         kernel_size: int = 4,
         chunk_size: int = 64,
     ):
+    
         self.d = d
         self.num_key_heads = num_key_heads
         self.num_value_heads = num_value_heads
@@ -567,10 +609,10 @@ class GatedDeltaNetEstimator:
         breakdown = self.projection_flops()
         # kv_mem and output each reduce a [K, V] state.
         breakdown["recurrent_state_flops"] = 4 * self.state_elements
-        non_matmul_breakdown = {
+        non_matmul_breakdown: dict[str, float] = {
             # Decay state, form/add the outer-product update, then gate delta.
-            "recurrent_state_update": 3 * self.state_elements,
-            "delta_gate_and_residual": 2 * self.value_dim,
+            "recurrent_state_update": float(3 * self.state_elements),
+            "delta_gate_and_residual": float(2 * self.value_dim),
         }
         return ComponentResult(
             matmul_flops=sum(breakdown.values()),
@@ -618,9 +660,11 @@ class GatedDeltaNetEstimator:
         )
 
         padded_tokens = chunks * C
-        non_matmul_breakdown = {
-            "chunk_decay_and_updates": padded_tokens
-            * (3 * self.state_elements + 2 * self.value_dim),
+        non_matmul_breakdown: dict[str, float] = {
+            "chunk_decay_and_updates": float(
+                padded_tokens
+                * (3 * self.state_elements + 2 * self.value_dim)
+            ),
         }
         return ComponentResult(
             matmul_flops=sum(breakdown.values()),
@@ -666,16 +710,16 @@ class FullAttentionEstimator:
         self.query_gate = query_gate
 
     def projection_flops(self, tokens: int = 1) -> dict[str, float]:
-        breakdown = {
-            "attention_qkv_projection_flops": (
+        breakdown: dict[str, float] = {
+            "attention_qkv_projection_flops": float(
                 tokens * 2 * self.d * (self.d_q + self.d_k + self.d_v)
             ),
-            "attention_output_projection_flops": (
+            "attention_output_projection_flops": float(
                 tokens * 2 * self.d_q * self.d
             ),
         }
         if self.query_gate:
-            breakdown["attention_query_gate_projection_flops"] = (
+            breakdown["attention_query_gate_projection_flops"] = float(
                 tokens * 2 * self.d * self.d_q
             )
         return breakdown
@@ -690,19 +734,19 @@ class FullAttentionEstimator:
     def decode_flops(self, S: int | None = None) -> ComponentResult:
         breakdown = self.projection_flops()
         if S is not None:
-            breakdown["attention_score_flops"] = 4 * self.n_q * self.h * S
-        non_matmul_breakdown = {
-            "attention_gate_multiply": self.d_q if self.query_gate else 0,
+            breakdown["attention_score_flops"] = float(4 * self.n_q * self.h * S)
+        non_matmul_breakdown: dict[str, float] = {
+            "attention_gate_multiply": float(self.d_q if self.query_gate else 0),
         }
         return ComponentResult(
             matmul_flops=sum(breakdown.values()),
             non_matmul_flops=sum(non_matmul_breakdown.values()),
-            weight_bytes=2 * self.parameter_count(),
-            kv_read_bytes=(
+            weight_bytes=float(2 * self.parameter_count()),
+            kv_read_bytes=float(
                 (self.d_k + self.d_v) * 2 * S if S is not None else 0
             ),
-            kv_write_bytes=(self.d_k + self.d_v) * 2,
-            activation_bytes=4 * (self.d_q + self.d_k + self.d_v),
+            kv_write_bytes=float((self.d_k + self.d_v) * 2),
+            activation_bytes=float(4 * (self.d_q + self.d_k + self.d_v)),
             matmul_breakdown=breakdown,
             non_matmul_breakdown=non_matmul_breakdown,
             omitted_non_matmul=(
@@ -719,19 +763,19 @@ class FullAttentionEstimator:
         if S <= 0:
             raise ValueError("sequence length must be positive")
         breakdown = self.projection_flops(tokens=S)
-        breakdown["attention_score_flops"] = (
+        breakdown["attention_score_flops"] = float(
             2 * self.n_q * self.h * S * (S + 1)
         )
-        non_matmul_breakdown = {
-            "attention_gate_multiply": S * self.d_q if self.query_gate else 0,
+        non_matmul_breakdown: dict[str, float] = {
+            "attention_gate_multiply": float(S * self.d_q if self.query_gate else 0),
         }
         return ComponentResult(
             matmul_flops=sum(breakdown.values()),
             non_matmul_flops=sum(non_matmul_breakdown.values()),
-            weight_bytes=2 * self.parameter_count(),
-            kv_read_bytes=0,
-            kv_write_bytes=S * (self.d_k + self.d_v) * 2,
-            activation_bytes=4 * S * (self.d_q + self.d_k + self.d_v),
+            weight_bytes=float(2 * self.parameter_count()),
+            kv_read_bytes=0.0,
+            kv_write_bytes=float(S * (self.d_k + self.d_v) * 2),
+            activation_bytes=float(4 * S * (self.d_q + self.d_k + self.d_v)),
             matmul_breakdown=breakdown,
             non_matmul_breakdown=non_matmul_breakdown,
             omitted_non_matmul=(
@@ -759,7 +803,7 @@ class MoeFfnEstimator:
         expert_intermediate_size: int,
         shared_expert_intermediate_size: int | None = None,
         ffn_kind: str = "gated",
-    ):
+    ) -> None:
         self.d = d
         self.E = num_experts
         self.k = experts_per_token
@@ -779,7 +823,7 @@ class MoeFfnEstimator:
         return result
 
     def decode_flops_breakdown(self) -> dict[str, float]:
-        result = {
+        result: dict[str, float] = {
             "routed_experts": (
                 self.k * self.n_matrices * 2 * self.d * self.m_e
             ),
@@ -795,15 +839,15 @@ class MoeFfnEstimator:
 
     def decode_flops(self) -> ComponentResult:
         breakdown = self.decode_flops_breakdown()
-        non_matmul_breakdown = {
-            "routed_reweight_and_accumulate": 2 * self.k * self.d,
-            "shared_expert_gate_multiply": self.d if self.m_s is not None else 0,
+        non_matmul_breakdown: dict[str, float] = {
+            "routed_reweight_and_accumulate": float(2 * self.k * self.d),
+            "shared_expert_gate_multiply": float(self.d if self.m_s is not None else 0),
         }
         return ComponentResult(
             matmul_flops=sum(breakdown.values()),
             non_matmul_flops=sum(non_matmul_breakdown.values()),
-            weight_bytes=2 * sum(self.parameter_breakdown().values()),
-            activation_bytes=(
+            weight_bytes=float(2 * sum(self.parameter_breakdown().values())),
+            activation_bytes=float(
                 4 * self.k * self.m_e
                 + (4 * self.m_s if self.m_s is not None else 0)
             ),
@@ -876,12 +920,24 @@ class ModelFlopsEstimator:
                 "Cannot estimate FLOPs; missing " + ", ".join(missing)
             )
 
-        self._d = int(normalized.hidden_size)
-        self._l = int(normalized.num_layers)
-        self._v = int(normalized.vocab_size)
-        self._h = int(normalized.head_dim)
-        self._n_q = int(normalized.num_attention_heads)
-        self._n_kv = int(normalized.num_key_value_heads)
+        d = normalized.hidden_size
+        l = normalized.num_layers
+        v = normalized.vocab_size
+        h = normalized.head_dim
+        n_q = normalized.num_attention_heads
+        n_kv = normalized.num_key_value_heads
+        assert d is not None
+        assert l is not None
+        assert v is not None
+        assert h is not None
+        assert n_q is not None
+        assert n_kv is not None
+        self._d = int(d)
+        self._l = int(l)
+        self._v = int(v)
+        self._h = int(h)
+        self._n_q = int(n_q)
+        self._n_kv = int(n_kv)
         self._gated = normalized.ffn_kind == "gated"
         self._layer_counts = dict(features.layer_counts)
         self.full_attention_layers = self._layer_counts.get("full_attention", 0)
@@ -1007,6 +1063,7 @@ class ModelFlopsEstimator:
         non_matmul: dict[str, float] = {}
         omitted: set[str] = set()
 
+        assert self._moe is not None
         moe = self._moe.decode_flops()
         moe_names = {
             "routed_experts": "moe_routed",
@@ -1033,6 +1090,7 @@ class ModelFlopsEstimator:
             )
             omitted.update(attention.omitted_non_matmul)
 
+        delta: ComponentResult | None = None
         if self._delta:
             delta = self._delta.decode_flops()
             self._add_scaled(
@@ -1057,7 +1115,7 @@ class ModelFlopsEstimator:
             non_matmul=non_matmul,
             omitted=omitted,
         )
-        if self._delta:
+        if delta is not None:
             result["state_traffic_bytes"] = {
                 "linear_state_bytes_read": delta.kv_read_bytes * self.linear_attention_layers,
                 "linear_state_bytes_written": delta.kv_write_bytes * self.linear_attention_layers,
@@ -1075,6 +1133,7 @@ class ModelFlopsEstimator:
         non_matmul: dict[str, float] = {}
         omitted: set[str] = set()
 
+        assert self._moe is not None
         moe = self._moe.decode_flops()
         moe_names = {
             "routed_experts": "moe_routed",
@@ -1103,6 +1162,7 @@ class ModelFlopsEstimator:
             )
             omitted.update(attention.omitted_non_matmul)
 
+        delta: ComponentResult | None = None
         if self._delta:
             delta = self._delta.prefill_flops(S)
             self._add_scaled(
@@ -1128,16 +1188,19 @@ class ModelFlopsEstimator:
             omitted=omitted,
         )
         result["logits_tokens"] = logits_tokens
-        if self._delta:
+        if delta is not None:
+            _delta = delta
             result["state_traffic_bytes"] = {
-                "linear_state_bytes_read": delta.kv_read_bytes * self.linear_attention_layers,
-                "linear_state_bytes_written": delta.kv_write_bytes * self.linear_attention_layers,
+                "linear_state_bytes_read": float(_delta.kv_read_bytes * self.linear_attention_layers),
+                "linear_state_bytes_written": float(_delta.kv_write_bytes * self.linear_attention_layers),
             }
         return result
 
     def weight_bytes(self, dtype_bytes: int = 2) -> dict[str, float]:
         out: dict[str, float] = {}
-        moe_params = self._moe.parameter_breakdown()
+        assert self._moe is not None
+        _moe = self._moe
+        moe_params = _moe.parameter_breakdown()
         for name, params in moe_params.items():
             out["moe_" + name] = params * self._l * dtype_bytes
 
@@ -1186,23 +1249,37 @@ class ModelFlopsEstimator:
 def compute_flops(
     model_config: dict[str, Any],
     *,
-    mode: str,
+    mode: Literal["decode", "prefill"],
     sequence_length: int,
-    batch_size: int = 1,
-    gpu_specs: dict | None = None,
     logits_tokens: int = 1,
 ) -> dict[str, Any]:
-    """Return an architecture-aware Qwen MoE FLOP estimate."""
-    if mode not in {"decode", "prefill"}:
-        raise ValueError("mode must be 'decode' or 'prefill'")
-    if batch_size <= 0:
-        raise ValueError("batch_size must be positive")
+    """Return Qwen3.6-35B text-inference FLOPs.
+
+    Args:
+        model_config: model configuration dict.
+        mode: ``"decode"`` or ``"prefill"``.
+        sequence_length: context length for decode, or prompt length for prefill.
+        logits_tokens: number of logits positions (prefill default: 1).
+
+    Returns:
+        Dict with ``estimate_status``, ``architecture``, ``flops``,
+        ``assumptions``, and ``warnings``.
+    """
     normalized = normalize_config(model_config)
     missing = missing_required_fields(normalized)
     if missing:
         return {
             "estimate_status": "unsupported",
             "warnings": ["missing configuration fields: " + ", ".join(missing)],
+        }
+    dimension_errors = validate_fixed_dimensions(normalized)
+    if dimension_errors:
+        return {
+            "estimate_status": "unsupported",
+            "warnings": [
+                "config dimensions do not match Qwen3.6-35B: "
+                + "; ".join(dimension_errors)
+            ],
         }
     features = detect_features(normalized)
     try:
@@ -1218,8 +1295,117 @@ def compute_flops(
     return {
         "architecture": features.to_dict(),
         "estimate_status": estimator.estimate_status,
-        "batch_size": batch_size,
         "flops": flops,
         "assumptions": estimator.assumptions,
         "warnings": [],
     }
+
+
+def _model_label(raw: dict[str, Any]) -> str:
+    """Derive a short model label from the config."""
+    model_type = str(raw.get("model_type", "unknown")).lower()
+    # Strip "qwen3_5_moe" / "qwen3_6_moe" prefix → "qwen3.5-35b-a3b"
+    if model_type.startswith("qwen3_6"):
+        return "qwen3.6-35b-a3b"
+    if model_type.startswith("qwen3_5"):
+        return "qwen3.5-35b-a3b"
+    return model_type.replace("_", "-")
+
+
+def run_flops_analysis(
+    model_config: dict[str, Any],
+    *,
+    context_lengths: list[int] | None = None,
+    prefill_lengths: list[int] | None = None,
+) -> dict[str, Any]:
+    """Return a complete FLOPs analysis document for the Qwen3.6-35B config.
+
+    Runs decode and prefill estimates across a range of sequence lengths and
+    returns a JSON-serialisable dict with the documented output schema.
+    """
+    if context_lengths is None:
+        context_lengths = [512, 2048, 8192, 32768]
+    if prefill_lengths is None:
+        prefill_lengths = [512, 2048, 8192, 32768]
+
+    normalized = normalize_config(model_config)
+    missing = missing_required_fields(normalized)
+    if missing:
+        return {
+            "estimate_status": "unsupported",
+            "architecture": {"model": _model_label(normalized.raw_text_config)},
+            "flops": {"decode": {}, "prefill": {}},
+            "assumptions": [],
+            "warnings": ["missing configuration fields: " + ", ".join(missing)],
+        }
+
+    dimension_errors = validate_fixed_dimensions(normalized)
+    if dimension_errors:
+        return {
+            "estimate_status": "unsupported",
+            "architecture": {"model": _model_label(normalized.raw_text_config)},
+            "flops": {"decode": {}, "prefill": {}},
+            "assumptions": [],
+            "warnings": [
+                "config dimensions do not match Qwen3.6-35B: "
+                + "; ".join(dimension_errors)
+            ],
+        }
+
+    features = detect_features(normalized)
+    try:
+        estimator = ModelFlopsEstimator(normalized, features)
+    except ValueError as exc:
+        return {
+            "estimate_status": "unsupported",
+            "architecture": {"model": _model_label(normalized.raw_text_config)},
+            "flops": {"decode": {}, "prefill": {}},
+            "assumptions": [],
+            "warnings": [str(exc)],
+        }
+
+    decode_results: dict[str, Any] = {}
+    prefill_results: dict[str, Any] = {}
+    for length in sorted(set(context_lengths)):
+        key = str(length)
+        decode_results[key] = estimator.decode_model_flops(length)
+
+    for length in sorted(set(prefill_lengths)):
+        key = str(length)
+        prefill_results[key] = estimator.prefill_flops(length)
+
+    return {
+        "estimate_status": estimator.estimate_status,
+        "architecture": {
+            "model": _model_label(normalized.raw_text_config),
+            "layer_counts": dict(features.layer_counts),
+            "ffn": features.ffn,
+            "token_mixers": sorted(features.token_mixers),
+            "is_hybrid": features.is_hybrid,
+        },
+        "flops": {
+            "decode": decode_results,
+            "prefill": prefill_results,
+            "assumptions": estimator.assumptions,
+        },
+        "assumptions": estimator.assumptions,
+        "warnings": list(estimator.assumptions),
+    }
+
+
+# --------------------------------------------------------------------------- #
+# CLI entry point — standalone analysis
+# --------------------------------------------------------------------------- #
+
+if __name__ == "__main__":
+    import json
+    import sys
+
+    from core_runner import load_model_config as _load_model_config
+
+    cfg_path = (
+        Path(sys.argv[1]) if len(sys.argv) > 1 else Path("models/qwen3.6_35b_redhat_nvfp4.yml")
+    )
+    cfg = _load_model_config(cfg_path)
+    result = run_flops_analysis(cfg)
+    print(json.dumps(result, indent=2, default=str))
