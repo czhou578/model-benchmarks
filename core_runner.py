@@ -132,6 +132,22 @@ def _run(cmd: list[str]) -> Optional[str]:
         return None
 
 
+def _get_server_model_config(client: ModelClient) -> dict[str, Any]:
+    """Fetch the unmodified model config from the running vLLM server."""
+    try:
+        r = requests.get(f"{client.base_url}/v1/models", timeout=10)
+        if r.status_code != 200:
+            return {}
+        data = r.json()
+        model_data = data.get("data", [{}])[0] if data.get("data") else {}
+        config = model_data.get("config", {})
+        if isinstance(config, dict) and config:
+            return config
+    except Exception:
+        pass
+    return {}
+
+
 def collect_environment() -> dict[str, Any]:
     env: dict[str, Any] = {
         "timestamp": datetime.now(timezone.utc).isoformat()
@@ -1236,12 +1252,21 @@ def main():
                 for k, v in prefill_results.get("per_length", {}).items()
             }
 
-        # Architecture-based FLOP estimation — standalone, no client needed
+        # Architecture-based FLOP estimation — fetch server config then estimate
         print("[core_runner] running FLOP analysis")
         from benchmarks.architecture_flops import run_flops_analysis
 
         flop_lengths = cfg.get("flop_analysis_lengths", [512, 2048, 8192, 32768])
-        flops_result = run_flops_analysis(cfg, prefill_lengths=flop_lengths, context_lengths=flop_lengths)
+        # Fetch the model config from the running vLLM server
+        server_config: dict[str, Any] | None = None
+        try:
+            server_config = _get_server_model_config(client)
+        except Exception as exc:
+            print(f"[core_runner] warning: could not fetch server config: {exc}")
+        flops_result = run_flops_analysis(
+            cfg, server_config=server_config,
+            prefill_lengths=flop_lengths, context_lengths=flop_lengths,
+        )
         save_json(run_dir / "flops_analysis.json", flops_result)
         summary["flops_analysis"] = {
             "status": flops_result.get("estimate_status"),
