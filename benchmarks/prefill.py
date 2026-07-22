@@ -230,7 +230,7 @@ class PrefillRequestResult:
 
 def run_prefill_scaling(
     client: ModelClient,
-    target_lengths: list[int] = None,
+    target_lengths: list[int] = [],
     repetitions: int = 5,
     gpu_monitor=None,
 ) -> dict[str, Any]:

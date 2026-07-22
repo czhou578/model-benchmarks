@@ -21,7 +21,7 @@ import statistics
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from core_runner import ModelClient, GpuMonitor
 
@@ -41,9 +41,9 @@ class TtftRequestResult:
     prompt_tokens: int
     prompt_tokens_exact: bool
     output_tokens: int
-    # Client-side wall-clock (ms)
-    ttft_ms: float
-    total_time_ms: float
+    # Client-side wall-clock (ms) — None when request failed
+    ttft_ms: float | None
+    total_time_ms: float | None
     # Server-side metrics (s) — may be None on older vLLM versions
     queue_time_s: float | None = None
     prefill_time_s: float | None = None
@@ -140,7 +140,7 @@ def run_ttft_breakdown(
             "cache_isolation_method": "cache_salt" if is_header else "text_salt",
             "max_tokens": 1,
             "temperature": 0.0,
-            "start_time": datetime.now(datetime.timezone.utc).isoformat(),
+            "start_time": datetime.now(timezone.utc).isoformat(),
         },
         "per_length": {},
     }
@@ -298,5 +298,5 @@ def run_ttft_breakdown(
             },
         }
 
-    result["config"]["end_time"] = datetime.now(datetime.timezone.utc).isoformat()
+    result["config"]["end_time"] = datetime.now(timezone.utc).isoformat()
     return result
