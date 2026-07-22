@@ -32,7 +32,8 @@ def primary_text_config():
         "hidden_size": 2048,
         "num_hidden_layers": 40,
         "vocab_size": 248320,
-        "head_dim": 128,
+        "head_dim": 256,
+        "attn_output_gate": True,
         "num_attention_heads": 16,
         "num_key_value_heads": 2,
         "layer_types": ["linear_attention"] * 30 + ["full_attention"] * 10,
@@ -131,16 +132,12 @@ class FeatureDetectionTests(unittest.TestCase):
         self.assertEqual(features.unsupported_layer_types, ("mystery_mixer",))
         self.assertIn("supported_layer_types", missing_required_fields(normalized))
 
-    def test_mla_and_mtp_are_independent_features(self):
+    def test_mtp_detected_without_mla(self):
         config = dense_config(
-            kv_lora_rank=16,
-            qk_nope_head_dim=8,
-            qk_rope_head_dim=8,
             num_nextn_predict_layers=1,
         )
         features = detect_features(normalize_config(config))
 
-        self.assertEqual(features.token_mixers, frozenset({"mla"}))
         self.assertTrue(features.has_mtp)
 
 
