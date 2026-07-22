@@ -28,7 +28,10 @@ from benchmarks.roofline_spec_db import (
     get_roofline_threshold,
     lookup_gpu_specs,
 )
-from benchmarks.architecture_flops import load_architecture_config
+from benchmarks.architecture_flops import (
+    ModelFlopsEstimator,
+    load_architecture_config,
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -54,104 +57,6 @@ def _get_model_config(client: ModelClient) -> dict[str, Any] | None:
     return None
 
 
-# --------------------------------------------------------------------------- #
-# FLOP estimation — from model architecture
-# --------------------------------------------------------------------------- #
-
-
-def estimate_flops_per_token(model_config: dict[str, Any],
-                              sequence_length: int) -> dict[str, float]:
-    """Estimate FLOPs per token for inference (decode or prefill).
-
-    Args:
-        model_config: dict with keys hidden_size, num_hidden_layers,
-            intermediate_size, num_attention_heads, vocab_size.
-        sequence_length: context length in tokens.
-
-    Returns:
-        Dict with ``flops_per_token`` and per-component breakdown:
-            - ``flops_per_token``     total FLOPs per output token
-            - ``ffn``                 feed-forward network (dominant)
-            - ``attn_proj``           Q/K/V projection matrices
-            - ``attn_score``          QK^T + softmax + V multiply
-            - ``attn_out_proj``       attention output projection
-            - ``lm_head``             language model head (negligible)
-    """
-    d = model_config.get("hidden_size", 4096)
-    l = model_config.get("num_hidden_layers", 32)
-    m = model_config.get("intermediate_size", 11008)
-    v = model_config.get("vocab_size", 32000)
-    s = sequence_length
-
-    # Per-layer FLOPs (2 FLOPs per multiply-add)
-    ffn = 4 * l * d * m              # GELU/activation: ~2× more
-    attn_proj = 2 * l * 3 * d * d    # Q, K, V projections
-    attn_score = l * 2 * d * s + 2 * d * s     # QK^T (softmax is negligible)
-    attn_out = 2 * l * d * d         # output projection
-
-    total = ffn + attn_proj + attn_score + attn_out + 2 * l * d * v
-
-    return {
-        "flops_per_token": total,
-        "ffn": ffn,
-        "attn_proj": attn_proj,
-        "attn_score": attn_score,
-        "attn_out_proj": attn_out,
-        "lm_head": 2 * d * v,
-    }
-
-
-# --------------------------------------------------------------------------- #
-# Memory-traffic estimation
-# --------------------------------------------------------------------------- #
-
-
-def estimate_bytes_per_token(model_config: dict[str, Any],
-                              sequence_length: int,
-                              weight_bits: int = 16) -> dict[str, float]:
-    """Estimate bytes transferred per token (GPU memory traffic).
-
-    Args:
-        model_config: same keys as estimate_flops_per_token.
-        sequence_length: context length in tokens.
-        weight_bits: bits per weight parameter (16 for FP16/BF16, 8 for FP8).
-
-    Returns:
-        Dict with ``bytes_per_token`` and breakdown:
-            - ``bytes_per_token``  total bytes / token
-            - ``weights``          model weights (moved every token)
-            - ``kv_cache``         KV cache for the current sequence
-            - ``activations``      temporary activations (Q, K, V, output)
-    """
-    d = model_config.get("hidden_size", 4096)
-    l = model_config.get("num_hidden_layers", 32)
-    m = model_config.get("intermediate_size", 11008)
-    v = model_config.get("vocab_size", 32000)
-    s = sequence_length
-
-    wb = weight_bits / 8  # bytes per weight param
-
-    # Model weights: total parameters × bytes-per-param
-    # Approximate: hidden×intermediate×2 (FFN) + hidden²×3 (QKV) + hidden² (out) + hidden×vocab
-    total_params = l * (2 * d * m + 3 * d * d + d * d) + l * d * v
-    weights_bytes = total_params * wb
-
-    # KV cache: 2 × layers × seq × head_dim × bytes (per token's access during this step)
-    # For decode, we access the full KV cache: 2 × l × s × (d/n_kv) × 2 (FP16)
-    kv_bytes = 2 * l * s * (d // max(1, (d // 128))) * 2
-
-    # Activations: Q output (d×seq), V output (d×1), etc.
-    # Per token: Q output matrix multiply ~ d × 1, plus intermediate activations
-    activations_bytes = 3 * l * d * 4  # Q/K/V projections (d×d) output in FP32 for precision
-
-    total = weights_bytes + kv_bytes + activations_bytes
-
-    return {
-        "bytes_per_token": total,
-        "weights": weights_bytes,
-        "kv_cache": kv_bytes,
-        "activations": activations_bytes,
-    }
 
 
 # --------------------------------------------------------------------------- #
@@ -189,69 +94,79 @@ def classify_workload(arithmetic_intensity: float,
         return "mixed"
 
 
-def compute_theoretical_bounds(
-    model_config: dict[str, Any],
+def _compute_bounds_from_estimator(
+    flops_result: dict[str, Any],
     gpu_specs: dict[str, float],
+    weight_bits: int,
+    *,
+    flops_estimator: "ModelFlopsEstimator",
     sequence_length: int,
-    weight_bits: int = 16,
 ) -> dict[str, Any]:
-    """Compute theoretical maximum throughput from roofline analysis.
+    """Compute roofline bounds using component-estimator results.
 
-    Args:
-        model_config: model architecture.
-        gpu_specs: GPU specifications (from roofline_spec_db).
-        sequence_length: context length.
-        weight_bits: bits per weight.
-
-    Returns:
-        Dict with:
-            - ``flops_per_token``
-            - ``bytes_per_token``
-            - ``arithmetic_intensity``
-            - ``roofline_threshold``
-            - ``bound``: compute / memory / mixed
-            - ``compute_bound_tps``: theoretical max tokens/s if compute-limited
-            - ``memory_bound_tps``: theoretical max tokens/s if memory-limited
-            - ``theoretical_tps``: effective bound (min of compute and memory bounds)
+    Replaces the old ``compute_theoretical_bounds`` for models that use
+    component estimators (MoE, linear attention, etc.).
     """
-    flops = estimate_flops_per_token(model_config, sequence_length)
-    bytes_info = estimate_bytes_per_token(model_config, sequence_length, weight_bits)
+    total_flops = flops_result.get("total", 0)
+    # For prefill, total_flops is the *total* work for S tokens.
+    # Divide by S to get per-token-equivalent for the roofline calculation.
+    n_tokens = sequence_length if flops_result.get("mode") == "prefill" else 1
+    flops_per_token = total_flops / n_tokens
 
-    flops_per_tok = flops["flops_per_token"]
-    bytes_per_tok = bytes_info["bytes_per_token"]
-    ai = compute_arithmetic_intensity(flops_per_tok, bytes_per_tok)
     threshold = get_roofline_threshold(gpu_specs)
 
-    # Peak throughput (compute-bound): peak_FLOPS / FLOP_per_token
+    # Peak throughput (compute-bound)
     peak_tflops = gpu_specs.get("peak_tflops_tf32") or gpu_specs.get("peak_tflops_fp8", 0)
     peak_flops = peak_tflops * 1e12
-    compute_bound_tps = peak_flops / flops_per_tok if flops_per_tok > 0 else float("inf")
+    compute_bound_tps = peak_flops / flops_per_token if flops_per_token > 0 else float("inf")
 
-    # Peak throughput (memory-bound): bandwidth / bytes_per_token
-    bandwidth_gbs = gpu_specs.get("hbm_bandwidth_gbs", 0)
-    bandwidth_bps = bandwidth_gbs * 1e9
-    memory_bound_tps = bandwidth_bps / bytes_per_tok if bytes_per_tok > 0 else float("inf")
+    # Memory bound: estimate bytes per token from weights + KV cache
+    dtype_bytes_int = int(weight_bits / 8)
+    weight_bytes = flops_estimator.weight_bytes(dtype_bytes_int)
+    total_weight_bytes = sum(
+        v for v in weight_bytes.values() if isinstance(v, (int, float))
+    )
 
+    # KV cache: only for full-attention layers
+    kv_bytes = flops_estimator.kv_state_bytes(sequence_length, dtype_bytes_int)
+    kv_read = kv_bytes.get("full_attention_kv", 0)  # per-sequence, read every token
+
+    # Estimate traffic: per-token traffic is dominated by weights + KV read
+    # For prefill, KV read is zero (nothing cached yet), but KV write matters
+    # For decode, KV read is the full cache per token
+    bytes_per_token = total_weight_bytes + kv_read
+
+    if bytes_per_token > 0:
+        memory_bound_tps = (gpu_specs.get("hbm_bandwidth_gbs", 0) * 1e9) / bytes_per_token
+    else:
+        memory_bound_tps = float("inf")
+
+    ai = compute_arithmetic_intensity(flops_per_token, bytes_per_token)
     bound_type = classify_workload(ai, threshold) if threshold else "unknown"
 
     effective_tps = min(compute_bound_tps, memory_bound_tps)
 
+    # Build per-component breakdown
+    flops_breakdown = {k: round(v, 1) for k, v in flops_result.items()
+                       if isinstance(v, (int, float)) and k not in ("total", "num_layers", "sequence_length")}
+
     return {
-        "flops_per_token": flops_per_tok,
-        "flops_per_token_breakdown": {
-            k: v for k, v in flops.items() if k != "flops_per_token"
-        },
-        "bytes_per_token": bytes_per_tok,
+        "flops_per_token": round(flops_per_token, 1),
+        "flops_per_token_breakdown": flops_breakdown,
+        "bytes_per_token": round(bytes_per_token, 1),
         "bytes_per_token_breakdown": {
-            k: round(v, 1) for k, v in bytes_info.items() if k != "bytes_per_token"
+            "weights": round(total_weight_bytes, 1),
+            "kv_cache_read": round(kv_read, 1),
         },
-        "arithmetic_intensity": ai,
+        "arithmetic_intensity": round(ai, 4),
         "roofline_threshold": threshold,
         "bound": bound_type,
         "compute_bound_tps": round(compute_bound_tps, 1),
         "memory_bound_tps": round(memory_bound_tps, 1),
         "theoretical_tps": round(effective_tps, 1),
     }
+
+
 
 
 # --------------------------------------------------------------------------- #
@@ -309,22 +224,17 @@ def run_roofline_analysis(
     assert config_result.features is not None
     normalized = config_result.normalized_config
     features = config_result.features
-    arch = normalized.raw_text_config
 
-    # Phase 1 detects these components but never routes them through the old
-    # dense/full-attention estimator. Their estimators are Phase 2 work.
-    unsupported_components: list[str] = []
-    if features.ffn == "moe":
-        unsupported_components.append("moe_ffn")
-    unsupported_components.extend(
-        mixer for mixer in features.token_mixers if mixer != "full_attention"
-    )
-    unsupported_components.extend(features.unsupported_layer_types)
-    if unsupported_components:
+    # Build the component-based flops estimator
+    try:
+        flops_estimator = ModelFlopsEstimator(normalized, features)
+        estimate_status = flops_estimator.estimate_status
+    except Exception as exc:
+        # Fall back: report unsupported rather than crashing
         return {
             "config": {
                 "benchmark_version": "1.1",
-                "definition": "Roofline analysis: component estimators pending",
+                "definition": "Roofline analysis: component estimators failed",
                 "model_name": model_config.get("name", "unknown"),
                 "model_config": normalized.to_dict(),
                 "start_time": datetime.utcnow().isoformat() + "Z",
@@ -332,8 +242,7 @@ def run_roofline_analysis(
             },
             "estimate_status": "partial",
             "architecture": features.to_dict(),
-            "unsupported_components": sorted(set(unsupported_components)),
-            "warnings": list(config_result.warnings),
+            "warnings": [*config_result.warnings, str(exc)],
             "per_length": {},
             "decode": {},
         }
@@ -378,18 +287,30 @@ def run_roofline_analysis(
                 "num_samples": len(util_samples),
             }
 
-    # Build per-length analysis
+    # Build per-length analysis using component estimators
     per_length: dict[str, Any] = {}
+    max_seq = max(prefill_lengths) if prefill_lengths else 8192
     for length in prefill_lengths:
         key = str(length)
-        analysis = compute_theoretical_bounds(arch, gpu_specs or {}, length, weight_bits)
-        per_length[key] = analysis
+        pf = flops_estimator.prefill_flops(length)
 
-    # Decode analysis (typically compute-bound due to minimal memory traffic)
-    decode_analysis = compute_theoretical_bounds(
-        arch, gpu_specs or {}, sequence_length=max(prefill_lengths) if prefill_lengths else 8192,
-        weight_bits=weight_bits
+        # Compute roofline bounds from estimator results
+        pf_analysis = _compute_bounds_from_estimator(
+            pf, gpu_specs or {}, weight_bits,
+            flops_estimator=flops_estimator, sequence_length=length,
+        )
+        pf_analysis["mode"] = "prefill"
+        pf_analysis["sequence_length"] = length
+        per_length[key] = pf_analysis
+
+    # Decode analysis (one new token, context = max_seq)
+    decode_result = flops_estimator.decode_model_flops(context_length=max_seq)
+    decode_analysis = _compute_bounds_from_estimator(
+        decode_result, gpu_specs or {}, weight_bits,
+        flops_estimator=flops_estimator, sequence_length=max_seq,
     )
+    decode_analysis["mode"] = "decode"
+    decode_analysis["sequence_length"] = max_seq
 
     # Build result
     result: dict[str, Any] = {
@@ -411,8 +332,9 @@ def run_roofline_analysis(
         },
         "per_length": per_length,
         "decode": decode_analysis,
-        "estimate_status": config_result.status,
+        "estimate_status": estimate_status,
         "architecture": features.to_dict(),
+        "assumptions": list(flops_estimator.assumptions),
         "warnings": list(config_result.warnings),
     }
 

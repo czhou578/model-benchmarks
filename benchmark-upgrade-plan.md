@@ -142,37 +142,6 @@ per-request TTFT/latency stats (avg/median/p95/min/max). GPU telemetry is not ye
 integrated into this module (tracked in other benchmarks). Configurable via
 `concurrency_levels` and `requests_per_level` in the model YAML.
 
-## 10. Scheduling Benchmark
-
-Compare: - Synchronous scheduling - Async scheduling - Chunked prefill -
-No chunked prefill
-
-Measure: - Queue delay - Fairness - Throughput - Latency
-
-# Phase 5 --- Configuration Optimization (Roadmap 2)
-
-## 11. Attention Backend Sweep
-
-Compare supported attention backends.
-
-Measure: - TTFT - Decode speed - Memory - GPU utilization
-
-## 12. MoE Backend Sweep
-
-Compare supported MoE implementations.
-
-Measure: - Routing overhead - Throughput - Memory - Expert dispatch cost
-
-## 13. Batch Size Sweep
-
-Sweep: - 1024 - 4096 - 8192 - 16384 - 32768
-
-Measure: - Throughput - Latency - P95 latency - GPU utilization
-
-## 14. Speculative Configuration Sweep
-
-Compare: - MTP-1 - MTP-2 - MTP-3 - MTP-4 (if supported)
-
 # Phase 6 --- Hardware Instrumentation
 
 Collect alongside every benchmark: - SM utilization - Tensor Core
@@ -183,15 +152,10 @@ Correlate hardware telemetry with performance changes.
 
 # Phase 7 --- Systems Analysis
 
-## 18. Roofline Analysis
+## 10. Roofline Analysis
 
 Estimate whether workloads are limited by: - Compute - Memory
 bandwidth - Scheduler overhead - Kernel launch overhead
-
-## 19. MoE-Specific Metrics
-
-Record: - Active experts/token - Expert imbalance - Routing overhead -
-Expert occupancy
 
 # Recommended Implementation Order
 
