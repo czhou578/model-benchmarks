@@ -1,21 +1,51 @@
-
-# vllm serve unsloth/Qwen3.6-35B-A3B-NVFP4-Fast \
-#   --tensor-parallel-size 1 \
-#   --gpu-memory-utilization 0.70 \
-#   --max-model-len 262144 \
-#   --moe-backend flashinfer_b12x \
-#   --enable-auto-tool-choice \
-#   --tool-call-parser qwen3_xml \
-#   --reasoning-parser qwen3  
-#   --speculative-config '{"method": "mtp", "num_speculative_tokens": 3}' \
-#   --trust-remote-code \
-#   --kv-cache-dtype fp8_e4m3 \
-#   --enable-prefix-caching \
-#   --enable-chunked-prefill \
-#   --max-num-batched-tokens 8192 \
-#   --async-scheduling \
-
 name: qwen3.6-35b-a3b-unsloth-nvfp4
+server:
+  mode: managed
+  command:
+    - vllm
+    - serve
+    - unsloth/Qwen3.6-35B-A3B-NVFP4-Fast
+    - --host
+    - "127.0.0.1"
+    - --port
+    - "8000"
+    - --tensor-parallel-size
+    - "1"
+    - --gpu-memory-utilization
+    - "0.70"
+    - --max-model-len
+    - "262144"
+    - --moe-backend
+    - flashinfer_cutlass
+    - --enable-auto-tool-choice
+    - --tool-call-parser
+    - qwen3_xml
+    - --reasoning-parser
+    - qwen3
+    - --speculative-config
+    - '{"method": "mtp", "num_speculative_tokens": 3}'
+    - --trust-remote-code
+    - --kv-cache-dtype
+    - fp8_e4m3
+    - --enable-prefix-caching
+    - --enable-chunked-prefill
+    - --max-num-batched-tokens
+    - "8192"
+    - --async-scheduling
+    - --compilation-config
+    - '{"cudagraph_capture_sizes": [1, 2, 4, 8, 16, 24, 32, 48, 64]}'
+    - --safetensors-load-strategy
+    - prefetch
+    - --load-format
+    - instanttensor
+    - --limit-mm-per-prompt
+    - '{"image": 0, "video": 0, "audio": 0}'
+    - --language-model-only
+  environment:
+    CUTE_DSL_ARCH: sm_121a
+  startup_timeout_s: 600
+  shutdown_timeout_s: 30
+
 endpoint:
   base_url: "http://127.0.0.1:8000"
   model_name: "unsloth/Qwen3.6-35B-A3B-NVFP4-Fast"
