@@ -1,0 +1,221 @@
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+from benchmarks.architecture_flops import (
+    detect_features,
+    load_architecture_config,
+    missing_required_fields,
+    normalize_config,
+)
+
+
+def dense_config(**overrides):
+    config = {
+        "model_type": "llama",
+        "hidden_size": 64,
+        "num_hidden_layers": 2,
+        "vocab_size": 100,
+        "num_attention_heads": 8,
+        "num_key_value_heads": 2,
+        "intermediate_size": 128,
+        "tie_word_embeddings": True,
+    }
+    config.update(overrides)
+    return config
+
+
+def primary_text_config():
+    return {
+        "model_type": "qwen3_5_moe",
+        "hidden_size": 2048,
+        "num_hidden_layers": 40,
+        "vocab_size": 248320,
+        "head_dim": 128,
+        "num_attention_heads": 16,
+        "num_key_value_heads": 2,
+        "layer_types": ["linear_attention"] * 30 + ["full_attention"] * 10,
+        "num_experts": 256,
+        "num_experts_per_tok": 8,
+        "moe_intermediate_size": 512,
+        "shared_expert_intermediate_size": 512,
+        "linear_num_key_heads": 16,
+        "linear_num_value_heads": 32,
+        "linear_key_head_dim": 128,
+        "linear_value_head_dim": 128,
+        "linear_conv_kernel_dim": 4,
+        "tie_word_embeddings": False,
+    }
+
+
+class NormalizeConfigTests(unittest.TestCase):
+    def test_aliases_preserve_provenance_and_expert_width(self):
+        config = dense_config(
+            num_experts=256,
+            num_experts_per_token=8,
+            moe_intermediate_size=512,
+            intermediate_size=None,
+        )
+        normalized = normalize_config(config)
+
+        self.assertEqual(normalized.experts_per_token, 8)
+        self.assertEqual(normalized.expert_intermediate_size, 512)
+        self.assertEqual(
+            normalized.source_keys["expert_intermediate_size"],
+            "moe_intermediate_size",
+        )
+        self.assertNotEqual(normalized.expert_intermediate_size, 512 // 256)
+        self.assertEqual(normalized.head_dim, 8)
+        self.assertEqual(
+            normalized.source_keys["head_dim"],
+            "derived:hidden_size/num_attention_heads",
+        )
+
+    def test_multimodal_wrapper_unwraps_text_and_retains_vision(self):
+        wrapper = {
+            "model_type": "vision_text_wrapper",
+            "text_config": dense_config(),
+            "vision_config": {"hidden_size": 1024, "num_hidden_layers": 24},
+            "quantization_config": {"quant_method": "fp4"},
+        }
+        normalized = normalize_config(wrapper, config_source="huggingface")
+        features = detect_features(normalized)
+
+        self.assertEqual(normalized.hidden_size, 64)
+        self.assertEqual(normalized.source_keys["hidden_size"], "text_config.hidden_size")
+        self.assertEqual(normalized.quantization, {"quant_method": "fp4"})
+        self.assertEqual(
+            normalized.source_keys["quantization"],
+            "wrapper.quantization_config",
+        )
+        self.assertEqual(normalized.vision_config["hidden_size"], 1024)
+        self.assertTrue(features.is_multimodal)
+
+    def test_values_are_not_filled_with_architecture_defaults(self):
+        normalized = normalize_config({"hidden_size": 64})
+
+        self.assertIsNone(normalized.num_layers)
+        self.assertIsNone(normalized.num_attention_heads)
+        self.assertIsNone(normalized.num_key_value_heads)
+        self.assertIn("num_layers", missing_required_fields(normalized))
+
+
+class FeatureDetectionTests(unittest.TestCase):
+    def test_primary_checkpoint_features_are_composable(self):
+        normalized = normalize_config(primary_text_config())
+        features = detect_features(normalized)
+
+        self.assertEqual(features.ffn, "moe")
+        self.assertEqual(
+            features.token_mixers,
+            frozenset({"linear_attention", "full_attention"}),
+        )
+        self.assertTrue(features.is_hybrid)
+        self.assertEqual(
+            features.layer_counts,
+            {"linear_attention": 30, "full_attention": 10},
+        )
+        self.assertEqual(normalized.num_experts, 256)
+        self.assertEqual(normalized.experts_per_token, 8)
+        self.assertEqual(normalized.expert_intermediate_size, 512)
+        self.assertEqual(normalized.shared_expert_intermediate_size, 512)
+        self.assertEqual(missing_required_fields(normalized), [])
+
+    def test_unknown_layer_type_is_explicitly_unsupported(self):
+        config = primary_text_config()
+        config["layer_types"] = ["linear_attention"] * 39 + ["mystery_mixer"]
+        normalized = normalize_config(config)
+        features = detect_features(normalized)
+
+        self.assertEqual(features.unsupported_layer_types, ("mystery_mixer",))
+        self.assertIn("supported_layer_types", missing_required_fields(normalized))
+
+    def test_mla_and_mtp_are_independent_features(self):
+        config = dense_config(
+            kv_lora_rank=16,
+            qk_nope_head_dim=8,
+            qk_rope_head_dim=8,
+            num_nextn_predict_layers=1,
+        )
+        features = detect_features(normalize_config(config))
+
+        self.assertEqual(features.token_mixers, frozenset({"mla"}))
+        self.assertTrue(features.has_mtp)
+
+
+class ConfigLoadingTests(unittest.TestCase):
+    def test_local_config_has_precedence_and_is_relative_to_yaml(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path = root / "config.json"
+            config_path.write_text(json.dumps(dense_config(hidden_size=96)))
+            auto_calls = []
+
+            result = load_architecture_config(
+                {
+                    "architecture_config_path": "config.json",
+                    "_config_dir": str(root),
+                    "model_id": "remote/model",
+                },
+                server_config=dense_config(hidden_size=32),
+                auto_config_loader=lambda model_id: auto_calls.append(model_id),
+            )
+
+        self.assertEqual(result.status, "exact_from_config")
+        self.assertTrue(result.config_source.startswith("local:"))
+        self.assertEqual(result.normalized_config.hidden_size, 96)
+        self.assertEqual(auto_calls, [])
+
+    def test_huggingface_precedes_complete_server_config(self):
+        result = load_architecture_config(
+            {"model_id": "remote/model"},
+            server_config=dense_config(hidden_size=32),
+            auto_config_loader=lambda model_id: dense_config(hidden_size=80),
+        )
+
+        self.assertEqual(result.config_source, "huggingface")
+        self.assertEqual(result.normalized_config.hidden_size, 80)
+
+    def test_incomplete_local_config_falls_through_to_huggingface(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "config.json").write_text(json.dumps({"hidden_size": 12}))
+            result = load_architecture_config(
+                {
+                    "architecture_config_path": "config.json",
+                    "_config_dir": str(root),
+                    "model_id": "remote/model",
+                },
+                auto_config_loader=lambda model_id: dense_config(hidden_size=72),
+            )
+
+        self.assertEqual(result.config_source, "huggingface")
+        self.assertEqual(result.normalized_config.hidden_size, 72)
+
+    def test_complete_server_config_is_last_supported_source(self):
+        def unavailable(_model_id):
+            raise OSError("offline")
+
+        result = load_architecture_config(
+            {"model_id": "remote/model"},
+            server_config=dense_config(hidden_size=48),
+            auto_config_loader=unavailable,
+        )
+
+        self.assertEqual(result.config_source, "server")
+        self.assertEqual(result.normalized_config.hidden_size, 48)
+        self.assertTrue(any("offline" in warning for warning in result.warnings))
+
+    def test_incomplete_sources_return_unsupported_without_defaults(self):
+        result = load_architecture_config(
+            {}, server_config={"hidden_size": 4096}
+        )
+
+        self.assertEqual(result.status, "unsupported")
+        self.assertIsNone(result.normalized_config)
+        self.assertTrue(any("incomplete" in warning for warning in result.warnings))
+
+
+if __name__ == "__main__":
+    unittest.main()

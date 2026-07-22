@@ -1003,7 +1003,12 @@ def register_benchmark(name: str):
 
 def load_model_config(path: Path) -> dict:
     with open(path) as f:
-        return yaml.safe_load(f)
+        config = yaml.safe_load(f)
+    if not isinstance(config, dict):
+        raise ValueError(f"model config must be a YAML mapping: {path}")
+    # Used to resolve an architecture_config_path relative to this YAML file.
+    config.setdefault("_config_dir", str(path.resolve().parent))
+    return config
 
 
 def make_run_dir(model_name: str) -> Path:

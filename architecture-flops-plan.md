@@ -58,7 +58,7 @@ def compute_flops(
 
 ## Phase 1 — Normalize and validate configuration
 
-### 1.1 Obtain the real model configuration
+### 1.1 Obtain the real model configuration — ✅ Done
 
 Do not rely on `/v1/models` returning a complete Hugging Face config. The current `_get_model_config()` also discards every architecture-specific key. Load the config in this order:
 
@@ -69,7 +69,7 @@ Do not rely on `/v1/models` returning a complete Hugging Face config. The curren
 
 For multimodal wrapper configs, unwrap the language backbone (`text_config`) for text-only benchmarks and retain the vision config separately. Vision FLOPs should be added only when image/video inputs are actually present.
 
-### 1.2 Normalize aliases without inventing values
+### 1.2 Normalize aliases without inventing values — ✅ Done
 
 Create a normalized schema with provenance for every field:
 
@@ -96,7 +96,7 @@ NormalizedConfig(
 
 Recognize common aliases such as `num_experts_per_tok`, `num_experts_per_token`, `moe_router_topk`, `moe_intermediate_size`, and `expert_intermediate_size`. `moe_intermediate_size` is per expert unless model-specific documentation says otherwise. Never infer a per-expert width by dividing a generic `intermediate_size` by `num_experts`.
 
-### 1.3 Architecture features are composable
+### 1.3 Architecture features are composable — ✅ Done
 
 A single enum such as `dense | moe | mla` is insufficient because MoE is an FFN choice while MLA, full attention, and linear attention are token-mixer choices. Detect independent features:
 

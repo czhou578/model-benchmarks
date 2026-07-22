@@ -28,6 +28,7 @@ from benchmarks.roofline_spec_db import (
     get_roofline_threshold,
     lookup_gpu_specs,
 )
+from benchmarks.architecture_flops import load_architecture_config
 
 
 # --------------------------------------------------------------------------- #
@@ -36,19 +37,7 @@ from benchmarks.roofline_spec_db import (
 
 
 def _get_model_config(client: ModelClient) -> dict[str, Any] | None:
-    """Fetch model metadata from the vLLM server endpoint.
-
-    Returns a dict with at least ``config`` containing:
-      - ``hidden_size`` (d)
-      - ``num_hidden_layers`` (l)
-      - ``intermediate_size`` (m, feed-forward expansion factor)
-      - ``num_attention_heads`` (n)
-      - ``num_key_value_heads`` (n_kv)
-      - ``vocab_size`` (v)
-      - ``hidden_act`` (activation name)
-
-    Returns None on failure.
-    """
+    """Fetch the unmodified model config exposed by the vLLM server."""
     try:
         resp = client.base_url
         import requests
@@ -58,17 +47,8 @@ def _get_model_config(client: ModelClient) -> dict[str, Any] | None:
         data = r.json()
         model_data = data.get("data", [{}])[0] if data.get("data") else {}
         config = model_data.get("config", {})
-        if isinstance(config, dict):
-            return {
-                "hidden_size": config.get("hidden_size", 4096),
-                "num_hidden_layers": config.get("num_hidden_layers", 32),
-                "intermediate_size": config.get("intermediate_size", 11008),
-                "num_attention_heads": config.get("num_attention_heads", 32),
-                "num_key_value_heads": config.get("num_key_value_heads",
-                                                   config.get("num_attention_heads", 32)),
-                "vocab_size": config.get("vocab_size", 32000),
-                "hidden_act": config.get("hidden_act", "silu"),
-            }
+        if isinstance(config, dict) and config:
+            return config
     except Exception:
         pass
     return None
@@ -304,17 +284,58 @@ def run_roofline_analysis(
     if prefill_lengths is None:
         prefill_lengths = [512, 2048, 8192, 32768]
 
-    # Fetch model architecture from server
-    arch = _get_model_config(client)
-    if arch is None:
-        # Fallback: use reasonable defaults
-        arch = {
-            "hidden_size": 4096,
-            "num_hidden_layers": 32,
-            "intermediate_size": 11008,
-            "num_attention_heads": 32,
-            "num_key_value_heads": 32,
-            "vocab_size": 32000,
+    # Load in precedence order: local path, Hugging Face, complete server config.
+    config_result = load_architecture_config(
+        model_config,
+        server_config=_get_model_config(client),
+    )
+    if config_result.status == "unsupported":
+        return {
+            "config": {
+                "benchmark_version": "1.1",
+                "definition": "Roofline analysis: architecture config unavailable",
+                "model_name": model_config.get("name", "unknown"),
+                "start_time": datetime.utcnow().isoformat() + "Z",
+                "end_time": datetime.utcnow().isoformat() + "Z",
+            },
+            "estimate_status": "unsupported",
+            "architecture": None,
+            "warnings": list(config_result.warnings),
+            "per_length": {},
+            "decode": {},
+        }
+
+    assert config_result.normalized_config is not None
+    assert config_result.features is not None
+    normalized = config_result.normalized_config
+    features = config_result.features
+    arch = normalized.raw_text_config
+
+    # Phase 1 detects these components but never routes them through the old
+    # dense/full-attention estimator. Their estimators are Phase 2 work.
+    unsupported_components: list[str] = []
+    if features.ffn == "moe":
+        unsupported_components.append("moe_ffn")
+    unsupported_components.extend(
+        mixer for mixer in features.token_mixers if mixer != "full_attention"
+    )
+    unsupported_components.extend(features.unsupported_layer_types)
+    if unsupported_components:
+        return {
+            "config": {
+                "benchmark_version": "1.1",
+                "definition": "Roofline analysis: component estimators pending",
+                "model_name": model_config.get("name", "unknown"),
+                "model_config": normalized.to_dict(),
+                "start_time": datetime.utcnow().isoformat() + "Z",
+                "end_time": datetime.utcnow().isoformat() + "Z",
+            },
+            "estimate_status": "partial",
+            "architecture": features.to_dict(),
+            "unsupported_components": sorted(set(unsupported_components)),
+            "warnings": list(config_result.warnings),
+            "per_length": {},
+            "decode": {},
         }
 
     # Detect weight precision from the model name or config
@@ -373,10 +394,10 @@ def run_roofline_analysis(
     # Build result
     result: dict[str, Any] = {
         "config": {
-            "benchmark_version": "1.0",
+            "benchmark_version": "1.1",
             "definition": "Roofline analysis: theoretical throughput bounds and workload classification",
             "model_name": model_config.get("name", "unknown"),
-            "model_config": arch,
+            "model_config": normalized.to_dict(),
             "weight_bits": weight_bits,
             "gpu_name": gpu_name,
             "prefill_lengths_analyzed": prefill_lengths,
@@ -390,6 +411,9 @@ def run_roofline_analysis(
         },
         "per_length": per_length,
         "decode": decode_analysis,
+        "estimate_status": config_result.status,
+        "architecture": features.to_dict(),
+        "warnings": list(config_result.warnings),
     }
 
     result["config"]["end_time"] = datetime.utcnow().isoformat() + "Z"
