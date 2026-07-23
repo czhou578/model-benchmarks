@@ -43,7 +43,7 @@ server:
     - --language-model-only
   environment:
     CUTE_DSL_ARCH: sm_121a
-  startup_timeout_s: 600
+  startup_timeout_s: 6000
   shutdown_timeout_s: 30
 
 endpoint:
