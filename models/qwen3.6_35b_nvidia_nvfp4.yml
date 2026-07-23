@@ -44,7 +44,7 @@ endpoint:
   base_url: "http://127.0.0.1:8000"
   model_name: "nvidia/Qwen3.6-35B-A3B-NVFP4"
   chat: true
-ready_timeout_s: 600
+ready_timeout_s: 6000
 monitor_interval_s: 1.0
 prompt_lengths: [32, 128, 512, 2048, 8192, 16384]
 latency_repeats: 10          # bump toward 100 once runtime is validated
