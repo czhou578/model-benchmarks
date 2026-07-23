@@ -1,0 +1,14 @@
+{
+  "estimate_status": "unsupported",
+  "architecture": {
+    "model": "unknown"
+  },
+  "flops": {
+    "decode": {},
+    "prefill": {}
+  },
+  "assumptions": [],
+  "warnings": [
+    "missing configuration fields: hidden_size, num_layers, vocab_size, head_dim, num_attention_heads, num_key_value_heads, ffn_kind, ffn_dimensions, token_mixer"
+  ]
+}

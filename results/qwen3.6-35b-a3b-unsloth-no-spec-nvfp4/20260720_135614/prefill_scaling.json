@@ -1,0 +1,195 @@
+{
+  "config": {
+    "benchmark_version": "1.0",
+    "definition": "cold-cached prefill throughput across a geometric progression of prompt lengths",
+    "target_lengths": [
+      512,
+      2048
+    ],
+    "cache_isolation_method": "cache_salt",
+    "cache_preflight_supported": true,
+    "repetitions": 2,
+    "max_tokens": 1,
+    "temperature": 0.0,
+    "max_output_tokens": 1,
+    "prompt_workload": "document-like passages with field-record headers (deterministic)",
+    "server_cache_settings": {
+      "prefix_caching": true,
+      "cache_salt_enabled": true
+    },
+    "start_time": "2026-07-20T21:11:04.347131Z",
+    "end_time": "2026-07-20T21:11:07.854482Z"
+  },
+  "per_length": {
+    "512": {
+      "status": "success",
+      "requested_tokens": 512,
+      "actual_tokens": 512,
+      "prompt_length_tolerance": 0,
+      "n_requests": 2,
+      "n_success": 2,
+      "per_request": [
+        {
+          "index": 0,
+          "success": true,
+          "prompt_tokens": 512,
+          "prompt_tokens_exact": true,
+          "client_ttft_s": 0.1418,
+          "total_time_s": 0.1419,
+          "effective_prefill_tps": 3609.61,
+          "engine_prefill_tps": null,
+          "cached_tokens": 0,
+          "server_ttft_s": null,
+          "queue_time_s": null,
+          "prefill_time_s": null,
+          "cache_isolation_method": "cache_salt",
+          "start_time": 21254.856685941,
+          "end_time": 21254.998659774,
+          "error": ""
+        },
+        {
+          "index": 1,
+          "success": true,
+          "prompt_tokens": 512,
+          "prompt_tokens_exact": true,
+          "client_ttft_s": 0.1388,
+          "total_time_s": 0.1389,
+          "effective_prefill_tps": 3688.36,
+          "engine_prefill_tps": null,
+          "cached_tokens": 0,
+          "server_ttft_s": null,
+          "queue_time_s": null,
+          "prefill_time_s": null,
+          "cache_isolation_method": "cache_salt",
+          "start_time": 21255.498856068,
+          "end_time": 21255.637802765,
+          "error": ""
+        }
+      ],
+      "aggregated": {
+        "ttft": {
+          "avg_s": 0.1403,
+          "median_s": 0.1403,
+          "p95_s": 0.1417,
+          "min_s": 0.1388,
+          "max_s": 0.1418
+        },
+        "effective_prefill_tps": {
+          "avg_s": 3648.985,
+          "median_s": 3648.985,
+          "p95_s": 3684.4225,
+          "min_s": 3609.61,
+          "max_s": 3688.36
+        },
+        "engine_prefill_tps": {
+          "avg_s": null,
+          "median_s": null,
+          "p95_s": null,
+          "min_s": null,
+          "max_s": null
+        },
+        "gpu": {
+          "num_samples": 2,
+          "duration_s": 2.0,
+          "gpu_util_avg_pct": 15.5,
+          "gpu_util_peak_pct": 31.0,
+          "gpu_power_avg_w": 18.0,
+          "gpu_power_peak_w": 18.46,
+          "gpu_mem_util_avg_pct": 0.0,
+          "gpu_mem_util_peak_pct": 0.0,
+          "gpu_mem_used_avg_mib": null,
+          "gpu_mem_used_peak_mib": null,
+          "energy_wh": 0.01,
+          "idle_base_power_w": 18.0,
+          "energy_above_idle_wh": 0.0,
+          "energy_per_input_token_wh": 1.953e-05
+        }
+      }
+    },
+    "2048": {
+      "status": "success",
+      "requested_tokens": 2048,
+      "actual_tokens": 2048,
+      "prompt_length_tolerance": 0,
+      "n_requests": 2,
+      "n_success": 2,
+      "per_request": [
+        {
+          "index": 0,
+          "success": true,
+          "prompt_tokens": 2048,
+          "prompt_tokens_exact": true,
+          "client_ttft_s": 0.3092,
+          "total_time_s": 0.3092,
+          "effective_prefill_tps": 6624.1,
+          "engine_prefill_tps": null,
+          "cached_tokens": 0,
+          "server_ttft_s": null,
+          "queue_time_s": null,
+          "prefill_time_s": null,
+          "cache_isolation_method": "cache_salt",
+          "start_time": 21256.549200972,
+          "end_time": 21256.858499177,
+          "error": ""
+        },
+        {
+          "index": 1,
+          "success": true,
+          "prompt_tokens": 2048,
+          "prompt_tokens_exact": true,
+          "client_ttft_s": 0.3169,
+          "total_time_s": 0.317,
+          "effective_prefill_tps": 6461.72,
+          "engine_prefill_tps": null,
+          "cached_tokens": 0,
+          "server_ttft_s": null,
+          "queue_time_s": null,
+          "prefill_time_s": null,
+          "cache_isolation_method": "cache_salt",
+          "start_time": 21257.359096894,
+          "end_time": 21257.676174867,
+          "error": ""
+        }
+      ],
+      "aggregated": {
+        "ttft": {
+          "avg_s": 0.3131,
+          "median_s": 0.3131,
+          "p95_s": 0.3166,
+          "min_s": 0.3092,
+          "max_s": 0.3169
+        },
+        "effective_prefill_tps": {
+          "avg_s": 6542.91,
+          "median_s": 6542.91,
+          "p95_s": 6615.981,
+          "min_s": 6461.72,
+          "max_s": 6624.1
+        },
+        "engine_prefill_tps": {
+          "avg_s": null,
+          "median_s": null,
+          "p95_s": null,
+          "min_s": null,
+          "max_s": null
+        },
+        "gpu": {
+          "num_samples": 2,
+          "duration_s": 2.0,
+          "gpu_util_avg_pct": 73.0,
+          "gpu_util_peak_pct": 96.0,
+          "gpu_power_avg_w": 32.03,
+          "gpu_power_peak_w": 33.15,
+          "gpu_mem_util_avg_pct": 0.0,
+          "gpu_mem_util_peak_pct": 0.0,
+          "gpu_mem_used_avg_mib": null,
+          "gpu_mem_used_peak_mib": null,
+          "energy_wh": 0.017797,
+          "idle_base_power_w": 32.03,
+          "energy_above_idle_wh": 3e-06,
+          "energy_per_input_token_wh": 8.69e-06
+        }
+      }
+    }
+  }
+}

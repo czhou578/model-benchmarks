@@ -1,0 +1,424 @@
+{
+  "config": {
+    "benchmark_version": "1.0",
+    "definition": "sweep vLLM attention backends and measure TTFT + decode throughput",
+    "backends_swept": [
+      "flash_attn",
+      "flash_attn_diffkv",
+      "triton_attn",
+      "triton_attn_diffkv",
+      "flashinfer",
+      "flashinfer_mla",
+      "tokenspeed_mla",
+      "flashinfer_mla_sparse",
+      "flashinfer_mla_sparse_sm120",
+      "triton_mla",
+      "cutlass_mla",
+      "flashmla",
+      "flashmla_sparse",
+      "flashmla_sparse_dsv4",
+      "flashinfer_mla_sparse_dsv4",
+      "flash_attn_mla",
+      "flash_attn_mla_sparse",
+      "minimax_m3_sparse",
+      "no_attention",
+      "flex_attention",
+      "hpc_attn",
+      "cpu_attn",
+      "turboquant",
+      "custom"
+    ],
+    "prompt_lengths": [
+      32,
+      128,
+      512,
+      2048,
+      8192,
+      16384
+    ],
+    "decode_lengths": [
+      512,
+      1024,
+      2048
+    ],
+    "repetitions": 5,
+    "start_time": "2026-07-20T21:11:11.014243+00:00",
+    "end_time": "2026-07-20T21:39:56.978298+00:00"
+  },
+  "per_backend": {
+    "flash_attn": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=242374)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=242374)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=242374)     return cls(\n(APIServer pid=242374)            ^^^^\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=242374)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=242374)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=242374)     return func(*args, **kwargs)\n(APIServer pid=242374)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=242374)     return AsyncMPClient(*client_args)\n(APIServer pid=242374)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=242374)     return func(*args, **kwargs)\n(APIServer pid=242374)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=242374)     super().__init__(\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=242374)     with launch_core_engines(\n(APIServer pid=242374)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242374)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=242374)     next(self.gen)\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=242374)     wait_for_engine_startup(\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=242374)     raise RuntimeError(\n(APIServer pid=242374) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "flash_attn_diffkv": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=242760)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=242760)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=242760)     return cls(\n(APIServer pid=242760)            ^^^^\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=242760)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=242760)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=242760)     return func(*args, **kwargs)\n(APIServer pid=242760)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=242760)     return AsyncMPClient(*client_args)\n(APIServer pid=242760)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=242760)     return func(*args, **kwargs)\n(APIServer pid=242760)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=242760)     super().__init__(\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=242760)     with launch_core_engines(\n(APIServer pid=242760)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242760)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=242760)     next(self.gen)\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=242760)     wait_for_engine_startup(\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=242760)     raise RuntimeError(\n(APIServer pid=242760) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "triton_attn": {
+      "command": [
+        "vllm",
+        "serve",
+        "unsloth/Qwen3.6-35B-A3B-NVFP4-Fast",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000",
+        "--tensor-parallel-size",
+        "1",
+        "--gpu-memory-utilization",
+        "0.70",
+        "--max-model-len",
+        "262144",
+        "--max-num-seqs",
+        "16",
+        "--max-num-batched-tokens",
+        "8192",
+        "--kv-cache-dtype",
+        "fp8_e4m3",
+        "--attention-backend",
+        "triton_attn",
+        "--enable-chunked-prefill",
+        "--async-scheduling",
+        "--reasoning-parser",
+        "qwen3",
+        "--tool-call-parser",
+        "qwen3_xml",
+        "--enable-auto-tool-choice",
+        "--generation-config",
+        "vllm",
+        "--moe-backend",
+        "flashinfer_b12x"
+      ],
+      "status": "success",
+      "gpu": {
+        "num_samples": 87,
+        "duration_s": 87.0,
+        "gpu_util_avg_pct": 79.89,
+        "gpu_util_peak_pct": 96.0,
+        "gpu_power_avg_w": 37.37,
+        "gpu_power_peak_w": 78.01,
+        "gpu_mem_util_avg_pct": 0.0,
+        "gpu_mem_util_peak_pct": 0.0,
+        "gpu_mem_used_avg_mib": null,
+        "gpu_mem_used_peak_mib": null,
+        "energy_wh": 0.903211,
+        "idle_base_power_w": 37.37,
+        "energy_above_idle_wh": 0.000103
+      },
+      "latency": {
+        "32": {
+          "requested_tokens": 32,
+          "n_success": 5,
+          "ttft": {
+            "avg_s": 2.0034,
+            "median_s": 0.0643,
+            "p95_s": 7.8245,
+            "min_s": 0.0605,
+            "max_s": 9.7644
+          }
+        },
+        "128": {
+          "requested_tokens": 128,
+          "n_success": 5,
+          "ttft": {
+            "avg_s": 0.0879,
+            "median_s": 0.0877,
+            "p95_s": 0.0895,
+            "min_s": 0.0862,
+            "max_s": 0.0898
+          }
+        },
+        "512": {
+          "requested_tokens": 512,
+          "n_success": 5,
+          "ttft": {
+            "avg_s": 0.1361,
+            "median_s": 0.1361,
+            "p95_s": 0.1374,
+            "min_s": 0.1346,
+            "max_s": 0.1374
+          }
+        },
+        "2048": {
+          "requested_tokens": 2048,
+          "n_success": 5,
+          "ttft": {
+            "avg_s": 0.3138,
+            "median_s": 0.3115,
+            "p95_s": 0.322,
+            "min_s": 0.3102,
+            "max_s": 0.3244
+          }
+        },
+        "8192": {
+          "requested_tokens": 8192,
+          "n_success": 5,
+          "ttft": {
+            "avg_s": 1.2615,
+            "median_s": 1.2241,
+            "p95_s": 1.3756,
+            "min_s": 1.2221,
+            "max_s": 1.413
+          }
+        },
+        "16384": {
+          "requested_tokens": 16384,
+          "n_success": 5,
+          "ttft": {
+            "avg_s": 2.7499,
+            "median_s": 2.7507,
+            "p95_s": 2.7537,
+            "min_s": 2.7435,
+            "max_s": 2.7543
+          }
+        }
+      },
+      "decode": {
+        "512": {
+          "requested_output_tokens": 512,
+          "actual_output_tokens": 512,
+          "tok_per_sec_avg": 74.63,
+          "tok_per_sec_peak": 92.72,
+          "n": 1
+        },
+        "1024": {
+          "requested_output_tokens": 1024,
+          "actual_output_tokens": 1024,
+          "tok_per_sec_avg": 74.66,
+          "tok_per_sec_peak": 96.23,
+          "n": 1
+        },
+        "2048": {
+          "requested_output_tokens": 2048,
+          "actual_output_tokens": 2048,
+          "tok_per_sec_avg": 74.42,
+          "tok_per_sec_peak": 101.74,
+          "n": 1
+        }
+      }
+    },
+    "triton_attn_diffkv": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=280479)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=280479)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=280479)     return cls(\n(APIServer pid=280479)            ^^^^\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=280479)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=280479)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=280479)     return func(*args, **kwargs)\n(APIServer pid=280479)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=280479)     return AsyncMPClient(*client_args)\n(APIServer pid=280479)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=280479)     return func(*args, **kwargs)\n(APIServer pid=280479)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=280479)     super().__init__(\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=280479)     with launch_core_engines(\n(APIServer pid=280479)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=280479)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=280479)     next(self.gen)\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=280479)     wait_for_engine_startup(\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=280479)     raise RuntimeError(\n(APIServer pid=280479) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "flashinfer": {
+      "command": [
+        "vllm",
+        "serve",
+        "unsloth/Qwen3.6-35B-A3B-NVFP4-Fast",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000",
+        "--tensor-parallel-size",
+        "1",
+        "--gpu-memory-utilization",
+        "0.70",
+        "--max-model-len",
+        "262144",
+        "--max-num-seqs",
+        "16",
+        "--max-num-batched-tokens",
+        "8192",
+        "--kv-cache-dtype",
+        "fp8_e4m3",
+        "--attention-backend",
+        "flashinfer",
+        "--enable-chunked-prefill",
+        "--async-scheduling",
+        "--reasoning-parser",
+        "qwen3",
+        "--tool-call-parser",
+        "qwen3_xml",
+        "--enable-auto-tool-choice",
+        "--generation-config",
+        "vllm",
+        "--moe-backend",
+        "flashinfer_b12x"
+      ],
+      "status": "success",
+      "gpu": {
+        "num_samples": 86,
+        "duration_s": 86.0,
+        "gpu_util_avg_pct": 77.67,
+        "gpu_util_peak_pct": 96.0,
+        "gpu_power_avg_w": 35.12,
+        "gpu_power_peak_w": 67.23,
+        "gpu_mem_util_avg_pct": 0.0,
+        "gpu_mem_util_peak_pct": 0.0,
+        "gpu_mem_used_avg_mib": null,
+        "gpu_mem_used_peak_mib": null,
+        "energy_wh": 0.839064,
+        "idle_base_power_w": 35.12,
+        "energy_above_idle_wh": 8.6e-05
+      },
+      "latency": {
+        "32": {
+          "requested_tokens": 32,
+          "n_success": 5,
+          "ttft": {
+            "avg_s": 1.9849,
+            "median_s": 0.0629,
+            "p95_s": 7.7505,
+            "min_s": 0.0617,
+            "max_s": 9.6719
+          }
+        },
+        "128": {
+          "requested_tokens": 128,
+          "n_success": 5,
+          "ttft": {
+            "avg_s": 0.0884,
+            "median_s": 0.0889,
+            "p95_s": 0.0894,
+            "min_s": 0.0863,
+            "max_s": 0.0895
+          }
+        },
+        "512": {
+          "requested_tokens": 512,
+          "n_success": 5,
+          "ttft": {
+            "avg_s": 0.1376,
+            "median_s": 0.1372,
+            "p95_s": 0.1389,
+            "min_s": 0.1366,
+            "max_s": 0.139
+          }
+        },
+        "2048": {
+          "requested_tokens": 2048,
+          "n_success": 5,
+          "ttft": {
+            "avg_s": 0.315,
+            "median_s": 0.3131,
+            "p95_s": 0.3248,
+            "min_s": 0.3095,
+            "max_s": 0.3274
+          }
+        },
+        "8192": {
+          "requested_tokens": 8192,
+          "n_success": 5,
+          "ttft": {
+            "avg_s": 1.1476,
+            "median_s": 1.1433,
+            "p95_s": 1.1645,
+            "min_s": 1.1381,
+            "max_s": 1.1695
+          }
+        },
+        "16384": {
+          "requested_tokens": 16384,
+          "n_success": 5,
+          "ttft": {
+            "avg_s": 2.4216,
+            "median_s": 2.422,
+            "p95_s": 2.4237,
+            "min_s": 2.4178,
+            "max_s": 2.4238
+          }
+        }
+      },
+      "decode": {
+        "512": {
+          "requested_output_tokens": 512,
+          "actual_output_tokens": 512,
+          "tok_per_sec_avg": 73.73,
+          "tok_per_sec_peak": 95.09,
+          "n": 1
+        },
+        "1024": {
+          "requested_output_tokens": 1024,
+          "actual_output_tokens": 1024,
+          "tok_per_sec_avg": 73.85,
+          "tok_per_sec_peak": 96.63,
+          "n": 1
+        },
+        "2048": {
+          "requested_output_tokens": 2048,
+          "actual_output_tokens": 2048,
+          "tok_per_sec_avg": 73.71,
+          "tok_per_sec_peak": 92.51,
+          "n": 1
+        }
+      }
+    },
+    "flashinfer_mla": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=282121)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=282121)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=282121)     return cls(\n(APIServer pid=282121)            ^^^^\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=282121)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=282121)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=282121)     return func(*args, **kwargs)\n(APIServer pid=282121)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=282121)     return AsyncMPClient(*client_args)\n(APIServer pid=282121)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=282121)     return func(*args, **kwargs)\n(APIServer pid=282121)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=282121)     super().__init__(\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=282121)     with launch_core_engines(\n(APIServer pid=282121)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282121)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=282121)     next(self.gen)\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=282121)     wait_for_engine_startup(\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=282121)     raise RuntimeError(\n(APIServer pid=282121) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "tokenspeed_mla": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=282575)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=282575)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=282575)     return cls(\n(APIServer pid=282575)            ^^^^\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=282575)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=282575)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=282575)     return func(*args, **kwargs)\n(APIServer pid=282575)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=282575)     return AsyncMPClient(*client_args)\n(APIServer pid=282575)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=282575)     return func(*args, **kwargs)\n(APIServer pid=282575)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=282575)     super().__init__(\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=282575)     with launch_core_engines(\n(APIServer pid=282575)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282575)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=282575)     next(self.gen)\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=282575)     wait_for_engine_startup(\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=282575)     raise RuntimeError(\n(APIServer pid=282575) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "flashinfer_mla_sparse": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=283044)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=283044)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=283044)     return cls(\n(APIServer pid=283044)            ^^^^\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=283044)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=283044)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=283044)     return func(*args, **kwargs)\n(APIServer pid=283044)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=283044)     return AsyncMPClient(*client_args)\n(APIServer pid=283044)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=283044)     return func(*args, **kwargs)\n(APIServer pid=283044)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=283044)     super().__init__(\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=283044)     with launch_core_engines(\n(APIServer pid=283044)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283044)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=283044)     next(self.gen)\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=283044)     wait_for_engine_startup(\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=283044)     raise RuntimeError(\n(APIServer pid=283044) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "flashinfer_mla_sparse_sm120": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=283430)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=283430)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=283430)     return cls(\n(APIServer pid=283430)            ^^^^\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=283430)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=283430)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=283430)     return func(*args, **kwargs)\n(APIServer pid=283430)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=283430)     return AsyncMPClient(*client_args)\n(APIServer pid=283430)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=283430)     return func(*args, **kwargs)\n(APIServer pid=283430)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=283430)     super().__init__(\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=283430)     with launch_core_engines(\n(APIServer pid=283430)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283430)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=283430)     next(self.gen)\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=283430)     wait_for_engine_startup(\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=283430)     raise RuntimeError(\n(APIServer pid=283430) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "triton_mla": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=283842)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=283842)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=283842)     return cls(\n(APIServer pid=283842)            ^^^^\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=283842)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=283842)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=283842)     return func(*args, **kwargs)\n(APIServer pid=283842)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=283842)     return AsyncMPClient(*client_args)\n(APIServer pid=283842)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=283842)     return func(*args, **kwargs)\n(APIServer pid=283842)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=283842)     super().__init__(\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=283842)     with launch_core_engines(\n(APIServer pid=283842)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283842)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=283842)     next(self.gen)\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=283842)     wait_for_engine_startup(\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=283842)     raise RuntimeError(\n(APIServer pid=283842) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "cutlass_mla": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=284254)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=284254)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=284254)     return cls(\n(APIServer pid=284254)            ^^^^\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=284254)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=284254)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=284254)     return func(*args, **kwargs)\n(APIServer pid=284254)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=284254)     return AsyncMPClient(*client_args)\n(APIServer pid=284254)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=284254)     return func(*args, **kwargs)\n(APIServer pid=284254)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=284254)     super().__init__(\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=284254)     with launch_core_engines(\n(APIServer pid=284254)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284254)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=284254)     next(self.gen)\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=284254)     wait_for_engine_startup(\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=284254)     raise RuntimeError(\n(APIServer pid=284254) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "flashmla": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=284641)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=284641)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=284641)     return cls(\n(APIServer pid=284641)            ^^^^\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=284641)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=284641)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=284641)     return func(*args, **kwargs)\n(APIServer pid=284641)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=284641)     return AsyncMPClient(*client_args)\n(APIServer pid=284641)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=284641)     return func(*args, **kwargs)\n(APIServer pid=284641)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=284641)     super().__init__(\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=284641)     with launch_core_engines(\n(APIServer pid=284641)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284641)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=284641)     next(self.gen)\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=284641)     wait_for_engine_startup(\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=284641)     raise RuntimeError(\n(APIServer pid=284641) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "flashmla_sparse": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=285033)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=285033)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=285033)     return cls(\n(APIServer pid=285033)            ^^^^\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=285033)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=285033)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=285033)     return func(*args, **kwargs)\n(APIServer pid=285033)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=285033)     return AsyncMPClient(*client_args)\n(APIServer pid=285033)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=285033)     return func(*args, **kwargs)\n(APIServer pid=285033)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=285033)     super().__init__(\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=285033)     with launch_core_engines(\n(APIServer pid=285033)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285033)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=285033)     next(self.gen)\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=285033)     wait_for_engine_startup(\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=285033)     raise RuntimeError(\n(APIServer pid=285033) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "flashmla_sparse_dsv4": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=285436)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=285436)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=285436)     return cls(\n(APIServer pid=285436)            ^^^^\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=285436)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=285436)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=285436)     return func(*args, **kwargs)\n(APIServer pid=285436)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=285436)     return AsyncMPClient(*client_args)\n(APIServer pid=285436)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=285436)     return func(*args, **kwargs)\n(APIServer pid=285436)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=285436)     super().__init__(\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=285436)     with launch_core_engines(\n(APIServer pid=285436)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285436)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=285436)     next(self.gen)\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=285436)     wait_for_engine_startup(\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=285436)     raise RuntimeError(\n(APIServer pid=285436) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "flashinfer_mla_sparse_dsv4": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=285836)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=285836)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=285836)     return cls(\n(APIServer pid=285836)            ^^^^\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=285836)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=285836)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=285836)     return func(*args, **kwargs)\n(APIServer pid=285836)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=285836)     return AsyncMPClient(*client_args)\n(APIServer pid=285836)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=285836)     return func(*args, **kwargs)\n(APIServer pid=285836)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=285836)     super().__init__(\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=285836)     with launch_core_engines(\n(APIServer pid=285836)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285836)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=285836)     next(self.gen)\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=285836)     wait_for_engine_startup(\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=285836)     raise RuntimeError(\n(APIServer pid=285836) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "flash_attn_mla": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=286242)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=286242)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=286242)     return cls(\n(APIServer pid=286242)            ^^^^\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=286242)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=286242)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=286242)     return func(*args, **kwargs)\n(APIServer pid=286242)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=286242)     return AsyncMPClient(*client_args)\n(APIServer pid=286242)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=286242)     return func(*args, **kwargs)\n(APIServer pid=286242)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=286242)     super().__init__(\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=286242)     with launch_core_engines(\n(APIServer pid=286242)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286242)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=286242)     next(self.gen)\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=286242)     wait_for_engine_startup(\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=286242)     raise RuntimeError(\n(APIServer pid=286242) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "flash_attn_mla_sparse": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=286645)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=286645)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=286645)     return cls(\n(APIServer pid=286645)            ^^^^\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=286645)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=286645)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=286645)     return func(*args, **kwargs)\n(APIServer pid=286645)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=286645)     return AsyncMPClient(*client_args)\n(APIServer pid=286645)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=286645)     return func(*args, **kwargs)\n(APIServer pid=286645)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=286645)     super().__init__(\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=286645)     with launch_core_engines(\n(APIServer pid=286645)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286645)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=286645)     next(self.gen)\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=286645)     wait_for_engine_startup(\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=286645)     raise RuntimeError(\n(APIServer pid=286645) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "minimax_m3_sparse": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=287035)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=287035)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=287035)     return cls(\n(APIServer pid=287035)            ^^^^\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=287035)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=287035)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=287035)     return func(*args, **kwargs)\n(APIServer pid=287035)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=287035)     return AsyncMPClient(*client_args)\n(APIServer pid=287035)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=287035)     return func(*args, **kwargs)\n(APIServer pid=287035)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=287035)     super().__init__(\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=287035)     with launch_core_engines(\n(APIServer pid=287035)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287035)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=287035)     next(self.gen)\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=287035)     wait_for_engine_startup(\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=287035)     raise RuntimeError(\n(APIServer pid=287035) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "no_attention": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=287489)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=287489)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=287489)     return cls(\n(APIServer pid=287489)            ^^^^\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=287489)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=287489)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=287489)     return func(*args, **kwargs)\n(APIServer pid=287489)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=287489)     return AsyncMPClient(*client_args)\n(APIServer pid=287489)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=287489)     return func(*args, **kwargs)\n(APIServer pid=287489)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=287489)     super().__init__(\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=287489)     with launch_core_engines(\n(APIServer pid=287489)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287489)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=287489)     next(self.gen)\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=287489)     wait_for_engine_startup(\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=287489)     raise RuntimeError(\n(APIServer pid=287489) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "flex_attention": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=287952)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=287952)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=287952)     return cls(\n(APIServer pid=287952)            ^^^^\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=287952)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=287952)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=287952)     return func(*args, **kwargs)\n(APIServer pid=287952)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=287952)     return AsyncMPClient(*client_args)\n(APIServer pid=287952)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=287952)     return func(*args, **kwargs)\n(APIServer pid=287952)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=287952)     super().__init__(\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=287952)     with launch_core_engines(\n(APIServer pid=287952)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287952)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=287952)     next(self.gen)\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=287952)     wait_for_engine_startup(\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=287952)     raise RuntimeError(\n(APIServer pid=287952) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "hpc_attn": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=288716)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=288716)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=288716)     return cls(\n(APIServer pid=288716)            ^^^^\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=288716)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=288716)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=288716)     return func(*args, **kwargs)\n(APIServer pid=288716)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=288716)     return AsyncMPClient(*client_args)\n(APIServer pid=288716)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=288716)     return func(*args, **kwargs)\n(APIServer pid=288716)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=288716)     super().__init__(\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=288716)     with launch_core_engines(\n(APIServer pid=288716)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=288716)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=288716)     next(self.gen)\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=288716)     wait_for_engine_startup(\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=288716)     raise RuntimeError(\n(APIServer pid=288716) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "cpu_attn": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=289106)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=289106)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=289106)     return cls(\n(APIServer pid=289106)            ^^^^\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=289106)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=289106)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=289106)     return func(*args, **kwargs)\n(APIServer pid=289106)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=289106)     return AsyncMPClient(*client_args)\n(APIServer pid=289106)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=289106)     return func(*args, **kwargs)\n(APIServer pid=289106)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=289106)     super().__init__(\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=289106)     with launch_core_engines(\n(APIServer pid=289106)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289106)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=289106)     next(self.gen)\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=289106)     wait_for_engine_startup(\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=289106)     raise RuntimeError(\n(APIServer pid=289106) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "turboquant": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=289511)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=289511)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=289511)     return cls(\n(APIServer pid=289511)            ^^^^\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=289511)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=289511)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=289511)     return func(*args, **kwargs)\n(APIServer pid=289511)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=289511)     return AsyncMPClient(*client_args)\n(APIServer pid=289511)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=289511)     return func(*args, **kwargs)\n(APIServer pid=289511)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=289511)     super().__init__(\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=289511)     with launch_core_engines(\n(APIServer pid=289511)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289511)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=289511)     next(self.gen)\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=289511)     wait_for_engine_startup(\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=289511)     raise RuntimeError(\n(APIServer pid=289511) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    },
+    "custom": {
+      "status": "server_not_ready",
+      "error": "vLLM exited during startup with code 1\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=289939)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=289939)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=289939)     return cls(\n(APIServer pid=289939)            ^^^^\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=289939)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=289939)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=289939)     return func(*args, **kwargs)\n(APIServer pid=289939)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=289939)     return AsyncMPClient(*client_args)\n(APIServer pid=289939)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=289939)     return func(*args, **kwargs)\n(APIServer pid=289939)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=289939)     super().__init__(\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=289939)     with launch_core_engines(\n(APIServer pid=289939)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289939)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=289939)     next(self.gen)\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=289939)     wait_for_engine_startup(\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=289939)     raise RuntimeError(\n(APIServer pid=289939) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+    }
+  }
+}
