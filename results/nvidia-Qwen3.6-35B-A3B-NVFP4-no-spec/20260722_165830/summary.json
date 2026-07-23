@@ -1,0 +1,45 @@
+{
+  "model": "nvidia-Qwen3.6-35B-A3B-NVFP4-no-spec",
+  "run_dir": "results/nvidia-Qwen3.6-35B-A3B-NVFP4-no-spec/20260722_165830",
+  "server_mode": "managed",
+  "status": "completed",
+  "deep_context": {
+    "32768": {
+      "requested_context_tokens": 32768,
+      "prompt_tokens_exact": true,
+      "n": 5,
+      "ttft_avg_s": 5.6995,
+      "ttft_median_s": 5.6838,
+      "ttft_p95_s": 5.739,
+      "prefill_tps_avg": 5751.2,
+      "status": "success"
+    },
+    "65536": {
+      "requested_context_tokens": 65536,
+      "prompt_tokens_exact": true,
+      "n": 5,
+      "ttft_avg_s": 14.446,
+      "ttft_median_s": 14.4385,
+      "ttft_p95_s": 14.4716,
+      "prefill_tps_avg": 4537.3,
+      "status": "success"
+    }
+  },
+  "flops_analysis": {
+    "status": "exact_from_config",
+    "model": "qwen3.5-35b-a3b"
+  },
+  "gpu": {
+    "samples_csv": "results/nvidia-Qwen3.6-35B-A3B-NVFP4-no-spec/20260722_165830/gpu_samples.csv",
+    "num_samples": 119,
+    "gpu_util_avg_pct": 84.96,
+    "gpu_util_peak_pct": 96.0,
+    "gpu_power_avg_w": 69.67,
+    "gpu_power_peak_w": 90.05,
+    "gpu_mem_used_avg_mib": null,
+    "gpu_mem_used_peak_mib": null,
+    "gpu_mem_util_avg_pct": 0.0,
+    "gpu_mem_util_peak_pct": 0.0,
+    "energy_wh": 2.3031
+  }
+}

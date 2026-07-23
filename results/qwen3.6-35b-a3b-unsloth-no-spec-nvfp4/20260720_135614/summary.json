@@ -1,0 +1,2544 @@
+{
+  "model": "qwen3.6-35b-a3b-unsloth-no-spec-nvfp4",
+  "run_dir": "results/qwen3.6-35b-a3b-unsloth-no-spec-nvfp4/20260720_135614",
+  "server_mode": "managed",
+  "status": "completed",
+  "latency": {
+    "32": {
+      "requested_prompt_tokens": 32,
+      "prompt_tokens_exact": true,
+      "n": 10,
+      "ttft_avg_s": 1.0221,
+      "ttft_median_s": 0.0604,
+      "ttft_p95_s": 5.3508,
+      "ttft_p99_s": 8.8129,
+      "prefill_tps_avg": 627.7
+    },
+    "128": {
+      "requested_prompt_tokens": 128,
+      "prompt_tokens_exact": true,
+      "n": 10,
+      "ttft_avg_s": 0.0864,
+      "ttft_median_s": 0.0861,
+      "ttft_p95_s": 0.0883,
+      "ttft_p99_s": 0.0889,
+      "prefill_tps_avg": 1597.7
+    },
+    "512": {
+      "requested_prompt_tokens": 512,
+      "prompt_tokens_exact": true,
+      "n": 10,
+      "ttft_avg_s": 0.133,
+      "ttft_median_s": 0.1329,
+      "ttft_p95_s": 0.1355,
+      "ttft_p99_s": 0.136,
+      "prefill_tps_avg": 3924.2
+    },
+    "2048": {
+      "requested_prompt_tokens": 2048,
+      "prompt_tokens_exact": true,
+      "n": 10,
+      "ttft_avg_s": 0.3043,
+      "ttft_median_s": 0.3027,
+      "ttft_p95_s": 0.3119,
+      "ttft_p99_s": 0.3164,
+      "prefill_tps_avg": 6764.5
+    },
+    "8192": {
+      "requested_prompt_tokens": 8192,
+      "prompt_tokens_exact": true,
+      "n": 10,
+      "ttft_avg_s": 1.1397,
+      "ttft_median_s": 1.1366,
+      "ttft_p95_s": 1.1538,
+      "ttft_p99_s": 1.1624,
+      "prefill_tps_avg": 7196.9
+    },
+    "16384": {
+      "requested_prompt_tokens": 16384,
+      "prompt_tokens_exact": true,
+      "n": 10,
+      "ttft_avg_s": 2.4079,
+      "ttft_median_s": 2.4069,
+      "ttft_p95_s": 2.4128,
+      "ttft_p99_s": 2.4131,
+      "prefill_tps_avg": 6808.4
+    }
+  },
+  "deep_context": {
+    "32768": {
+      "requested_context_tokens": 32768,
+      "prompt_tokens_exact": true,
+      "n": 5,
+      "ttft_avg_s": 5.5288,
+      "ttft_median_s": 5.5288,
+      "ttft_p95_s": 5.5363,
+      "prefill_tps_avg": 5928.6,
+      "status": "success"
+    },
+    "65536": {
+      "requested_context_tokens": 65536,
+      "prompt_tokens_exact": true,
+      "n": 5,
+      "ttft_avg_s": 14.0982,
+      "ttft_median_s": 14.0991,
+      "ttft_p95_s": 14.1039,
+      "prefill_tps_avg": 4649.2,
+      "status": "success"
+    }
+  },
+  "ttft_breakdown": {
+    "config": {
+      "benchmark_version": "1.0",
+      "definition": "TTFT decomposition into scheduler delay, prefill time, and first decode overhead",
+      "prompt_lengths": [
+        128,
+        512,
+        2048,
+        8192,
+        32768
+      ],
+      "repetitions": 10,
+      "cache_isolation_method": "cache_salt",
+      "max_tokens": 1,
+      "temperature": 0.0,
+      "start_time": "2026-07-20T14:04:11.153338-07:00",
+      "end_time": "2026-07-20T14:05:43.692552-07:00"
+    },
+    "per_length": {
+      "128": {
+        "status": "success",
+        "requested_tokens": 128,
+        "actual_tokens": 138,
+        "n_requests": 10,
+        "n_success": 10,
+        "n_failed": 0,
+        "per_request": [
+          {
+            "index": 0,
+            "success": true,
+            "prompt_tokens": 138,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 65.8741,
+            "total_time_ms": 65.948,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 1,
+            "success": true,
+            "prompt_tokens": 138,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 68.0242,
+            "total_time_ms": 68.1238,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 2,
+            "success": true,
+            "prompt_tokens": 138,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 70.8725,
+            "total_time_ms": 70.9686,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 3,
+            "success": true,
+            "prompt_tokens": 138,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 67.3435,
+            "total_time_ms": 67.4396,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 4,
+            "success": true,
+            "prompt_tokens": 138,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 71.2347,
+            "total_time_ms": 71.3103,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 5,
+            "success": true,
+            "prompt_tokens": 138,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 70.3595,
+            "total_time_ms": 70.4601,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 6,
+            "success": true,
+            "prompt_tokens": 138,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 69.2873,
+            "total_time_ms": 69.3617,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 7,
+            "success": true,
+            "prompt_tokens": 138,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 69.9878,
+            "total_time_ms": 70.0622,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 8,
+            "success": true,
+            "prompt_tokens": 138,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 66.8895,
+            "total_time_ms": 66.9882,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 9,
+            "success": true,
+            "prompt_tokens": 138,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 69.3932,
+            "total_time_ms": 69.4885,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          }
+        ],
+        "aggregated": {
+          "ttft": {
+            "avg_ms": 68.9266,
+            "median_ms": 69.3402,
+            "p95_ms": 71.0717,
+            "min_ms": 65.8741,
+            "max_ms": 71.2347
+          },
+          "scheduler_delay": {
+            "avg_ms": null,
+            "median_ms": null,
+            "p95_ms": null,
+            "min_ms": null,
+            "max_ms": null
+          },
+          "prefill_time": {
+            "avg_ms": null,
+            "median_ms": null,
+            "p95_ms": null,
+            "min_ms": null,
+            "max_ms": null
+          },
+          "first_decode": {
+            "avg_ms": null,
+            "median_ms": null,
+            "p95_ms": null,
+            "min_ms": null,
+            "max_ms": null
+          },
+          "gpu": {
+            "num_samples": 5,
+            "duration_s": 5.0,
+            "gpu_util_avg_pct": 10.8,
+            "gpu_util_peak_pct": 54.0,
+            "gpu_power_avg_w": 20.35,
+            "gpu_power_peak_w": 28.05,
+            "gpu_mem_util_avg_pct": 0.0,
+            "gpu_mem_util_peak_pct": 0.0,
+            "gpu_mem_used_avg_mib": null,
+            "gpu_mem_used_peak_mib": null,
+            "energy_wh": 0.028261
+          }
+        }
+      },
+      "512": {
+        "status": "success",
+        "requested_tokens": 512,
+        "actual_tokens": 522,
+        "n_requests": 10,
+        "n_success": 10,
+        "n_failed": 0,
+        "per_request": [
+          {
+            "index": 0,
+            "success": true,
+            "prompt_tokens": 522,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 104.532,
+            "total_time_ms": 104.605,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 1,
+            "success": true,
+            "prompt_tokens": 522,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 108.8591,
+            "total_time_ms": 108.9339,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 2,
+            "success": true,
+            "prompt_tokens": 522,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 104.7082,
+            "total_time_ms": 104.8033,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 3,
+            "success": true,
+            "prompt_tokens": 522,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 106.7109,
+            "total_time_ms": 106.7867,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 4,
+            "success": true,
+            "prompt_tokens": 522,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 108.3162,
+            "total_time_ms": 108.3899,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 5,
+            "success": true,
+            "prompt_tokens": 522,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 105.7339,
+            "total_time_ms": 105.8073,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 6,
+            "success": true,
+            "prompt_tokens": 522,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 105.7191,
+            "total_time_ms": 105.8083,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 7,
+            "success": true,
+            "prompt_tokens": 522,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 115.0568,
+            "total_time_ms": 115.149,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 8,
+            "success": true,
+            "prompt_tokens": 522,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 106.4835,
+            "total_time_ms": 106.5876,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 9,
+            "success": true,
+            "prompt_tokens": 522,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 106.2951,
+            "total_time_ms": 106.3774,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          }
+        ],
+        "aggregated": {
+          "ttft": {
+            "avg_ms": 107.2415,
+            "median_ms": 106.3893,
+            "p95_ms": 112.2678,
+            "min_ms": 104.532,
+            "max_ms": 115.0568
+          },
+          "scheduler_delay": {
+            "avg_ms": null,
+            "median_ms": null,
+            "p95_ms": null,
+            "min_ms": null,
+            "max_ms": null
+          },
+          "prefill_time": {
+            "avg_ms": null,
+            "median_ms": null,
+            "p95_ms": null,
+            "min_ms": null,
+            "max_ms": null
+          },
+          "first_decode": {
+            "avg_ms": null,
+            "median_ms": null,
+            "p95_ms": null,
+            "min_ms": null,
+            "max_ms": null
+          },
+          "gpu": {
+            "num_samples": 5,
+            "duration_s": 5.0,
+            "gpu_util_avg_pct": 15.4,
+            "gpu_util_peak_pct": 77.0,
+            "gpu_power_avg_w": 20.62,
+            "gpu_power_peak_w": 22.12,
+            "gpu_mem_util_avg_pct": 0.0,
+            "gpu_mem_util_peak_pct": 0.0,
+            "gpu_mem_used_avg_mib": null,
+            "gpu_mem_used_peak_mib": null,
+            "energy_wh": 0.028633
+          }
+        }
+      },
+      "2048": {
+        "status": "success",
+        "requested_tokens": 2048,
+        "actual_tokens": 2058,
+        "n_requests": 10,
+        "n_success": 10,
+        "n_failed": 0,
+        "per_request": [
+          {
+            "index": 0,
+            "success": true,
+            "prompt_tokens": 2058,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 273.793,
+            "total_time_ms": 273.8652,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 1,
+            "success": true,
+            "prompt_tokens": 2058,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 271.6987,
+            "total_time_ms": 271.7733,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 2,
+            "success": true,
+            "prompt_tokens": 2058,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 269.2113,
+            "total_time_ms": 269.3069,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 3,
+            "success": true,
+            "prompt_tokens": 2058,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 274.4541,
+            "total_time_ms": 274.5364,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 4,
+            "success": true,
+            "prompt_tokens": 2058,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 275.7514,
+            "total_time_ms": 275.8286,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 5,
+            "success": true,
+            "prompt_tokens": 2058,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 272.5585,
+            "total_time_ms": 272.6505,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 6,
+            "success": true,
+            "prompt_tokens": 2058,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 271.9688,
+            "total_time_ms": 272.047,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 7,
+            "success": true,
+            "prompt_tokens": 2058,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 275.5041,
+            "total_time_ms": 275.6038,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 8,
+            "success": true,
+            "prompt_tokens": 2058,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 276.4862,
+            "total_time_ms": 276.5627,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 9,
+            "success": true,
+            "prompt_tokens": 2058,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 271.7733,
+            "total_time_ms": 271.8711,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          }
+        ],
+        "aggregated": {
+          "ttft": {
+            "avg_ms": 273.3199,
+            "median_ms": 273.1757,
+            "p95_ms": 276.1555,
+            "min_ms": 269.2113,
+            "max_ms": 276.4862
+          },
+          "scheduler_delay": {
+            "avg_ms": null,
+            "median_ms": null,
+            "p95_ms": null,
+            "min_ms": null,
+            "max_ms": null
+          },
+          "prefill_time": {
+            "avg_ms": null,
+            "median_ms": null,
+            "p95_ms": null,
+            "min_ms": null,
+            "max_ms": null
+          },
+          "first_decode": {
+            "avg_ms": null,
+            "median_ms": null,
+            "p95_ms": null,
+            "min_ms": null,
+            "max_ms": null
+          },
+          "gpu": {
+            "num_samples": 7,
+            "duration_s": 7.0,
+            "gpu_util_avg_pct": 24.0,
+            "gpu_util_peak_pct": 96.0,
+            "gpu_power_avg_w": 28.62,
+            "gpu_power_peak_w": 35.91,
+            "gpu_mem_util_avg_pct": 0.0,
+            "gpu_mem_util_peak_pct": 0.0,
+            "gpu_mem_used_avg_mib": null,
+            "gpu_mem_used_peak_mib": null,
+            "energy_wh": 0.055653
+          }
+        }
+      },
+      "8192": {
+        "status": "success",
+        "requested_tokens": 8192,
+        "actual_tokens": 8202,
+        "n_requests": 10,
+        "n_success": 10,
+        "n_failed": 0,
+        "per_request": [
+          {
+            "index": 0,
+            "success": true,
+            "prompt_tokens": 8202,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 1118.5734,
+            "total_time_ms": 1118.6669,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 1,
+            "success": true,
+            "prompt_tokens": 8202,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 1117.3575,
+            "total_time_ms": 1117.5058,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 2,
+            "success": true,
+            "prompt_tokens": 8202,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 1123.2603,
+            "total_time_ms": 1123.358,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 3,
+            "success": true,
+            "prompt_tokens": 8202,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 1124.2611,
+            "total_time_ms": 1124.3634,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 4,
+            "success": true,
+            "prompt_tokens": 8202,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 1118.6016,
+            "total_time_ms": 1118.6988,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 5,
+            "success": true,
+            "prompt_tokens": 8202,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 1117.1684,
+            "total_time_ms": 1117.2709,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 6,
+            "success": true,
+            "prompt_tokens": 8202,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 1122.7479,
+            "total_time_ms": 1122.8583,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 7,
+            "success": true,
+            "prompt_tokens": 8202,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 1114.9123,
+            "total_time_ms": 1115.0093,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 8,
+            "success": true,
+            "prompt_tokens": 8202,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 1115.8173,
+            "total_time_ms": 1115.9089,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 9,
+            "success": true,
+            "prompt_tokens": 8202,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 1114.2304,
+            "total_time_ms": 1114.3045,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          }
+        ],
+        "aggregated": {
+          "ttft": {
+            "avg_ms": 1118.693,
+            "median_ms": 1117.9655,
+            "p95_ms": 1123.8107,
+            "min_ms": 1114.2304,
+            "max_ms": 1124.2611
+          },
+          "scheduler_delay": {
+            "avg_ms": null,
+            "median_ms": null,
+            "p95_ms": null,
+            "min_ms": null,
+            "max_ms": null
+          },
+          "prefill_time": {
+            "avg_ms": null,
+            "median_ms": null,
+            "p95_ms": null,
+            "min_ms": null,
+            "max_ms": null
+          },
+          "first_decode": {
+            "avg_ms": null,
+            "median_ms": null,
+            "p95_ms": null,
+            "min_ms": null,
+            "max_ms": null
+          },
+          "gpu": {
+            "num_samples": 15,
+            "duration_s": 15.0,
+            "gpu_util_avg_pct": 63.4,
+            "gpu_util_peak_pct": 96.0,
+            "gpu_power_avg_w": 45.41,
+            "gpu_power_peak_w": 61.76,
+            "gpu_mem_util_avg_pct": 0.0,
+            "gpu_mem_util_peak_pct": 0.0,
+            "gpu_mem_used_avg_mib": null,
+            "gpu_mem_used_peak_mib": null,
+            "energy_wh": 0.189194
+          }
+        }
+      },
+      "32768": {
+        "status": "success",
+        "requested_tokens": 32768,
+        "actual_tokens": 32778,
+        "n_requests": 10,
+        "n_success": 10,
+        "n_failed": 0,
+        "per_request": [
+          {
+            "index": 0,
+            "success": true,
+            "prompt_tokens": 32778,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 5427.922,
+            "total_time_ms": 5428.02,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 1,
+            "success": true,
+            "prompt_tokens": 32778,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 5429.0502,
+            "total_time_ms": 5429.1534,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 2,
+            "success": true,
+            "prompt_tokens": 32778,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 5426.1401,
+            "total_time_ms": 5426.2466,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 3,
+            "success": true,
+            "prompt_tokens": 32778,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 5433.7595,
+            "total_time_ms": 5433.8388,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 4,
+            "success": true,
+            "prompt_tokens": 32778,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 5442.909,
+            "total_time_ms": 5443.0094,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 5,
+            "success": true,
+            "prompt_tokens": 32778,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 5431.0255,
+            "total_time_ms": 5431.1209,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 6,
+            "success": true,
+            "prompt_tokens": 32778,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 5429.4086,
+            "total_time_ms": 5429.4956,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 7,
+            "success": true,
+            "prompt_tokens": 32778,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 5439.8086,
+            "total_time_ms": 5439.904,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 8,
+            "success": true,
+            "prompt_tokens": 32778,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 5437.1631,
+            "total_time_ms": 5437.2623,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          },
+          {
+            "index": 9,
+            "success": true,
+            "prompt_tokens": 32778,
+            "prompt_tokens_exact": true,
+            "output_tokens": 1,
+            "ttft_ms": 5427.6755,
+            "total_time_ms": 5427.7782,
+            "queue_time_s": null,
+            "prefill_time_s": null,
+            "server_ttft_s": null,
+            "scheduler_delay_ms": null,
+            "first_decode_ms": null,
+            "error": ""
+          }
+        ],
+        "aggregated": {
+          "ttft": {
+            "avg_ms": 5432.4862,
+            "median_ms": 5430.217,
+            "p95_ms": 5441.5138,
+            "min_ms": 5426.1401,
+            "max_ms": 5442.909
+          },
+          "scheduler_delay": {
+            "avg_ms": null,
+            "median_ms": null,
+            "p95_ms": null,
+            "min_ms": null,
+            "max_ms": null
+          },
+          "prefill_time": {
+            "avg_ms": null,
+            "median_ms": null,
+            "p95_ms": null,
+            "min_ms": null,
+            "max_ms": null
+          },
+          "first_decode": {
+            "avg_ms": null,
+            "median_ms": null,
+            "p95_ms": null,
+            "min_ms": null,
+            "max_ms": null
+          },
+          "gpu": {
+            "num_samples": 57,
+            "duration_s": 57.0,
+            "gpu_util_avg_pct": 85.86,
+            "gpu_util_peak_pct": 96.0,
+            "gpu_power_avg_w": 66.5,
+            "gpu_power_peak_w": 78.61,
+            "gpu_mem_util_avg_pct": 0.0,
+            "gpu_mem_util_peak_pct": 0.0,
+            "gpu_mem_used_avg_mib": null,
+            "gpu_mem_used_peak_mib": null,
+            "energy_wh": 1.052914
+          }
+        }
+      }
+    }
+  },
+  "decode": {
+    "512": {
+      "requested_output_tokens": 512,
+      "actual_output_tokens": 512,
+      "output_tokens_exact": true,
+      "output_truncated": false,
+      "ttft_s": 0.0863,
+      "decode_time_s": 6.904,
+      "tok_per_sec_avg": 74.16,
+      "tok_per_sec_peak": 84.26,
+      "tok_per_sec_min": 58.82,
+      "tok_per_sec_median": 74.37,
+      "output_text_preview": "Here's a thinking thinking sequence\n\n1.  **Deconstruct and Analyze the Prompt:**\n    *   *Role:* Creative writer.\n    *   *Topic:* Discovery of an ancient underwater civilization.\n    *   *Required Elements:*\n        *   Ocean environment description.\n        *   Architecture of cities.\n        *   Technology.\n        *   Beliefs and customs.\n        *   What happened to them (fall/disappearance).\n        *   *Additional Details:* Interaction with marine life, conflicts with surface dwellers, relationship w\n  [truncated, total length: 1957 chars]",
+      "reasoning_tokens": 498,
+      "answer_tokens": 0,
+      "reasoning_ratio": null
+    },
+    "1024": {
+      "requested_output_tokens": 1024,
+      "actual_output_tokens": 1024,
+      "output_tokens_exact": true,
+      "output_truncated": false,
+      "ttft_s": 0.0853,
+      "decode_time_s": 13.808,
+      "tok_per_sec_avg": 74.16,
+      "tok_per_sec_peak": 90.82,
+      "tok_per_sec_min": 57.82,
+      "tok_per_sec_median": 74.31,
+      "output_text_preview": "Here's a thinking thinking sequence\n\n1.  **Deconstruct and Analyze the Prompt:**\n    *   *Role:* Creative writer.\n    *   *Topic:* Discovery of an ancient underwater civilization.\n    *   *Required Elements:*\n        *   Ocean environment description.\n        *   Architecture of cities.\n        *   Technology.\n        *   Beliefs and customs.\n        *   What happened to them (fall/discovery).\n        *   *Additional Details 1:* Interaction with marine life.\n        *   *Additional Details 2:* Conflicts wit\n  [truncated, total length: 3887 chars]",
+      "reasoning_tokens": 992,
+      "answer_tokens": 0,
+      "reasoning_ratio": null
+    },
+    "2048": {
+      "requested_output_tokens": 2048,
+      "actual_output_tokens": 2048,
+      "output_tokens_exact": true,
+      "output_truncated": false,
+      "ttft_s": 0.0847,
+      "decode_time_s": 27.633,
+      "tok_per_sec_avg": 74.11,
+      "tok_per_sec_peak": 92.51,
+      "tok_per_sec_min": 56.67,
+      "tok_per_sec_median": 74.31,
+      "output_text_preview": "Here's a thinking thinking sequence\n\n1.  **Deconstruct and Analyze the Prompt:**\n    *   *Role:* Creative writer.\n    *   *Topic:* Discovery of an ancient underwater civilization.\n    *   *Required Elements:*\n        *   Ocean environment description.\n        *   Architecture of cities.\n        *   Technology.\n        *   Beliefs and customs.\n        *   What happened to them (fall/discovery).\n        *   *Additional Details:* Interaction with marine life, conflicts with surface dwellers, relationship with \n  [truncated, total length: 7779 chars]",
+      "reasoning_tokens": 2003,
+      "answer_tokens": 0,
+      "reasoning_ratio": null
+    }
+  },
+  "reasoning": {
+    "per_prompt": [
+      {
+        "thinking_tokens": 616,
+        "answer_tokens": 168,
+        "reasoning_text_preview": "Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Problem:** A train travels 60 miles in 45 minutes.\n   - **Questio",
+        "answer_text_preview": "\n\nTo find the speed in miles per hour (mph), use the formula:\n\n**Speed = Distance \u00f7 Time**\n\n**Step 1: Convert time to hours**  \n",
+        "ratio_thinking_to_answer": 3.667,
+        "prompt_preview": "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show"
+      },
+      {
+        "thinking_tokens": 869,
+        "answer_tokens": 118,
+        "reasoning_text_preview": "Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - Statement: \"A farmer has 17 sheep, all but 9 die. How many are left",
+        "answer_text_preview": "\n\nHere's the step-by-step reasoning:\n\n1. **Start with the initial number:** The farmer begins with 17 sheep.\n2. **Interpret the ",
+        "ratio_thinking_to_answer": 7.364,
+        "prompt_preview": "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning "
+      },
+      {
+        "thinking_tokens": 905,
+        "answer_tokens": 0,
+        "reasoning_text_preview": "Here's a thinking process that leads to the solution:\n\n1.  **Analyze the Request:**\n    *   Given: Distance = 60 miles, Time = 4",
+        "answer_text_preview": "",
+        "ratio_thinking_to_answer": null,
+        "prompt_preview": "<antThinking>\nI'll work through this problem step by step.\n</antThinking>\nSolve:"
+      },
+      {
+        "thinking_tokens": 298,
+        "answer_tokens": 26,
+        "reasoning_text_preview": "Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - The user presents a classic riddle: \"A farmer has 17 sheep, all but",
+        "answer_text_preview": "\n\n**9 sheep are left.** \n\nThe phrase \"all but 9 die\" means that 9 of them survived.",
+        "ratio_thinking_to_answer": 11.462,
+        "prompt_preview": "<antThinking>\nLet me think through this carefully.\n</antThinking>\nA farmer has 1"
+      },
+      {
+        "thinking_tokens": 977,
+        "answer_tokens": 0,
+        "reasoning_text_preview": "Here's a thinking process that leads to the suggested solution:\n\n1.  **Understand the Goal:** The user wants to find the probabi",
+        "answer_text_preview": "",
+        "ratio_thinking_to_answer": null,
+        "prompt_preview": "<antThinking>\nLet me break this down systematically.\n</antThinking>\nA bag contai"
+      },
+      {
+        "thinking_tokens": 988,
+        "answer_tokens": 0,
+        "reasoning_text_preview": "Here's a thinking process:\n\n1.  **Understand the User Request:**\n   - **Task:** Write a Python function to find the longest pali",
+        "answer_text_preview": "",
+        "ratio_thinking_to_answer": null,
+        "prompt_preview": "<antThinking>\nI need to analyze this problem step by step.\n</antThinking>\nWrite "
+      }
+    ],
+    "thinking_tokens_avg": 775.5,
+    "thinking_tokens_max": 988,
+    "thinking_tokens_median": 887.0,
+    "answer_tokens_avg": 52,
+    "answer_tokens_max": 168,
+    "answer_tokens_median": 13.0
+  },
+  "concurrency": {
+    "config": {
+      "concurrency_levels": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "requests_per_level": 16,
+      "max_tokens": 256,
+      "temperature": 0.0,
+      "prompt_tokens": 256
+    },
+    "per_concurrency_level": {
+      "1": {
+        "wall_time_s": 56.66,
+        "total_output_tokens": 4096,
+        "aggregate_throughput_tok_s": 72.3,
+        "n_requests": 16,
+        "n_success": 16,
+        "n_failed": 0,
+        "success_rate": 1.0,
+        "ttft": {
+          "avg_s": 0.1071,
+          "median_s": 0.1043,
+          "p95_s": 0.1201,
+          "min_s": 0.1021,
+          "max_s": 0.123
+        },
+        "total_time_s": {
+          "avg_s": 3.5411,
+          "median_s": 3.539,
+          "p95_s": 3.5538,
+          "min_s": 3.5337,
+          "max_s": 3.5561
+        },
+        "individual_requests": [
+          {
+            "index": 0,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1049,
+            "total_time_s": 3.539,
+            "error": ""
+          },
+          {
+            "index": 1,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1032,
+            "total_time_s": 3.5355,
+            "error": ""
+          },
+          {
+            "index": 2,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1036,
+            "total_time_s": 3.5401,
+            "error": ""
+          },
+          {
+            "index": 3,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1044,
+            "total_time_s": 3.5372,
+            "error": ""
+          },
+          {
+            "index": 4,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1021,
+            "total_time_s": 3.5337,
+            "error": ""
+          },
+          {
+            "index": 5,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.123,
+            "total_time_s": 3.5561,
+            "error": ""
+          },
+          {
+            "index": 6,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1044,
+            "total_time_s": 3.5373,
+            "error": ""
+          },
+          {
+            "index": 7,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1038,
+            "total_time_s": 3.5396,
+            "error": ""
+          },
+          {
+            "index": 8,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1191,
+            "total_time_s": 3.5521,
+            "error": ""
+          },
+          {
+            "index": 9,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1038,
+            "total_time_s": 3.5377,
+            "error": ""
+          },
+          {
+            "index": 10,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1045,
+            "total_time_s": 3.5404,
+            "error": ""
+          },
+          {
+            "index": 11,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1178,
+            "total_time_s": 3.553,
+            "error": ""
+          },
+          {
+            "index": 12,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1035,
+            "total_time_s": 3.5365,
+            "error": ""
+          },
+          {
+            "index": 13,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1066,
+            "total_time_s": 3.5409,
+            "error": ""
+          },
+          {
+            "index": 14,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1043,
+            "total_time_s": 3.5388,
+            "error": ""
+          },
+          {
+            "index": 15,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.104,
+            "total_time_s": 3.5391,
+            "error": ""
+          }
+        ]
+      },
+      "2": {
+        "wall_time_s": 36.305,
+        "total_output_tokens": 4096,
+        "aggregate_throughput_tok_s": 112.8,
+        "n_requests": 16,
+        "n_success": 16,
+        "n_failed": 0,
+        "success_rate": 1.0,
+        "ttft": {
+          "avg_s": 0.1711,
+          "median_s": 0.1745,
+          "p95_s": 0.2076,
+          "min_s": 0.1385,
+          "max_s": 0.2111
+        },
+        "total_time_s": {
+          "avg_s": 4.5373,
+          "median_s": 4.5845,
+          "p95_s": 4.6158,
+          "min_s": 4.2094,
+          "max_s": 4.6162
+        },
+        "individual_requests": [
+          {
+            "index": 1,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1385,
+            "total_time_s": 4.5469,
+            "error": ""
+          },
+          {
+            "index": 0,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.2001,
+            "total_time_s": 4.5569,
+            "error": ""
+          },
+          {
+            "index": 2,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1405,
+            "total_time_s": 4.5983,
+            "error": ""
+          },
+          {
+            "index": 3,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.192,
+            "total_time_s": 4.5986,
+            "error": ""
+          },
+          {
+            "index": 4,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1583,
+            "total_time_s": 4.6162,
+            "error": ""
+          },
+          {
+            "index": 5,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.2111,
+            "total_time_s": 4.6156,
+            "error": ""
+          },
+          {
+            "index": 6,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1402,
+            "total_time_s": 4.5505,
+            "error": ""
+          },
+          {
+            "index": 7,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1908,
+            "total_time_s": 4.5508,
+            "error": ""
+          },
+          {
+            "index": 8,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.14,
+            "total_time_s": 4.5869,
+            "error": ""
+          },
+          {
+            "index": 9,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1909,
+            "total_time_s": 4.5894,
+            "error": ""
+          },
+          {
+            "index": 10,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1453,
+            "total_time_s": 4.2094,
+            "error": ""
+          },
+          {
+            "index": 11,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1941,
+            "total_time_s": 4.2103,
+            "error": ""
+          },
+          {
+            "index": 12,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1584,
+            "total_time_s": 4.5821,
+            "error": ""
+          },
+          {
+            "index": 13,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.2064,
+            "total_time_s": 4.5797,
+            "error": ""
+          },
+          {
+            "index": 14,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1405,
+            "total_time_s": 4.6022,
+            "error": ""
+          },
+          {
+            "index": 15,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1906,
+            "total_time_s": 4.6024,
+            "error": ""
+          }
+        ]
+      },
+      "4": {
+        "wall_time_s": 21.973,
+        "total_output_tokens": 4096,
+        "aggregate_throughput_tok_s": 186.4,
+        "n_requests": 16,
+        "n_success": 16,
+        "n_failed": 0,
+        "success_rate": 1.0,
+        "ttft": {
+          "avg_s": 0.2277,
+          "median_s": 0.2407,
+          "p95_s": 0.2686,
+          "min_s": 0.1643,
+          "max_s": 0.2697
+        },
+        "total_time_s": {
+          "avg_s": 5.4916,
+          "median_s": 5.5185,
+          "p95_s": 5.6477,
+          "min_s": 5.2718,
+          "max_s": 5.6481
+        },
+        "individual_requests": [
+          {
+            "index": 0,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1713,
+            "total_time_s": 5.5454,
+            "error": ""
+          },
+          {
+            "index": 3,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.2675,
+            "total_time_s": 5.561,
+            "error": ""
+          },
+          {
+            "index": 1,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.2697,
+            "total_time_s": 5.5625,
+            "error": ""
+          },
+          {
+            "index": 2,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.2683,
+            "total_time_s": 5.5621,
+            "error": ""
+          },
+          {
+            "index": 4,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1643,
+            "total_time_s": 5.2718,
+            "error": ""
+          },
+          {
+            "index": 5,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.242,
+            "total_time_s": 5.2723,
+            "error": ""
+          },
+          {
+            "index": 7,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.2407,
+            "total_time_s": 5.2722,
+            "error": ""
+          },
+          {
+            "index": 6,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.2406,
+            "total_time_s": 5.2731,
+            "error": ""
+          },
+          {
+            "index": 8,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1659,
+            "total_time_s": 5.6463,
+            "error": ""
+          },
+          {
+            "index": 11,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.2406,
+            "total_time_s": 5.6465,
+            "error": ""
+          },
+          {
+            "index": 9,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.2418,
+            "total_time_s": 5.6476,
+            "error": ""
+          },
+          {
+            "index": 10,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.2415,
+            "total_time_s": 5.6481,
+            "error": ""
+          },
+          {
+            "index": 12,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.1663,
+            "total_time_s": 5.4916,
+            "error": ""
+          },
+          {
+            "index": 13,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.2408,
+            "total_time_s": 5.4886,
+            "error": ""
+          },
+          {
+            "index": 15,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.2402,
+            "total_time_s": 5.4876,
+            "error": ""
+          },
+          {
+            "index": 14,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.2413,
+            "total_time_s": 5.4892,
+            "error": ""
+          }
+        ]
+      },
+      "8": {
+        "wall_time_s": 14.487,
+        "total_output_tokens": 4096,
+        "aggregate_throughput_tok_s": 282.7,
+        "n_requests": 16,
+        "n_success": 16,
+        "n_failed": 0,
+        "success_rate": 1.0,
+        "ttft": {
+          "avg_s": 0.3598,
+          "median_s": 0.3796,
+          "p95_s": 0.3826,
+          "min_s": 0.2054,
+          "max_s": 0.3832
+        },
+        "total_time_s": {
+          "avg_s": 7.2393,
+          "median_s": 7.2294,
+          "p95_s": 7.434,
+          "min_s": 7.0491,
+          "max_s": 7.435
+        },
+        "individual_requests": [
+          {
+            "index": 0,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.2054,
+            "total_time_s": 7.4063,
+            "error": ""
+          },
+          {
+            "index": 5,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.3771,
+            "total_time_s": 7.4284,
+            "error": ""
+          },
+          {
+            "index": 3,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.378,
+            "total_time_s": 7.4297,
+            "error": ""
+          },
+          {
+            "index": 7,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.3749,
+            "total_time_s": 7.4281,
+            "error": ""
+          },
+          {
+            "index": 6,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.3757,
+            "total_time_s": 7.4291,
+            "error": ""
+          },
+          {
+            "index": 4,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.3772,
+            "total_time_s": 7.4311,
+            "error": ""
+          },
+          {
+            "index": 2,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.3802,
+            "total_time_s": 7.4336,
+            "error": ""
+          },
+          {
+            "index": 1,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.3796,
+            "total_time_s": 7.435,
+            "error": ""
+          },
+          {
+            "index": 8,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.24,
+            "total_time_s": 7.0503,
+            "error": ""
+          },
+          {
+            "index": 14,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.3795,
+            "total_time_s": 7.0491,
+            "error": ""
+          },
+          {
+            "index": 10,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.3832,
+            "total_time_s": 7.052,
+            "error": ""
+          },
+          {
+            "index": 12,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.3815,
+            "total_time_s": 7.0509,
+            "error": ""
+          },
+          {
+            "index": 9,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.3825,
+            "total_time_s": 7.0524,
+            "error": ""
+          },
+          {
+            "index": 13,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.3805,
+            "total_time_s": 7.0507,
+            "error": ""
+          },
+          {
+            "index": 11,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.3821,
+            "total_time_s": 7.0521,
+            "error": ""
+          },
+          {
+            "index": 15,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.3798,
+            "total_time_s": 7.0501,
+            "error": ""
+          }
+        ]
+      },
+      "16": {
+        "wall_time_s": 8.54,
+        "total_output_tokens": 4096,
+        "aggregate_throughput_tok_s": 479.6,
+        "n_requests": 16,
+        "n_success": 16,
+        "n_failed": 0,
+        "success_rate": 1.0,
+        "ttft": {
+          "avg_s": 0.6192,
+          "median_s": 0.6391,
+          "p95_s": 0.6445,
+          "min_s": 0.3085,
+          "max_s": 0.6448
+        },
+        "total_time_s": {
+          "avg_s": 8.5304,
+          "median_s": 8.5309,
+          "p95_s": 8.5369,
+          "min_s": 8.5041,
+          "max_s": 8.5375
+        },
+        "individual_requests": [
+          {
+            "index": 2,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.3085,
+            "total_time_s": 8.5041,
+            "error": ""
+          },
+          {
+            "index": 5,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.6416,
+            "total_time_s": 8.5334,
+            "error": ""
+          },
+          {
+            "index": 0,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.6444,
+            "total_time_s": 8.536,
+            "error": ""
+          },
+          {
+            "index": 7,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.6396,
+            "total_time_s": 8.5309,
+            "error": ""
+          },
+          {
+            "index": 14,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.6361,
+            "total_time_s": 8.5274,
+            "error": ""
+          },
+          {
+            "index": 9,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.6386,
+            "total_time_s": 8.5303,
+            "error": ""
+          },
+          {
+            "index": 13,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.6355,
+            "total_time_s": 8.5285,
+            "error": ""
+          },
+          {
+            "index": 4,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.6426,
+            "total_time_s": 8.5353,
+            "error": ""
+          },
+          {
+            "index": 11,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.6382,
+            "total_time_s": 8.5299,
+            "error": ""
+          },
+          {
+            "index": 8,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.6398,
+            "total_time_s": 8.5314,
+            "error": ""
+          },
+          {
+            "index": 1,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.6448,
+            "total_time_s": 8.5368,
+            "error": ""
+          },
+          {
+            "index": 10,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.6384,
+            "total_time_s": 8.531,
+            "error": ""
+          },
+          {
+            "index": 15,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.6349,
+            "total_time_s": 8.5286,
+            "error": ""
+          },
+          {
+            "index": 12,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.6378,
+            "total_time_s": 8.5304,
+            "error": ""
+          },
+          {
+            "index": 6,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.6419,
+            "total_time_s": 8.5352,
+            "error": ""
+          },
+          {
+            "index": 3,
+            "success": true,
+            "prompt_tokens": 266,
+            "output_tokens": 256,
+            "ttft_s": 0.6442,
+            "total_time_s": 8.5375,
+            "error": ""
+          }
+        ]
+      }
+    }
+  },
+  "prefill_scaling": {
+    "512": {
+      "status": "success",
+      "n_success": 2
+    },
+    "2048": {
+      "status": "success",
+      "n_success": 2
+    }
+  },
+  "attention_backend": {
+    "config": {
+      "benchmark_version": "1.0",
+      "definition": "sweep vLLM attention backends and measure TTFT + decode throughput",
+      "backends_swept": [
+        "flash_attn",
+        "flash_attn_diffkv",
+        "triton_attn",
+        "triton_attn_diffkv",
+        "flashinfer",
+        "flashinfer_mla",
+        "tokenspeed_mla",
+        "flashinfer_mla_sparse",
+        "flashinfer_mla_sparse_sm120",
+        "triton_mla",
+        "cutlass_mla",
+        "flashmla",
+        "flashmla_sparse",
+        "flashmla_sparse_dsv4",
+        "flashinfer_mla_sparse_dsv4",
+        "flash_attn_mla",
+        "flash_attn_mla_sparse",
+        "minimax_m3_sparse",
+        "no_attention",
+        "flex_attention",
+        "hpc_attn",
+        "cpu_attn",
+        "turboquant",
+        "custom"
+      ],
+      "prompt_lengths": [
+        32,
+        128,
+        512,
+        2048,
+        8192,
+        16384
+      ],
+      "decode_lengths": [
+        512,
+        1024,
+        2048
+      ],
+      "repetitions": 5,
+      "start_time": "2026-07-20T21:11:11.014243+00:00",
+      "end_time": "2026-07-20T21:39:56.978298+00:00"
+    },
+    "per_backend": {
+      "flash_attn": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=242374)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=242374)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=242374)     return cls(\n(APIServer pid=242374)            ^^^^\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=242374)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=242374)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=242374)     return func(*args, **kwargs)\n(APIServer pid=242374)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=242374)     return AsyncMPClient(*client_args)\n(APIServer pid=242374)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=242374)     return func(*args, **kwargs)\n(APIServer pid=242374)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=242374)     super().__init__(\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=242374)     with launch_core_engines(\n(APIServer pid=242374)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242374)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=242374)     next(self.gen)\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=242374)     wait_for_engine_startup(\n(APIServer pid=242374)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=242374)     raise RuntimeError(\n(APIServer pid=242374) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "flash_attn_diffkv": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=242760)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=242760)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=242760)     return cls(\n(APIServer pid=242760)            ^^^^\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=242760)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=242760)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=242760)     return func(*args, **kwargs)\n(APIServer pid=242760)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=242760)     return AsyncMPClient(*client_args)\n(APIServer pid=242760)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=242760)     return func(*args, **kwargs)\n(APIServer pid=242760)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=242760)     super().__init__(\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=242760)     with launch_core_engines(\n(APIServer pid=242760)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=242760)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=242760)     next(self.gen)\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=242760)     wait_for_engine_startup(\n(APIServer pid=242760)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=242760)     raise RuntimeError(\n(APIServer pid=242760) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "triton_attn": {
+        "command": [
+          "vllm",
+          "serve",
+          "unsloth/Qwen3.6-35B-A3B-NVFP4-Fast",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "8000",
+          "--tensor-parallel-size",
+          "1",
+          "--gpu-memory-utilization",
+          "0.70",
+          "--max-model-len",
+          "262144",
+          "--max-num-seqs",
+          "16",
+          "--max-num-batched-tokens",
+          "8192",
+          "--kv-cache-dtype",
+          "fp8_e4m3",
+          "--attention-backend",
+          "triton_attn",
+          "--enable-chunked-prefill",
+          "--async-scheduling",
+          "--reasoning-parser",
+          "qwen3",
+          "--tool-call-parser",
+          "qwen3_xml",
+          "--enable-auto-tool-choice",
+          "--generation-config",
+          "vllm",
+          "--moe-backend",
+          "flashinfer_b12x"
+        ],
+        "status": "success",
+        "gpu": {
+          "num_samples": 87,
+          "duration_s": 87.0,
+          "gpu_util_avg_pct": 79.89,
+          "gpu_util_peak_pct": 96.0,
+          "gpu_power_avg_w": 37.37,
+          "gpu_power_peak_w": 78.01,
+          "gpu_mem_util_avg_pct": 0.0,
+          "gpu_mem_util_peak_pct": 0.0,
+          "gpu_mem_used_avg_mib": null,
+          "gpu_mem_used_peak_mib": null,
+          "energy_wh": 0.903211,
+          "idle_base_power_w": 37.37,
+          "energy_above_idle_wh": 0.000103
+        },
+        "latency": {
+          "32": {
+            "requested_tokens": 32,
+            "n_success": 5,
+            "ttft": {
+              "avg_s": 2.0034,
+              "median_s": 0.0643,
+              "p95_s": 7.8245,
+              "min_s": 0.0605,
+              "max_s": 9.7644
+            }
+          },
+          "128": {
+            "requested_tokens": 128,
+            "n_success": 5,
+            "ttft": {
+              "avg_s": 0.0879,
+              "median_s": 0.0877,
+              "p95_s": 0.0895,
+              "min_s": 0.0862,
+              "max_s": 0.0898
+            }
+          },
+          "512": {
+            "requested_tokens": 512,
+            "n_success": 5,
+            "ttft": {
+              "avg_s": 0.1361,
+              "median_s": 0.1361,
+              "p95_s": 0.1374,
+              "min_s": 0.1346,
+              "max_s": 0.1374
+            }
+          },
+          "2048": {
+            "requested_tokens": 2048,
+            "n_success": 5,
+            "ttft": {
+              "avg_s": 0.3138,
+              "median_s": 0.3115,
+              "p95_s": 0.322,
+              "min_s": 0.3102,
+              "max_s": 0.3244
+            }
+          },
+          "8192": {
+            "requested_tokens": 8192,
+            "n_success": 5,
+            "ttft": {
+              "avg_s": 1.2615,
+              "median_s": 1.2241,
+              "p95_s": 1.3756,
+              "min_s": 1.2221,
+              "max_s": 1.413
+            }
+          },
+          "16384": {
+            "requested_tokens": 16384,
+            "n_success": 5,
+            "ttft": {
+              "avg_s": 2.7499,
+              "median_s": 2.7507,
+              "p95_s": 2.7537,
+              "min_s": 2.7435,
+              "max_s": 2.7543
+            }
+          }
+        },
+        "decode": {
+          "512": {
+            "requested_output_tokens": 512,
+            "actual_output_tokens": 512,
+            "tok_per_sec_avg": 74.63,
+            "tok_per_sec_peak": 92.72,
+            "n": 1
+          },
+          "1024": {
+            "requested_output_tokens": 1024,
+            "actual_output_tokens": 1024,
+            "tok_per_sec_avg": 74.66,
+            "tok_per_sec_peak": 96.23,
+            "n": 1
+          },
+          "2048": {
+            "requested_output_tokens": 2048,
+            "actual_output_tokens": 2048,
+            "tok_per_sec_avg": 74.42,
+            "tok_per_sec_peak": 101.74,
+            "n": 1
+          }
+        }
+      },
+      "triton_attn_diffkv": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=280479)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=280479)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=280479)     return cls(\n(APIServer pid=280479)            ^^^^\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=280479)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=280479)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=280479)     return func(*args, **kwargs)\n(APIServer pid=280479)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=280479)     return AsyncMPClient(*client_args)\n(APIServer pid=280479)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=280479)     return func(*args, **kwargs)\n(APIServer pid=280479)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=280479)     super().__init__(\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=280479)     with launch_core_engines(\n(APIServer pid=280479)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=280479)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=280479)     next(self.gen)\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=280479)     wait_for_engine_startup(\n(APIServer pid=280479)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=280479)     raise RuntimeError(\n(APIServer pid=280479) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "flashinfer": {
+        "command": [
+          "vllm",
+          "serve",
+          "unsloth/Qwen3.6-35B-A3B-NVFP4-Fast",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "8000",
+          "--tensor-parallel-size",
+          "1",
+          "--gpu-memory-utilization",
+          "0.70",
+          "--max-model-len",
+          "262144",
+          "--max-num-seqs",
+          "16",
+          "--max-num-batched-tokens",
+          "8192",
+          "--kv-cache-dtype",
+          "fp8_e4m3",
+          "--attention-backend",
+          "flashinfer",
+          "--enable-chunked-prefill",
+          "--async-scheduling",
+          "--reasoning-parser",
+          "qwen3",
+          "--tool-call-parser",
+          "qwen3_xml",
+          "--enable-auto-tool-choice",
+          "--generation-config",
+          "vllm",
+          "--moe-backend",
+          "flashinfer_b12x"
+        ],
+        "status": "success",
+        "gpu": {
+          "num_samples": 86,
+          "duration_s": 86.0,
+          "gpu_util_avg_pct": 77.67,
+          "gpu_util_peak_pct": 96.0,
+          "gpu_power_avg_w": 35.12,
+          "gpu_power_peak_w": 67.23,
+          "gpu_mem_util_avg_pct": 0.0,
+          "gpu_mem_util_peak_pct": 0.0,
+          "gpu_mem_used_avg_mib": null,
+          "gpu_mem_used_peak_mib": null,
+          "energy_wh": 0.839064,
+          "idle_base_power_w": 35.12,
+          "energy_above_idle_wh": 8.6e-05
+        },
+        "latency": {
+          "32": {
+            "requested_tokens": 32,
+            "n_success": 5,
+            "ttft": {
+              "avg_s": 1.9849,
+              "median_s": 0.0629,
+              "p95_s": 7.7505,
+              "min_s": 0.0617,
+              "max_s": 9.6719
+            }
+          },
+          "128": {
+            "requested_tokens": 128,
+            "n_success": 5,
+            "ttft": {
+              "avg_s": 0.0884,
+              "median_s": 0.0889,
+              "p95_s": 0.0894,
+              "min_s": 0.0863,
+              "max_s": 0.0895
+            }
+          },
+          "512": {
+            "requested_tokens": 512,
+            "n_success": 5,
+            "ttft": {
+              "avg_s": 0.1376,
+              "median_s": 0.1372,
+              "p95_s": 0.1389,
+              "min_s": 0.1366,
+              "max_s": 0.139
+            }
+          },
+          "2048": {
+            "requested_tokens": 2048,
+            "n_success": 5,
+            "ttft": {
+              "avg_s": 0.315,
+              "median_s": 0.3131,
+              "p95_s": 0.3248,
+              "min_s": 0.3095,
+              "max_s": 0.3274
+            }
+          },
+          "8192": {
+            "requested_tokens": 8192,
+            "n_success": 5,
+            "ttft": {
+              "avg_s": 1.1476,
+              "median_s": 1.1433,
+              "p95_s": 1.1645,
+              "min_s": 1.1381,
+              "max_s": 1.1695
+            }
+          },
+          "16384": {
+            "requested_tokens": 16384,
+            "n_success": 5,
+            "ttft": {
+              "avg_s": 2.4216,
+              "median_s": 2.422,
+              "p95_s": 2.4237,
+              "min_s": 2.4178,
+              "max_s": 2.4238
+            }
+          }
+        },
+        "decode": {
+          "512": {
+            "requested_output_tokens": 512,
+            "actual_output_tokens": 512,
+            "tok_per_sec_avg": 73.73,
+            "tok_per_sec_peak": 95.09,
+            "n": 1
+          },
+          "1024": {
+            "requested_output_tokens": 1024,
+            "actual_output_tokens": 1024,
+            "tok_per_sec_avg": 73.85,
+            "tok_per_sec_peak": 96.63,
+            "n": 1
+          },
+          "2048": {
+            "requested_output_tokens": 2048,
+            "actual_output_tokens": 2048,
+            "tok_per_sec_avg": 73.71,
+            "tok_per_sec_peak": 92.51,
+            "n": 1
+          }
+        }
+      },
+      "flashinfer_mla": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=282121)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=282121)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=282121)     return cls(\n(APIServer pid=282121)            ^^^^\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=282121)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=282121)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=282121)     return func(*args, **kwargs)\n(APIServer pid=282121)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=282121)     return AsyncMPClient(*client_args)\n(APIServer pid=282121)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=282121)     return func(*args, **kwargs)\n(APIServer pid=282121)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=282121)     super().__init__(\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=282121)     with launch_core_engines(\n(APIServer pid=282121)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282121)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=282121)     next(self.gen)\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=282121)     wait_for_engine_startup(\n(APIServer pid=282121)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=282121)     raise RuntimeError(\n(APIServer pid=282121) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "tokenspeed_mla": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=282575)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=282575)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=282575)     return cls(\n(APIServer pid=282575)            ^^^^\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=282575)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=282575)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=282575)     return func(*args, **kwargs)\n(APIServer pid=282575)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=282575)     return AsyncMPClient(*client_args)\n(APIServer pid=282575)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=282575)     return func(*args, **kwargs)\n(APIServer pid=282575)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=282575)     super().__init__(\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=282575)     with launch_core_engines(\n(APIServer pid=282575)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=282575)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=282575)     next(self.gen)\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=282575)     wait_for_engine_startup(\n(APIServer pid=282575)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=282575)     raise RuntimeError(\n(APIServer pid=282575) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "flashinfer_mla_sparse": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=283044)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=283044)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=283044)     return cls(\n(APIServer pid=283044)            ^^^^\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=283044)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=283044)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=283044)     return func(*args, **kwargs)\n(APIServer pid=283044)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=283044)     return AsyncMPClient(*client_args)\n(APIServer pid=283044)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=283044)     return func(*args, **kwargs)\n(APIServer pid=283044)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=283044)     super().__init__(\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=283044)     with launch_core_engines(\n(APIServer pid=283044)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283044)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=283044)     next(self.gen)\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=283044)     wait_for_engine_startup(\n(APIServer pid=283044)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=283044)     raise RuntimeError(\n(APIServer pid=283044) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "flashinfer_mla_sparse_sm120": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=283430)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=283430)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=283430)     return cls(\n(APIServer pid=283430)            ^^^^\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=283430)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=283430)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=283430)     return func(*args, **kwargs)\n(APIServer pid=283430)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=283430)     return AsyncMPClient(*client_args)\n(APIServer pid=283430)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=283430)     return func(*args, **kwargs)\n(APIServer pid=283430)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=283430)     super().__init__(\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=283430)     with launch_core_engines(\n(APIServer pid=283430)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283430)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=283430)     next(self.gen)\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=283430)     wait_for_engine_startup(\n(APIServer pid=283430)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=283430)     raise RuntimeError(\n(APIServer pid=283430) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "triton_mla": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=283842)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=283842)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=283842)     return cls(\n(APIServer pid=283842)            ^^^^\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=283842)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=283842)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=283842)     return func(*args, **kwargs)\n(APIServer pid=283842)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=283842)     return AsyncMPClient(*client_args)\n(APIServer pid=283842)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=283842)     return func(*args, **kwargs)\n(APIServer pid=283842)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=283842)     super().__init__(\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=283842)     with launch_core_engines(\n(APIServer pid=283842)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=283842)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=283842)     next(self.gen)\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=283842)     wait_for_engine_startup(\n(APIServer pid=283842)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=283842)     raise RuntimeError(\n(APIServer pid=283842) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "cutlass_mla": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=284254)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=284254)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=284254)     return cls(\n(APIServer pid=284254)            ^^^^\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=284254)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=284254)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=284254)     return func(*args, **kwargs)\n(APIServer pid=284254)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=284254)     return AsyncMPClient(*client_args)\n(APIServer pid=284254)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=284254)     return func(*args, **kwargs)\n(APIServer pid=284254)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=284254)     super().__init__(\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=284254)     with launch_core_engines(\n(APIServer pid=284254)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284254)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=284254)     next(self.gen)\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=284254)     wait_for_engine_startup(\n(APIServer pid=284254)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=284254)     raise RuntimeError(\n(APIServer pid=284254) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "flashmla": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=284641)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=284641)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=284641)     return cls(\n(APIServer pid=284641)            ^^^^\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=284641)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=284641)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=284641)     return func(*args, **kwargs)\n(APIServer pid=284641)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=284641)     return AsyncMPClient(*client_args)\n(APIServer pid=284641)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=284641)     return func(*args, **kwargs)\n(APIServer pid=284641)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=284641)     super().__init__(\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=284641)     with launch_core_engines(\n(APIServer pid=284641)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=284641)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=284641)     next(self.gen)\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=284641)     wait_for_engine_startup(\n(APIServer pid=284641)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=284641)     raise RuntimeError(\n(APIServer pid=284641) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "flashmla_sparse": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=285033)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=285033)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=285033)     return cls(\n(APIServer pid=285033)            ^^^^\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=285033)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=285033)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=285033)     return func(*args, **kwargs)\n(APIServer pid=285033)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=285033)     return AsyncMPClient(*client_args)\n(APIServer pid=285033)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=285033)     return func(*args, **kwargs)\n(APIServer pid=285033)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=285033)     super().__init__(\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=285033)     with launch_core_engines(\n(APIServer pid=285033)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285033)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=285033)     next(self.gen)\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=285033)     wait_for_engine_startup(\n(APIServer pid=285033)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=285033)     raise RuntimeError(\n(APIServer pid=285033) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "flashmla_sparse_dsv4": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=285436)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=285436)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=285436)     return cls(\n(APIServer pid=285436)            ^^^^\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=285436)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=285436)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=285436)     return func(*args, **kwargs)\n(APIServer pid=285436)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=285436)     return AsyncMPClient(*client_args)\n(APIServer pid=285436)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=285436)     return func(*args, **kwargs)\n(APIServer pid=285436)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=285436)     super().__init__(\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=285436)     with launch_core_engines(\n(APIServer pid=285436)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285436)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=285436)     next(self.gen)\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=285436)     wait_for_engine_startup(\n(APIServer pid=285436)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=285436)     raise RuntimeError(\n(APIServer pid=285436) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "flashinfer_mla_sparse_dsv4": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=285836)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=285836)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=285836)     return cls(\n(APIServer pid=285836)            ^^^^\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=285836)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=285836)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=285836)     return func(*args, **kwargs)\n(APIServer pid=285836)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=285836)     return AsyncMPClient(*client_args)\n(APIServer pid=285836)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=285836)     return func(*args, **kwargs)\n(APIServer pid=285836)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=285836)     super().__init__(\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=285836)     with launch_core_engines(\n(APIServer pid=285836)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=285836)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=285836)     next(self.gen)\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=285836)     wait_for_engine_startup(\n(APIServer pid=285836)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=285836)     raise RuntimeError(\n(APIServer pid=285836) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "flash_attn_mla": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=286242)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=286242)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=286242)     return cls(\n(APIServer pid=286242)            ^^^^\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=286242)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=286242)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=286242)     return func(*args, **kwargs)\n(APIServer pid=286242)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=286242)     return AsyncMPClient(*client_args)\n(APIServer pid=286242)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=286242)     return func(*args, **kwargs)\n(APIServer pid=286242)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=286242)     super().__init__(\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=286242)     with launch_core_engines(\n(APIServer pid=286242)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286242)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=286242)     next(self.gen)\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=286242)     wait_for_engine_startup(\n(APIServer pid=286242)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=286242)     raise RuntimeError(\n(APIServer pid=286242) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "flash_attn_mla_sparse": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=286645)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=286645)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=286645)     return cls(\n(APIServer pid=286645)            ^^^^\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=286645)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=286645)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=286645)     return func(*args, **kwargs)\n(APIServer pid=286645)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=286645)     return AsyncMPClient(*client_args)\n(APIServer pid=286645)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=286645)     return func(*args, **kwargs)\n(APIServer pid=286645)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=286645)     super().__init__(\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=286645)     with launch_core_engines(\n(APIServer pid=286645)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=286645)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=286645)     next(self.gen)\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=286645)     wait_for_engine_startup(\n(APIServer pid=286645)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=286645)     raise RuntimeError(\n(APIServer pid=286645) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "minimax_m3_sparse": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=287035)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=287035)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=287035)     return cls(\n(APIServer pid=287035)            ^^^^\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=287035)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=287035)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=287035)     return func(*args, **kwargs)\n(APIServer pid=287035)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=287035)     return AsyncMPClient(*client_args)\n(APIServer pid=287035)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=287035)     return func(*args, **kwargs)\n(APIServer pid=287035)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=287035)     super().__init__(\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=287035)     with launch_core_engines(\n(APIServer pid=287035)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287035)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=287035)     next(self.gen)\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=287035)     wait_for_engine_startup(\n(APIServer pid=287035)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=287035)     raise RuntimeError(\n(APIServer pid=287035) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "no_attention": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=287489)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=287489)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=287489)     return cls(\n(APIServer pid=287489)            ^^^^\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=287489)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=287489)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=287489)     return func(*args, **kwargs)\n(APIServer pid=287489)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=287489)     return AsyncMPClient(*client_args)\n(APIServer pid=287489)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=287489)     return func(*args, **kwargs)\n(APIServer pid=287489)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=287489)     super().__init__(\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=287489)     with launch_core_engines(\n(APIServer pid=287489)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287489)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=287489)     next(self.gen)\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=287489)     wait_for_engine_startup(\n(APIServer pid=287489)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=287489)     raise RuntimeError(\n(APIServer pid=287489) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "flex_attention": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=287952)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=287952)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=287952)     return cls(\n(APIServer pid=287952)            ^^^^\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=287952)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=287952)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=287952)     return func(*args, **kwargs)\n(APIServer pid=287952)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=287952)     return AsyncMPClient(*client_args)\n(APIServer pid=287952)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=287952)     return func(*args, **kwargs)\n(APIServer pid=287952)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=287952)     super().__init__(\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=287952)     with launch_core_engines(\n(APIServer pid=287952)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=287952)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=287952)     next(self.gen)\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=287952)     wait_for_engine_startup(\n(APIServer pid=287952)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=287952)     raise RuntimeError(\n(APIServer pid=287952) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "hpc_attn": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=288716)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=288716)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=288716)     return cls(\n(APIServer pid=288716)            ^^^^\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=288716)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=288716)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=288716)     return func(*args, **kwargs)\n(APIServer pid=288716)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=288716)     return AsyncMPClient(*client_args)\n(APIServer pid=288716)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=288716)     return func(*args, **kwargs)\n(APIServer pid=288716)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=288716)     super().__init__(\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=288716)     with launch_core_engines(\n(APIServer pid=288716)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=288716)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=288716)     next(self.gen)\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=288716)     wait_for_engine_startup(\n(APIServer pid=288716)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=288716)     raise RuntimeError(\n(APIServer pid=288716) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "cpu_attn": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=289106)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=289106)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=289106)     return cls(\n(APIServer pid=289106)            ^^^^\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=289106)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=289106)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=289106)     return func(*args, **kwargs)\n(APIServer pid=289106)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=289106)     return AsyncMPClient(*client_args)\n(APIServer pid=289106)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=289106)     return func(*args, **kwargs)\n(APIServer pid=289106)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=289106)     super().__init__(\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=289106)     with launch_core_engines(\n(APIServer pid=289106)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289106)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=289106)     next(self.gen)\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=289106)     wait_for_engine_startup(\n(APIServer pid=289106)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=289106)     raise RuntimeError(\n(APIServer pid=289106) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "turboquant": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=289511)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=289511)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=289511)     return cls(\n(APIServer pid=289511)            ^^^^\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=289511)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=289511)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=289511)     return func(*args, **kwargs)\n(APIServer pid=289511)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=289511)     return AsyncMPClient(*client_args)\n(APIServer pid=289511)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=289511)     return func(*args, **kwargs)\n(APIServer pid=289511)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=289511)     super().__init__(\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=289511)     with launch_core_engines(\n(APIServer pid=289511)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289511)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=289511)     next(self.gen)\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=289511)     wait_for_engine_startup(\n(APIServer pid=289511)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=289511)     raise RuntimeError(\n(APIServer pid=289511) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      },
+      "custom": {
+        "status": "server_not_ready",
+        "error": "vLLM exited during startup with code 1\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 136, in build_async_engine_client_from_engine_args\n(APIServer pid=289939)     async_llm = AsyncLLM.from_vllm_config(\n(APIServer pid=289939)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 217, in from_vllm_config\n(APIServer pid=289939)     return cls(\n(APIServer pid=289939)            ^^^^\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 146, in __init__\n(APIServer pid=289939)     self.engine_core = EngineCoreClient.make_async_mp_client(\n(APIServer pid=289939)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=289939)     return func(*args, **kwargs)\n(APIServer pid=289939)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 132, in make_async_mp_client\n(APIServer pid=289939)     return AsyncMPClient(*client_args)\n(APIServer pid=289939)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(APIServer pid=289939)     return func(*args, **kwargs)\n(APIServer pid=289939)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 963, in __init__\n(APIServer pid=289939)     super().__init__(\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 573, in __init__\n(APIServer pid=289939)     with launch_core_engines(\n(APIServer pid=289939)          ^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=289939)   File \"/home/colin-spark/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/contextlib.py\", line 144, in __exit__\n(APIServer pid=289939)     next(self.gen)\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1213, in launch_core_engines\n(APIServer pid=289939)     wait_for_engine_startup(\n(APIServer pid=289939)   File \"/home/colin-spark/Projects/model-benchmarks/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1272, in wait_for_engine_startup\n(APIServer pid=289939)     raise RuntimeError(\n(APIServer pid=289939) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      }
+    }
+  },
+  "gpu": {
+    "samples_csv": "results/qwen3.6-35b-a3b-unsloth-no-spec-nvfp4/20260720_135614/gpu_samples.csv",
+    "num_samples": 2538,
+    "gpu_util_avg_pct": 26.15,
+    "gpu_util_peak_pct": 96.0,
+    "gpu_power_avg_w": 19.99,
+    "gpu_power_peak_w": 98.18,
+    "gpu_mem_used_avg_mib": null,
+    "gpu_mem_used_peak_mib": null,
+    "gpu_mem_util_avg_pct": 0.0,
+    "gpu_mem_util_peak_pct": 0.0,
+    "energy_wh": 14.0952
+  },
+  "energy_per_token_wh": 0.003933
+}

@@ -1,0 +1,7 @@
+{
+  "model": "qwen3.6-35b-a3b-unsloth-nvfp4",
+  "run_dir": "results/qwen3.6-35b-a3b-unsloth-nvfp4/20260722_161816",
+  "server_mode": "managed",
+  "status": "failed",
+  "error": "VllmServerError: refusing to start vLLM: 127.0.0.1:8000 is already in use; use --server-mode external to benchmark that endpoint"
+}

@@ -1,0 +1,22 @@
+{
+  "32768": {
+    "requested_context_tokens": 32768,
+    "prompt_tokens_exact": true,
+    "n": 5,
+    "ttft_avg_s": 5.6995,
+    "ttft_median_s": 5.6838,
+    "ttft_p95_s": 5.739,
+    "prefill_tps_avg": 5751.2,
+    "status": "success"
+  },
+  "65536": {
+    "requested_context_tokens": 65536,
+    "prompt_tokens_exact": true,
+    "n": 5,
+    "ttft_avg_s": 14.446,
+    "ttft_median_s": 14.4385,
+    "ttft_p95_s": 14.4716,
+    "prefill_tps_avg": 4537.3,
+    "status": "success"
+  }
+}

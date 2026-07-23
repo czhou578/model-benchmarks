@@ -1,0 +1,23 @@
+{
+  "model": "qwen3.6-35b-a3b-unsloth-nvfp4",
+  "run_dir": "results/qwen3.6-35b-a3b-unsloth-nvfp4/20260722_161824",
+  "server_mode": "managed",
+  "status": "completed",
+  "flops_analysis": {
+    "status": "exact_from_config",
+    "model": "qwen3.5-35b-a3b"
+  },
+  "gpu": {
+    "samples_csv": "results/qwen3.6-35b-a3b-unsloth-nvfp4/20260722_161824/gpu_samples.csv",
+    "num_samples": 3,
+    "gpu_util_avg_pct": 0.0,
+    "gpu_util_peak_pct": 0.0,
+    "gpu_power_avg_w": 12.56,
+    "gpu_power_peak_w": 14.18,
+    "gpu_mem_used_avg_mib": null,
+    "gpu_mem_used_peak_mib": null,
+    "gpu_mem_util_avg_pct": 0.0,
+    "gpu_mem_util_peak_pct": 0.0,
+    "energy_wh": 0.0105
+  }
+}

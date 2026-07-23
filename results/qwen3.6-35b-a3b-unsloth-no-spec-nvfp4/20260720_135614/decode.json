@@ -1,0 +1,50 @@
+{
+  "512": {
+    "requested_output_tokens": 512,
+    "actual_output_tokens": 512,
+    "output_tokens_exact": true,
+    "output_truncated": false,
+    "ttft_s": 0.0863,
+    "decode_time_s": 6.904,
+    "tok_per_sec_avg": 74.16,
+    "tok_per_sec_peak": 84.26,
+    "tok_per_sec_min": 58.82,
+    "tok_per_sec_median": 74.37,
+    "output_text_preview": "Here's a thinking thinking sequence\n\n1.  **Deconstruct and Analyze the Prompt:**\n    *   *Role:* Creative writer.\n    *   *Topic:* Discovery of an ancient underwater civilization.\n    *   *Required Elements:*\n        *   Ocean environment description.\n        *   Architecture of cities.\n        *   Technology.\n        *   Beliefs and customs.\n        *   What happened to them (fall/disappearance).\n        *   *Additional Details:* Interaction with marine life, conflicts with surface dwellers, relationship w\n  [truncated, total length: 1957 chars]",
+    "reasoning_tokens": 498,
+    "answer_tokens": 0,
+    "reasoning_ratio": null
+  },
+  "1024": {
+    "requested_output_tokens": 1024,
+    "actual_output_tokens": 1024,
+    "output_tokens_exact": true,
+    "output_truncated": false,
+    "ttft_s": 0.0853,
+    "decode_time_s": 13.808,
+    "tok_per_sec_avg": 74.16,
+    "tok_per_sec_peak": 90.82,
+    "tok_per_sec_min": 57.82,
+    "tok_per_sec_median": 74.31,
+    "output_text_preview": "Here's a thinking thinking sequence\n\n1.  **Deconstruct and Analyze the Prompt:**\n    *   *Role:* Creative writer.\n    *   *Topic:* Discovery of an ancient underwater civilization.\n    *   *Required Elements:*\n        *   Ocean environment description.\n        *   Architecture of cities.\n        *   Technology.\n        *   Beliefs and customs.\n        *   What happened to them (fall/discovery).\n        *   *Additional Details 1:* Interaction with marine life.\n        *   *Additional Details 2:* Conflicts wit\n  [truncated, total length: 3887 chars]",
+    "reasoning_tokens": 992,
+    "answer_tokens": 0,
+    "reasoning_ratio": null
+  },
+  "2048": {
+    "requested_output_tokens": 2048,
+    "actual_output_tokens": 2048,
+    "output_tokens_exact": true,
+    "output_truncated": false,
+    "ttft_s": 0.0847,
+    "decode_time_s": 27.633,
+    "tok_per_sec_avg": 74.11,
+    "tok_per_sec_peak": 92.51,
+    "tok_per_sec_min": 56.67,
+    "tok_per_sec_median": 74.31,
+    "output_text_preview": "Here's a thinking thinking sequence\n\n1.  **Deconstruct and Analyze the Prompt:**\n    *   *Role:* Creative writer.\n    *   *Topic:* Discovery of an ancient underwater civilization.\n    *   *Required Elements:*\n        *   Ocean environment description.\n        *   Architecture of cities.\n        *   Technology.\n        *   Beliefs and customs.\n        *   What happened to them (fall/discovery).\n        *   *Additional Details:* Interaction with marine life, conflicts with surface dwellers, relationship with \n  [truncated, total length: 7779 chars]",
+    "reasoning_tokens": 2003,
+    "answer_tokens": 0,
+    "reasoning_ratio": null
+  }
+}
