@@ -798,3 +798,826 @@ tasks:
       tool_accuracy: true
       param_completeness: 1.0
       param_correctness: true
+
+# ──────────────────────────────────────────────────────────────────────────
+# Phase 2 — Multi-Tool Chaining
+#
+# Each task describes an expected sequence of tool calls across multiple
+# turns.  The benchmark runner executes the loop:
+#   1. Send prompt with tool definitions → model picks tool #1
+#   2. Simulate tool response → feed back as a "tool" message
+#   3. Model decides tool #2 (or answers directly)
+#   4. Repeat until the model stops calling tools or max turns reached
+#
+# Scoring checks:
+#   - orchestration_accuracy : right sequence of tools?
+#   - data_flow_correct      : did the model use output from turn N as input
+#                              to turn N+1?
+#   - turns_correct          : did it stop at the expected turn?
+# ──────────────────────────────────────────────────────────────────────────
+
+  # ── Chain: stock price → calculation → comparison (2 tasks) ────────────
+  - id: chain_stock_calc
+    category: multi_tool
+    tools:
+      - name: get_stock_price
+        description: "Get the current stock price for a symbol"
+        parameters:
+          type: object
+          properties:
+            symbol:
+              type: string
+              description: "Stock ticker symbol (e.g. AAPL, NVDA, MSFT)"
+          required: [symbol]
+      - name: calculate
+        description: "Evaluate a mathematical expression"
+        parameters:
+          type: object
+          properties:
+            expression:
+              type: string
+              description: "A valid mathematical expression (e.g. '2 + 3 * 4')"
+          required: [expression]
+    prompt: "Look up the current price of NVDA and tell me if a 20% increase would put it above $200."
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: get_stock_price
+        params:
+          symbol: "NVDA"
+      - step: 2
+        tool: calculate
+        params:
+          expression: "150 * 1.2"
+    expected_intermediate_values:
+      step_1_result: 150
+      step_2_input_from_step_1: 150
+    scoring:
+      orchestration_accuracy: true
+      data_flow_correct: true
+      turns_correct: true
+
+  - id: chain_stock_calc_different
+    category: multi_tool
+    tools:
+      - name: get_stock_price
+        description: "Get the current stock price for a symbol"
+        parameters:
+          type: object
+          properties:
+            symbol:
+              type: string
+              description: "Stock ticker symbol (e.g. AAPL, NVDA, MSFT)"
+          required: [symbol]
+      - name: calculate
+        description: "Evaluate a mathematical expression"
+        parameters:
+          type: object
+          properties:
+            expression:
+              type: string
+              description: "A valid mathematical expression (e.g. '2 + 3 * 4')"
+          required: [expression]
+    prompt: "Get the price of AAPL stock and tell me what a 10% drop would be."
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: get_stock_price
+        params:
+          symbol: "AAPL"
+      - step: 2
+        tool: calculate
+        params:
+          expression: "190 * 0.9"
+    expected_intermediate_values:
+      step_1_result: 190
+      step_2_input_from_step_1: 190
+    scoring:
+      orchestration_accuracy: true
+      data_flow_correct: true
+      turns_correct: true
+
+  # ── Chain: weather + currency (2 tasks) ─────────────────────────────────
+  - id: chain_weather_currency
+    category: multi_tool
+    tools:
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+      - name: convert_currency
+        description: "Convert an amount from one currency to another"
+        parameters:
+          type: object
+          properties:
+            amount:
+              type: number
+              description: "The amount to convert"
+            from_currency:
+              type: string
+              description: "Source currency code (e.g. USD, EUR, JPY)"
+            to_currency:
+              type: string
+              description: "Target currency code"
+          required: [amount, from_currency, to_currency]
+    prompt: "What's the weather in Tokyo, and also convert 100 USD to Japanese Yen."
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: get_weather
+        params:
+          location: "Tokyo"
+          unit: "celsius"
+      - step: 2
+        tool: convert_currency
+        params:
+          amount: 100
+          from_currency: "USD"
+          to_currency: "JPY"
+    scoring:
+      orchestration_accuracy: true
+      data_flow_correct: true
+      turns_correct: true
+
+  - id: chain_weather_currency_reverse
+    category: multi_tool
+    tools:
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+      - name: convert_currency
+        description: "Convert an amount from one currency to another"
+        parameters:
+          type: object
+          properties:
+            amount:
+              type: number
+              description: "The amount to convert"
+            from_currency:
+              type: string
+              description: "Source currency code (e.g. USD, EUR, JPY)"
+            to_currency:
+              type: string
+              description: "Target currency code"
+          required: [amount, from_currency, to_currency]
+    prompt: "How hot is London in Fahrenheit? Also tell me what 250 British pounds is in euros."
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: get_weather
+        params:
+          location: "London"
+          unit: "fahrenheit"
+      - step: 2
+        tool: convert_currency
+        params:
+          amount: 250
+          from_currency: "GBP"
+          to_currency: "EUR"
+    scoring:
+      orchestration_accuracy: true
+      data_flow_correct: true
+      turns_correct: true
+
+  # ── Chain: search → calculation (1 task) ─────────────────────────────────
+  - id: chain_search_calc
+    category: multi_tool
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+      - name: calculate
+        description: "Evaluate a mathematical expression"
+        parameters:
+          type: object
+          properties:
+            expression:
+              type: string
+              description: "A valid mathematical expression (e.g. '2 + 3 * 4')"
+          required: [expression]
+    prompt: "Search for the current population of Tokyo, then calculate what 10% of that would be."
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: search
+        params:
+          query: "Tokyo population 2025"
+      - step: 2
+        tool: calculate
+        params:
+          expression: "14000000 * 0.10"
+    expected_intermediate_values:
+      step_1_result: 14000000
+      step_2_input_from_step_1: 14000000
+    scoring:
+      orchestration_accuracy: true
+      data_flow_correct: true
+      turns_correct: true
+
+  # ── Chain: email → schedule (1 task) ────────────────────────────────────
+  - id: chain_email_meeting
+    category: multi_tool
+    tools:
+      - name: send_email
+        description: "Send an email message"
+        parameters:
+          type: object
+          properties:
+            to:
+              type: string
+              description: "Recipient email address"
+            subject:
+              type: string
+              description: "Email subject line"
+            body:
+              type: string
+              description: "Email body content"
+          required: [to, subject, body]
+      - name: schedule_meeting
+        description: "Schedule a calendar meeting"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              description: "Meeting title"
+            datetime:
+              type: string
+              description: "Meeting datetime in ISO format (e.g. '2026-07-25T14:00:00')"
+            attendees:
+              type: array
+              items:
+                type: string
+              description: "List of attendee email addresses"
+          required: [title, datetime, attendees]
+    prompt: "Send an email to alice@example.com saying 'Let's meet tomorrow at 10am' and also schedule a meeting called 'Design Review' for 2026-08-01T10:00:00 with alice@example.com and bob@example.com."
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: send_email
+        params:
+          to: "alice@example.com"
+          subject: "Meeting tomorrow"
+          body: "Let's meet tomorrow at 10am"
+      - step: 2
+        tool: schedule_meeting
+        params:
+          title: "Design Review"
+          datetime: "2026-08-01T10:00:00"
+          attendees: ["alice@example.com", "bob@example.com"]
+    scoring:
+      orchestration_accuracy: true
+      data_flow_correct: true
+      turns_correct: true
+
+  # ── Chain: calculate → currency (1 task) ────────────────────────────────
+  - id: chain_calc_currency
+    category: multi_tool
+    tools:
+      - name: calculate
+        description: "Evaluate a mathematical expression"
+        parameters:
+          type: object
+          properties:
+            expression:
+              type: string
+              description: "A valid mathematical expression (e.g. '2 + 3 * 4')"
+          required: [expression]
+      - name: convert_currency
+        description: "Convert an amount from one currency to another"
+        parameters:
+          type: object
+          properties:
+            amount:
+              type: number
+              description: "The amount to convert"
+            from_currency:
+              type: string
+              description: "Source currency code (e.g. USD, EUR, JPY)"
+            to_currency:
+              type: string
+              description: "Target currency code"
+          required: [amount, from_currency, to_currency]
+    prompt: "First calculate 200 times 1.15, then convert that result to Japanese Yen."
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: calculate
+        params:
+          expression: "200 * 1.15"
+      - step: 2
+        tool: convert_currency
+        params:
+          amount: 230.0
+          from_currency: "USD"
+          to_currency: "JPY"
+    expected_intermediate_values:
+      step_1_result: 230.0
+      step_2_input_from_step_1: 230.0
+    scoring:
+      orchestration_accuracy: true
+      data_flow_correct: true
+      turns_correct: true
+
+  # ── Chain: search → weather (2 tasks) ───────────────────────────────────
+  - id: chain_search_weather
+    category: multi_tool
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+    prompt: "Search for the capital of Australia, then tell me the weather there in celsius."
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: search
+        params:
+          query: "capital of Australia"
+      - step: 2
+        tool: get_weather
+        params:
+          location: "Canberra"
+          unit: "celsius"
+    expected_intermediate_values:
+      step_1_result: "Canberra"
+      step_2_input_from_step_1: "Canberra"
+    scoring:
+      orchestration_accuracy: true
+      data_flow_correct: true
+      turns_correct: true
+
+  - id: chain_search_weather_fahrenheit
+    category: multi_tool
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+    prompt: "Look up what the capital of Canada is, then get me the weather in Fahrenheit."
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: search
+        params:
+          query: "capital of Canada"
+      - step: 2
+        tool: get_weather
+        params:
+          location: "Ottawa"
+          unit: "fahrenheit"
+    expected_intermediate_values:
+      step_1_result: "Ottawa"
+      step_2_input_from_step_1: "Ottawa"
+    scoring:
+      orchestration_accuracy: true
+      data_flow_correct: true
+      turns_correct: true
+
+  # ── Chain: 3 tools — stock → calculate → currency (1 task) ──────────────
+  - id: chain_3_tools
+    category: multi_tool
+    tools:
+      - name: get_stock_price
+        description: "Get the current stock price for a symbol"
+        parameters:
+          type: object
+          properties:
+            symbol:
+              type: string
+              description: "Stock ticker symbol (e.g. AAPL, NVDA, MSFT)"
+          required: [symbol]
+      - name: calculate
+        description: "Evaluate a mathematical expression"
+        parameters:
+          type: object
+          properties:
+            expression:
+              type: string
+              description: "A valid mathematical expression (e.g. '2 + 3 * 4')"
+          required: [expression]
+      - name: convert_currency
+        description: "Convert an amount from one currency to another"
+        parameters:
+          type: object
+          properties:
+            amount:
+              type: number
+              description: "The amount to convert"
+            from_currency:
+              type: string
+              description: "Source currency code (e.g. USD, EUR, JPY)"
+            to_currency:
+              type: string
+              description: "Target currency code"
+          required: [amount, from_currency, to_currency]
+    prompt: "Get NVDA's stock price, multiply it by 1.2 for a 20% gain, then convert that to Japanese Yen."
+    expected_turns: 3
+    expected_sequence:
+      - step: 1
+        tool: get_stock_price
+        params:
+          symbol: "NVDA"
+      - step: 2
+        tool: calculate
+        params:
+          expression: "150 * 1.2"
+      - step: 3
+        tool: convert_currency
+        params:
+          amount: 180.0
+          from_currency: "USD"
+          to_currency: "JPY"
+    expected_intermediate_values:
+      step_1_result: 150
+      step_2_input_from_step_1: 150
+      step_2_result: 180.0
+      step_3_input_from_step_2: 180.0
+    scoring:
+      orchestration_accuracy: true
+      data_flow_correct: true
+      turns_correct: true
+
+  # ── Chain: 3 tools — calculate → currency → weather (1 task) ────────────
+  - id: chain_3_tools_weather
+    category: multi_tool
+    tools:
+      - name: calculate
+        description: "Evaluate a mathematical expression"
+        parameters:
+          type: object
+          properties:
+            expression:
+              type: string
+              description: "A valid mathematical expression (e.g. '2 + 3 * 4')"
+          required: [expression]
+      - name: convert_currency
+        description: "Convert an amount from one currency to another"
+        parameters:
+          type: object
+          properties:
+            amount:
+              type: number
+              description: "The amount to convert"
+            from_currency:
+              type: string
+              description: "Source currency code (e.g. USD, EUR, JPY)"
+            to_currency:
+              type: string
+              description: "Target currency code"
+          required: [amount, from_currency, to_currency]
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+    prompt: "Calculate 1000 / 8, convert that to Euros, then get the weather in Rome in celsius."
+    expected_turns: 3
+    expected_sequence:
+      - step: 1
+        tool: calculate
+        params:
+          expression: "1000 / 8"
+      - step: 2
+        tool: convert_currency
+        params:
+          amount: 125.0
+          from_currency: "USD"
+          to_currency: "EUR"
+      - step: 3
+        tool: get_weather
+        params:
+          location: "Rome"
+          unit: "celsius"
+    expected_intermediate_values:
+      step_1_result: 125.0
+      step_2_input_from_step_1: 125.0
+    scoring:
+      orchestration_accuracy: true
+      data_flow_correct: true
+      turns_correct: true
+
+  # ── Chain: stock → currency → calculate (1 task) ────────────────────────
+  - id: chain_3_mixed
+    category: multi_tool
+    tools:
+      - name: get_stock_price
+        description: "Get the current stock price for a symbol"
+        parameters:
+          type: object
+          properties:
+            symbol:
+              type: string
+              description: "Stock ticker symbol (e.g. AAPL, NVDA, MSFT)"
+          required: [symbol]
+      - name: convert_currency
+        description: "Convert an amount from one currency to another"
+        parameters:
+          type: object
+          properties:
+            amount:
+              type: number
+              description: "The amount to convert"
+            from_currency:
+              type: string
+              description: "Source currency code (e.g. USD, EUR, JPY)"
+            to_currency:
+              type: string
+              description: "Target currency code"
+          required: [amount, from_currency, to_currency]
+      - name: calculate
+        description: "Evaluate a mathematical expression"
+        parameters:
+          type: object
+          properties:
+            expression:
+              type: string
+              description: "A valid mathematical expression (e.g. '2 + 3 * 4')"
+          required: [expression]
+    prompt: "Get the price of MSFT stock, convert 100 USD to EUR, then calculate 50 + 75."
+    expected_turns: 3
+    expected_sequence:
+      - step: 1
+        tool: get_stock_price
+        params:
+          symbol: "MSFT"
+      - step: 2
+        tool: convert_currency
+        params:
+          amount: 100
+          from_currency: "USD"
+          to_currency: "EUR"
+      - step: 3
+        tool: calculate
+        params:
+          expression: "50 + 75"
+    scoring:
+      orchestration_accuracy: true
+      data_flow_correct: true
+      turns_correct: true
+
+  # ── Parallel tools — call two tools at once (2 tasks) ───────────────────
+  - id: parallel_stock_weather
+    category: multi_tool
+    tools:
+      - name: get_stock_price
+        description: "Get the current stock price for a symbol"
+        parameters:
+          type: object
+          properties:
+            symbol:
+              type: string
+              description: "Stock ticker symbol (e.g. AAPL, NVDA, MSFT)"
+          required: [symbol]
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+    prompt: "What's the weather in Tokyo in celsius and what's the stock price for AAPL?"
+    expected_turns: 1
+    expected_sequence:
+      - step: 1
+        tool: "parallel_get_weather_parallel_get_stock_price"
+        params:
+          _both: true
+          get_weather:
+            location: "Tokyo"
+            unit: "celsius"
+          get_stock_price:
+            symbol: "AAPL"
+    scoring:
+      orchestration_accuracy: true
+      data_flow_correct: true
+      turns_correct: true
+
+  - id: parallel_currency_calculate
+    category: multi_tool
+    tools:
+      - name: convert_currency
+        description: "Convert an amount from one currency to another"
+        parameters:
+          type: object
+          properties:
+            amount:
+              type: number
+              description: "The amount to convert"
+            from_currency:
+              type: string
+              description: "Source currency code (e.g. USD, EUR, JPY)"
+            to_currency:
+              type: string
+              description: "Target currency code"
+          required: [amount, from_currency, to_currency]
+      - name: calculate
+        description: "Evaluate a mathematical expression"
+        parameters:
+          type: object
+          properties:
+            expression:
+              type: string
+              description: "A valid mathematical expression (e.g. '2 + 3 * 4')"
+          required: [expression]
+    prompt: "Convert 50 GBP to USD and also calculate 30% of 1000."
+    expected_turns: 1
+    expected_sequence:
+      - step: 1
+        tool: "parallel_convert_currency_parallel_calculate"
+        params:
+          _both: true
+          convert_currency:
+            amount: 50
+            from_currency: "GBP"
+            to_currency: "USD"
+          calculate:
+            expression: "1000 * 0.30"
+    scoring:
+      orchestration_accuracy: true
+      data_flow_correct: true
+      turns_correct: true
+
+  # ── Dependency chain — output of tool N feeds into tool N+1 (1 task) ────
+  - id: chain_dependency_search_calc
+    category: multi_tool
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+      - name: calculate
+        description: "Evaluate a mathematical expression"
+        parameters:
+          type: object
+          properties:
+            expression:
+              type: string
+              description: "A valid mathematical expression (e.g. '2 + 3 * 4')"
+          required: [expression]
+    prompt: "Search for how many states the US has, then calculate what 25% of that number is."
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: search
+        params:
+          query: "how many states does the US have"
+      - step: 2
+        tool: calculate
+        params:
+          expression: "50 * 0.25"
+    expected_intermediate_values:
+      step_1_result: 50
+      step_2_input_from_step_1: 50
+    scoring:
+      orchestration_accuracy: true
+      data_flow_correct: true
+      turns_correct: true
+
+  # ── Dependency chain — stock → calculate × 2 (1 task) ───────────────────
+  - id: chain_stock_double_calc
+    category: multi_tool
+    tools:
+      - name: get_stock_price
+        description: "Get the current stock price for a symbol"
+        parameters:
+          type: object
+          properties:
+            symbol:
+              type: string
+              description: "Stock ticker symbol (e.g. AAPL, NVDA, MSFT)"
+          required: [symbol]
+      - name: calculate
+        description: "Evaluate a mathematical expression"
+        parameters:
+          type: object
+          properties:
+            expression:
+              type: string
+              description: "A valid mathematical expression (e.g. '2 + 3 * 4')"
+          required: [expression]
+    prompt: "Get the price of TSLA stock. Then calculate a 15% increase and a 10% decrease from that price."
+    expected_turns: 3
+    expected_sequence:
+      - step: 1
+        tool: get_stock_price
+        params:
+          symbol: "TSLA"
+      - step: 2
+        tool: calculate
+        params:
+          expression: "250 * 1.15"
+      - step: 3
+        tool: calculate
+        params:
+          expression: "250 * 0.90"
+    expected_intermediate_values:
+      step_1_result: 250
+      step_2_input_from_step_1: 250
+      step_3_input_from_step_1: 250
+    scoring:
+      orchestration_accuracy: true
+      data_flow_correct: true
+      turns_correct: true

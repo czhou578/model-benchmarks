@@ -427,7 +427,7 @@ This is simpler — no mock server needed. The tools are declarative schemas pas
 
 ## Implementation Phases
 
-### Phase 1 — Single-Tool Benchmark (Baseline)
+### Phase 1 — Single-Tool Benchmark (Baseline) DONE
 
 - Define 20 tasks in `datasets/tool_calling_tasks.yaml`.
 - Implement `run_tool_calling_benchmark()` in `benchmarks/tool_calling.py`.
