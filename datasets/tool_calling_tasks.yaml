@@ -1,0 +1,800 @@
+# Tool Calling Benchmark — Phase 1: Single-Tool Invocation
+# ~20 tasks covering the 8 tool types with basic + edge prompts.
+version: "1.0"
+
+tasks:
+  # ── search — basic query (2 tasks) ─────────────────────────────────────
+  - id: search_tech_news
+    category: search_basic
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+    prompt: "Find me the latest news about AI chip startups"
+    expected:
+      tool: search
+      params:
+        query: "latest news AI chip startups"
+    scoring:
+      tool_accuracy: true
+      param_completeness: 0.5    # only 'query' is required
+      param_correctness: true
+
+  - id: search_recipe
+    category: search_basic
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+    prompt: "Search for a traditional Italian pasta recipe"
+    expected:
+      tool: search
+      params:
+        query: "traditional Italian pasta recipe"
+    scoring:
+      tool_accuracy: true
+      param_completeness: 0.5
+      param_correctness: true
+
+  # ── search — explicit parameters (1 task) ─────────────────────────────
+  - id: search_specific_params
+    category: search_params
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+    prompt: "Search for 'quantum computing breakthrough' with only 3 results"
+    expected:
+      tool: search
+      params:
+        query: "quantum computing breakthrough"
+        max_results: 3
+    scoring:
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  # ── get_weather — default unit (1 task) ────────────────────────────────
+  - id: weather_default_unit
+    category: weather_basic
+    tools:
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+    prompt: "Tell me the weather in Sydney"
+    expected:
+      tool: get_weather
+      params:
+        location: "Sydney"
+    scoring:
+      tool_accuracy: true
+      param_completeness: 0.5    # 'unit' is optional with a default
+      param_correctness: true
+
+  # ── get_weather — explicit enum (2 tasks) ──────────────────────────────
+  - id: weather_tokyo_celsius
+    category: weather_enum
+    tools:
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+    prompt: "How hot is Tokyo right now?"
+    expected:
+      tool: get_weather
+      params:
+        location: "Tokyo"
+        unit: "celsius"
+    scoring:
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  - id: weather_london_fahrenheit
+    category: weather_enum
+    tools:
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+    prompt: "What's the weather in London in Fahrenheit?"
+    expected:
+      tool: get_weather
+      params:
+        location: "London"
+        unit: "fahrenheit"
+    scoring:
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  # ── convert_currency — basic (3 tasks) ─────────────────────────────────
+  - id: currency_usd_jpy
+    category: currency_basic
+    tools:
+      - name: convert_currency
+        description: "Convert an amount from one currency to another"
+        parameters:
+          type: object
+          properties:
+            amount:
+              type: number
+              description: "The amount to convert"
+            from_currency:
+              type: string
+              description: "Source currency code (e.g. USD, EUR, JPY)"
+            to_currency:
+              type: string
+              description: "Target currency code"
+          required: [amount, from_currency, to_currency]
+    prompt: "Convert 1000 USD to Japanese Yen"
+    expected:
+      tool: convert_currency
+      params:
+        amount: 1000
+        from_currency: "USD"
+        to_currency: "JPY"
+    scoring:
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  - id: currency_small_amount
+    category: currency_basic
+    tools:
+      - name: convert_currency
+        description: "Convert an amount from one currency to another"
+        parameters:
+          type: object
+          properties:
+            amount:
+              type: number
+              description: "The amount to convert"
+            from_currency:
+              type: string
+              description: "Source currency code (e.g. USD, EUR, JPY)"
+            to_currency:
+              type: string
+              description: "Target currency code"
+          required: [amount, from_currency, to_currency]
+    prompt: "How much is 0.5 EUR in GBP?"
+    expected:
+      tool: convert_currency
+      params:
+        amount: 0.5
+        from_currency: "EUR"
+        to_currency: "GBP"
+    scoring:
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  - id: currency_reverse
+    category: currency_basic
+    tools:
+      - name: convert_currency
+        description: "Convert an amount from one currency to another"
+        parameters:
+          type: object
+          properties:
+            amount:
+              type: number
+              description: "The amount to convert"
+            from_currency:
+              type: string
+              description: "Source currency code (e.g. USD, EUR, JPY)"
+            to_currency:
+              type: string
+              description: "Target currency code"
+          required: [amount, from_currency, to_currency]
+    prompt: "I have 500 British pounds. What is that in US dollars?"
+    expected:
+      tool: convert_currency
+      params:
+        amount: 500
+        from_currency: "GBP"
+        to_currency: "USD"
+    scoring:
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  # ── get_stock_price (2 tasks) ──────────────────────────────────────────
+  - id: stock_nvda
+    category: stock_basic
+    tools:
+      - name: get_stock_price
+        description: "Get the current stock price for a symbol"
+        parameters:
+          type: object
+          properties:
+            symbol:
+              type: string
+              description: "Stock ticker symbol (e.g. AAPL, NVDA, MSFT)"
+          required: [symbol]
+    prompt: "What's the current price of NVIDIA stock?"
+    expected:
+      tool: get_stock_price
+      params:
+        symbol: "NVDA"
+    scoring:
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  - id: stock_tesla
+    category: stock_basic
+    tools:
+      - name: get_stock_price
+        description: "Get the current stock price for a symbol"
+        parameters:
+          type: object
+          properties:
+            symbol:
+              type: string
+              description: "Stock ticker symbol (e.g. AAPL, NVDA, MSFT)"
+          required: [symbol]
+    prompt: "Look up the stock price for Tesla"
+    expected:
+      tool: get_stock_price
+      params:
+        symbol: "TSLA"
+    scoring:
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  # ── calculate — basic (3 tasks) ────────────────────────────────────────
+  - id: calc_simple
+    category: calculate_basic
+    tools:
+      - name: calculate
+        description: "Evaluate a mathematical expression"
+        parameters:
+          type: object
+          properties:
+            expression:
+              type: string
+              description: "A valid mathematical expression (e.g. '2 + 3 * 4')"
+          required: [expression]
+    prompt: "What is 150 multiplied by 1.2?"
+    expected:
+      tool: calculate
+      params:
+        expression: "150 * 1.2"
+    scoring:
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  - id: calc_percentage
+    category: calculate_basic
+    tools:
+      - name: calculate
+        description: "Evaluate a mathematical expression"
+        parameters:
+          type: object
+          properties:
+            expression:
+              type: string
+              description: "A valid mathematical expression (e.g. '2 + 3 * 4')"
+          required: [expression]
+    prompt: "Calculate 20% of 250"
+    expected:
+      tool: calculate
+      params:
+        expression: "250 * 0.20"
+    scoring:
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  - id: calc_complex
+    category: calculate_basic
+    tools:
+      - name: calculate
+        description: "Evaluate a mathematical expression"
+        parameters:
+          type: object
+          properties:
+            expression:
+              type: string
+              description: "A valid mathematical expression (e.g. '2 + 3 * 4')"
+          required: [expression]
+    prompt: "Evaluate the expression: (100 + 200) * 3 / 4"
+    expected:
+      tool: calculate
+      params:
+        expression: "(100 + 200) * 3 / 4"
+    scoring:
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  # ── create_ticket — basic (2 tasks) ────────────────────────────────────
+  - id: ticket_simple
+    category: ticket_basic
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title"
+            description:
+              type: string
+              description: "Ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign"
+              default: []
+          required: [title, priority]
+    prompt: "Create a P2 bug ticket titled 'Login page broken on mobile'"
+    expected:
+      tool: create_ticket
+      params:
+        title: "Login page broken on mobile"
+        priority: "p2"
+        labels: ["bug"]
+    scoring:
+      tool_accuracy: true
+      param_completeness: 0.67    # title + priority required, labels present
+      param_correctness: true
+
+  - id: ticket_high_priority
+    category: ticket_basic
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title"
+            description:
+              type: string
+              description: "Ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign"
+              default: []
+          required: [title, priority]
+    prompt: "Create a security P0 ticket: 'SQL injection in user profile endpoint'"
+    expected:
+      tool: create_ticket
+      params:
+        title: "SQL injection in user profile endpoint"
+        priority: "p0"
+        labels: ["security"]
+    scoring:
+      tool_accuracy: true
+      param_completeness: 0.67
+      param_correctness: true
+
+  # ── create_ticket — complex schema (1 task) ────────────────────────────
+  - id: ticket_with_assignee
+    category: ticket_complex
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title"
+            description:
+              type: string
+              description: "Ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign"
+              default: []
+          required: [title, priority]
+    prompt: "Create a P3 feature ticket titled 'Add dark mode support' for user alice"
+    expected:
+      tool: create_ticket
+      params:
+        title: "Add dark mode support"
+        priority: "p3"
+        labels: ["feature"]
+        assignees:
+          - username: "alice"
+            role: "primary"
+    scoring:
+      tool_accuracy: true
+      param_completeness: 0.8
+      param_correctness: true
+
+  # ── send_email — basic (2 tasks) ───────────────────────────────────────
+  - id: email_simple
+    category: email_basic
+    tools:
+      - name: send_email
+        description: "Send an email message"
+        parameters:
+          type: object
+          properties:
+            to:
+              type: string
+              description: "Recipient email address"
+            subject:
+              type: string
+              description: "Email subject line"
+            body:
+              type: string
+              description: "Email body content"
+          required: [to, subject, body]
+    prompt: "Send an email to bob@example.com with subject 'Meeting Tomorrow' and body 'Hi Bob, just a reminder about our meeting tomorrow at 3pm.'"
+    expected:
+      tool: send_email
+      params:
+        to: "bob@example.com"
+        subject: "Meeting Tomorrow"
+        body: "Hi Bob, just a reminder about our meeting tomorrow at 3pm."
+    scoring:
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  - id: email_subject_only
+    category: email_basic
+    tools:
+      - name: send_email
+        description: "Send an email message"
+        parameters:
+          type: object
+          properties:
+            to:
+              type: string
+              description: "Recipient email address"
+            subject:
+              type: string
+              description: "Email subject line"
+            body:
+              type: string
+              description: "Email body content"
+          required: [to, subject, body]
+    prompt: "Email sarah@company.com about the project update"
+    expected:
+      tool: send_email
+      params:
+        to: "sarah@company.com"
+        subject: "Project update"
+    scoring:
+      tool_accuracy: true
+      param_completeness: 0.67    # body missing / assumed
+      param_correctness: true
+
+  # ── schedule_meeting — basic (2 tasks) ─────────────────────────────────
+  - id: meeting_basic
+    category: meeting_basic
+    tools:
+      - name: schedule_meeting
+        description: "Schedule a calendar meeting"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              description: "Meeting title"
+            datetime:
+              type: string
+              description: "Meeting datetime in ISO format (e.g. '2026-07-25T14:00:00')"
+            attendees:
+              type: array
+              items:
+                type: string
+              description: "List of attendee email addresses"
+          required: [title, datetime, attendees]
+    prompt: "Schedule a team standup every Monday at 9am. Title it 'Weekly Standup'."
+    expected:
+      tool: schedule_meeting
+      params:
+        title: "Weekly Standup"
+        datetime: "2026-07-28T09:00:00"
+    scoring:
+      tool_accuracy: true
+      param_completeness: 0.67    # attendees not specified
+      param_correctness: true
+
+  - id: meeting_with_attendees
+    category: meeting_basic
+    tools:
+      - name: schedule_meeting
+        description: "Schedule a calendar meeting"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              description: "Meeting title"
+            datetime:
+              type: string
+              description: "Meeting datetime in ISO format (e.g. '2026-07-25T14:00:00')"
+            attendees:
+              type: array
+              items:
+                type: string
+              description: "List of attendee email addresses"
+          required: [title, datetime, attendees]
+    prompt: "Book a 1:1 meeting called 'Sprint Review' for July 30 at 2pm with alice@co.com and bob@co.com"
+    expected:
+      tool: schedule_meeting
+      params:
+        title: "Sprint Review"
+        datetime: "2026-07-30T14:00:00"
+        attendees: ["alice@co.com", "bob@co.com"]
+    scoring:
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  # ── ambiguous / underspecified (1 task) ────────────────────────────────
+  - id: ambiguous_generic
+    category: ambiguous
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+      - name: convert_currency
+        description: "Convert an amount from one currency to another"
+        parameters:
+          type: object
+          properties:
+            amount:
+              type: number
+              description: "The amount to convert"
+            from_currency:
+              type: string
+              description: "Source currency code (e.g. USD, EUR, JPY)"
+            to_currency:
+              type: string
+              description: "Target currency code"
+          required: [amount, from_currency, to_currency]
+    prompt: "Find me something about Japan"
+    expected:
+      tool: search
+      params:
+        query: "Japan"
+    scoring:
+      tool_accuracy: true    # search is reasonable default
+      param_completeness: 1.0
+      param_correctness: true
+
+  # ── refusal — no tool needed (2 tasks) ─────────────────────────────────
+  - id: refusal_joke
+    category: refusal
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+    prompt: "Tell me a joke"
+    expected:
+      tool: null    # no tool call expected
+    scoring:
+      tool_accuracy: true    # correct: no tool call
+      param_completeness: 1.0
+      param_correctness: true
+
+  - id: refusal_identity
+    category: refusal
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+    prompt: "What is your name?"
+    expected:
+      tool: null
+    scoring:
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
