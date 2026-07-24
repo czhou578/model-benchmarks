@@ -434,19 +434,24 @@ This is simpler — no mock server needed. The tools are declarative schemas pas
 - Score: tool accuracy, param completeness, param correctness.
 - Estimated time: 1–2 days.
 
-### Phase 2 — Multi-Tool Chaining
+### Phase 2 — Multi-Tool Chaining ✅ DONE
 
-- Add 15–20 multi-turn tasks.
-- Implement multi-turn loop: send tool output back as user message.
-- Score: orchestration accuracy, data flow correctness.
-- Estimated time: 2–3 days.
+- **16 multi-tool tasks** added: stock→calc, weather→currency, search→calc, email→meeting, 3-tool chains, parallel calls, dependency chains.
+- **Multi-turn loop** in `_run_multi_turn_task()`: model calls tools sequentially or in parallel with simulated responses.
+- **Scoring**: orchestration accuracy, data flow correctness, turns correct, multi_score.
+- **Failure modes**: `wrong_tool_sequence`, `data_flow_error`, `wrong_turn_count`.
 
-### Phase 3 — Schema Compliance & Robustness
+### Phase 3 — Schema Compliance & Robustness ✅ DONE
 
-- Add complex nested schema tasks (60+ property tasks).
-- Add ambiguity tests, error recovery tests, refusal tests.
-- Implement scoring for all 6 categories.
-- Estimated time: 2–3 days.
+- **20 schema compliance tasks** added: test minLength, maxLength, pattern, enum, required fields, nested objects (assignees), array items against the `create_ticket` tool schema.
+- **17 error recovery tasks** added: cover all 8 tool types with bad params → error → retry sequences, plus multi-turn chains.
+- **Ambiguous tasks**: 9 tasks already implemented (no_tool, underspecified, assumption strategies).
+- **Scoring functions**:
+  - `_score_schema_compliance_task()`: checks required, length, enum, pattern, nested constraints.
+  - Error recovery scoring in `_run_multi_turn_task()`: checks turn count and params validity.
+- **Aggregation**: `category_scores` include `strict_compliance`, `error_recovery`, `self_corrected`, etc.
+- **Failure modes**: `schema_constraint_violation`, `error_no_retry`, `error_retry_invalid`.
+- Total tasks: ~85 across 10 categories.
 
 ### Phase 4 — Integration & Reporting
 
