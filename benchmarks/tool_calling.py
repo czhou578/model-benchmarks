@@ -7,6 +7,11 @@ Phase 2 — Multi-Tool Chaining
   Multi-turn chains where the model must orchestrate multiple tools.
   The output of one tool feeds into the next.
 
+Phase 3 — Schema Compliance & Error Recovery
+  Schema compliance: strict JSON Schema constraint validation (minLength,
+  maxLength, pattern, enum, required, nested objects).
+  Error recovery: model self-corrects when a tool returns an error.
+
 Input : ``datasets/tool_calling_tasks.yaml``
 Output: ``tool_calling.json`` inside the run directory.
 
@@ -30,6 +35,7 @@ from typing import Any
 
 import requests
 import yaml
+import re
 
 from core_runner import ModelClient
 
@@ -312,6 +318,121 @@ def _score_ambiguous_task(
     return (no_halluc, no_halluc, "" if no_halluc else "hallucinated params")
 
 
+def _score_schema_compliance_task(
+    actual_params: dict[str, Any] | None,
+    tool_params_schema: dict,
+    scoring: dict,
+) -> tuple[bool, dict[str, bool], str]:
+    """Score a schema compliance task.
+
+    Checks that the model's params satisfy all schema constraints.
+
+    Returns:
+        (correct, constraint_results, details)
+    """
+    properties = tool_params_schema.get("properties", {})
+    required = tool_params_schema.get("required", [])
+
+    if not actual_params:
+        if required:
+            return False, {"required_present": False}, "no params provided"
+        return True, {}, "no params, no required fields"
+
+    results: dict[str, bool] = {
+        "required_present": True,
+        "length_valid": True,
+        "enum_valid": True,
+        "pattern_valid": True,
+        "nested_valid": True,
+    }
+
+    details_parts: list[str] = []
+
+    # Check required fields
+    for req in required:
+        if req not in actual_params:
+            results["required_present"] = False
+            details_parts.append(f"missing required: {req}")
+
+    # Check each provided param against its schema
+    for param_name, param_value in actual_params.items():
+        prop_schema = properties.get(param_name, {})
+
+        # String constraints
+        if isinstance(param_value, str):
+            if "minLength" in prop_schema:
+                if len(param_value) < prop_schema["minLength"]:
+                    results["length_valid"] = False
+                    details_parts.append(
+                        f"{param_name}: too short (len={len(param_value)}, min={prop_schema['minLength']})"
+                    )
+            if "maxLength" in prop_schema:
+                if len(param_value) > prop_schema["maxLength"]:
+                    results["length_valid"] = False
+                    details_parts.append(
+                        f"{param_name}: too long (len={len(param_value)}, max={prop_schema['maxLength']})"
+                    )
+            if "pattern" in prop_schema:
+                import re
+                if not re.match(prop_schema["pattern"], param_value):
+                    results["pattern_valid"] = False
+                    details_parts.append(
+                        f"{param_name}: violates pattern {prop_schema['pattern']}"
+                    )
+            if "enum" in prop_schema and param_value not in prop_schema["enum"]:
+                results["enum_valid"] = False
+                details_parts.append(
+                    f"{param_name}: {param_value!r} not in {prop_schema['enum']}"
+                )
+
+        # Array constraints
+        if isinstance(param_value, list):
+            item_schema = prop_schema.get("items", {})
+            for item in param_value:
+                if "enum" in item_schema and isinstance(item, str):
+                    if item not in item_schema["enum"]:
+                        results["enum_valid"] = False
+                        details_parts.append(f"label: {item!r} not in enum")
+
+        # Nested object (assignees)
+        if isinstance(param_value, list) and prop_schema.get("items", {}).get("type") == "object":
+            items_schema = prop_schema["items"]
+            nested_props = items_schema.get("properties", {})
+            nested_required = items_schema.get("required", [])
+            for idx, entry in enumerate(param_value):
+                if isinstance(entry, dict):
+                    # Check required nested fields
+                    for nr in nested_required:
+                        if nr not in entry:
+                            results["nested_valid"] = False
+                            details_parts.append(f"assignee[{idx}]: missing {nr}")
+                    # Check nested string constraints
+                    for ne, nv in entry.items():
+                        np_ = nested_props.get(ne, {})
+                        if isinstance(nv, str):
+                            if "pattern" in np_ and not re.match(np_["pattern"], nv):
+                                results["pattern_valid"] = False
+                                details_parts.append(f"assignee[{idx}].{ne}: pattern violation")
+                            if "enum" in np_ and nv not in np_["enum"]:
+                                results["enum_valid"] = False
+                                details_parts.append(f"assignee[{idx}].{ne}: {nv!r} not in enum")
+
+    all_ok = all(results.values())
+    if not results["required_present"]:
+        all_ok = False
+    if not results["length_valid"]:
+        all_ok = False
+    if not results["enum_valid"]:
+        all_ok = False
+    if not results["pattern_valid"]:
+        all_ok = False
+    if not results["nested_valid"]:
+        all_ok = False
+
+    details = "; ".join(details_parts) if details_parts else ""
+    return all_ok, results, details
+
+
 # --------------------------------------------------------------------------- #
 # Mock tool executor — deterministic simulated responses
 # --------------------------------------------------------------------------- #
@@ -582,6 +703,27 @@ def _run_task(
         if not ambig_correct:
             correct = False
 
+    # Default values for schema-compliance scoring (overridden if category matches).
+    schema_ok = True
+    schema_constraint_results: dict[str, bool] = {}
+    schema_details = ""
+
+    # ── Schema-compliance overlay scoring ───────────────────────────────────
+    if task.get("category") == "schema_compliance":
+        # Get the tool schema for the expected tool
+        actual_schema = {}
+        for t in tools_def:
+            if t["function"]["name"] == actual_tool:
+                actual_schema = t["function"].get("parameters", {})
+                break
+
+        schema_ok, schema_constraint_results, schema_details = _score_schema_compliance_task(
+            actual_params, actual_schema, task.get("scoring", {}),
+        )
+        if not schema_ok:
+            correct = False
+            details = f"Schema violations: {schema_details}"
+
     # Standard details (tool/param mismatch)
     if not tool_correct:
         expected_display = expected_tool or "no tool"
@@ -624,6 +766,14 @@ def _run_task(
             "strategy", task.get("strategy", "assumption"),
         )
         result.ambig_details = ambig_details
+
+    # Attach schema-compliance fields for schema_compliance tasks.
+    if task.get("category") == "schema_compliance":
+        result.no_hallucinated_params = schema_ok
+        result.ambig_strategy = "schema_compliance"
+        result.ambig_details = schema_details
+        for key, val in schema_constraint_results.items():
+            setattr(result, f"schema_{key}", val)
 
     return result
 
@@ -881,6 +1031,29 @@ def _run_multi_turn_task(
     )
     correct = single_correct
 
+    # ── Error-recovery scoring ─────────────────────────────────────────────
+    recovery_ok = True
+    self_corrected = True
+    recovery_details = ""
+
+    if task.get("category") == "error_recovery":
+        # Check if model made at least as many calls as expected
+        if len(actual_sequence) != expected_turns:
+            recovery_ok = False
+            recovery_details = f"expected {expected_turns} turns, got {len(actual_sequence)}"
+
+        # Check if the model's last call had non-empty, valid params
+        if actual_sequence:
+            last_params = actual_sequence[-1].get("params", {}) or {}
+            for _, v in last_params.items():
+                if isinstance(v, str) and not v.strip():
+                    self_corrected = False
+                    recovery_ok = False
+                    recovery_details += "; last call has empty param"
+
+        if not recovery_ok or not self_corrected:
+            correct = False
+
     result = MultiTurnTaskResult(
         task_id=task_id,
         category=category,
@@ -1002,6 +1175,81 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
                 ) if total else None,
             })
 
+        # Schema-compliance-specific fields.
+        if cat == "schema_compliance":
+            total_compliant = sum(1 for r in cat_results if r.correct)
+            no_halluc = sum(
+                1 for r in cat_results
+                if getattr(r, "no_hallucinated_params", True)
+            )
+            req_present = sum(
+                1 for r in cat_results
+                if getattr(r, "schema_required_present", True)
+            )
+            length_ok = sum(
+                1 for r in cat_results
+                if getattr(r, "schema_length_valid", True)
+            )
+            enum_ok = sum(
+                1 for r in cat_results
+                if getattr(r, "schema_enum_valid", True)
+            )
+            pattern_ok = sum(
+                1 for r in cat_results
+                if getattr(r, "schema_pattern_valid", True)
+            )
+            nested_ok = sum(
+                1 for r in cat_results
+                if getattr(r, "schema_nested_valid", True)
+            )
+            cat_score.update({
+                "strict_compliance": round(
+                    total_compliant / total, 4
+                ) if total else None,
+                "no_hallucinated_params": round(
+                    no_halluc / total, 4
+                ) if total else None,
+                "required_present": round(
+                    req_present / total, 4
+                ) if total else None,
+                "length_valid": round(
+                    length_ok / total, 4
+                ) if total else None,
+                "enum_valid": round(
+                    enum_ok / total, 4
+                ) if total else None,
+                "pattern_valid": round(
+                    pattern_ok / total, 4
+                ) if total else None,
+                "nested_valid": round(
+                    nested_ok / total, 4
+                ) if total else None,
+            })
+
+        # Error-recovery-specific fields.
+        if cat == "error_recovery":
+            total_recovery = sum(1 for r in cat_results if r.correct)
+            no_halluc = sum(
+                1 for r in cat_results
+                if getattr(r, "no_hallucinated_params", True)
+            )
+            # Count how many had their expected turn count
+            turns_matched = sum(
+                1 for r in cat_results
+                if isinstance(r, MultiTurnTaskResult) and r.turns_correct
+            )
+            cat_score.update({
+                "error_recovery": round(
+                    total_recovery / total, 4
+                ) if total else None,
+                "self_corrected": round(
+                    no_halluc / total, 4
+                ) if total else None,
+                "turns_matched": round(
+                    turns_matched / total, 4
+                ) if total else None,
+            })
+
         category_scores[cat] = cat_score
 
     total_correct = sum(1 for r in results if r.correct)
@@ -1022,6 +1270,9 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
         "data_flow_error": 0,
         "wrong_turn_count": 0,
         "hallucinated_param_value": 0,
+        "schema_constraint_violation": 0,
+        "error_no_retry": 0,
+        "error_retry_invalid": 0,
     }
     for r in results:
         if not r.correct:
@@ -1046,6 +1297,27 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
             # Track hallucinated params for ambiguous tasks.
             if getattr(r, "no_hallucinated_params", True) is False:
                 failure_modes["hallucinated_param_value"] += 1
+
+            # Schema compliance failure modes.
+            if r.category == "schema_compliance":
+                if not getattr(r, "schema_required_present", True):
+                    failure_modes["schema_constraint_violation"] += 1
+                elif not getattr(r, "schema_length_valid", True):
+                    failure_modes["schema_constraint_violation"] += 1
+                elif not getattr(r, "schema_enum_valid", True):
+                    failure_modes["schema_constraint_violation"] += 1
+                elif not getattr(r, "schema_pattern_valid", True):
+                    failure_modes["schema_constraint_violation"] += 1
+                elif not getattr(r, "schema_nested_valid", True):
+                    failure_modes["schema_constraint_violation"] += 1
+
+            # Error recovery failure modes.
+            if r.category == "error_recovery":
+                if isinstance(r, MultiTurnTaskResult):
+                    if not r.turns_correct:
+                        failure_modes["error_no_retry"] += 1
+                    elif not getattr(r, "no_hallucinated_params", True):
+                        failure_modes["error_retry_invalid"] += 1
 
     per_task_serialized = []
     for r in results:
@@ -1080,6 +1352,27 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
             entry.update({
                 "no_hallucinated_params": getattr(r, "no_hallucinated_params", True),
                 "ambig_strategy": getattr(r, "ambig_strategy", "assumption"),
+                "ambig_details": getattr(r, "ambig_details", ""),
+            })
+
+        # Schema-compliance-specific fields.
+        if r.category == "schema_compliance":
+            entry.update({
+                "no_hallucinated_params": getattr(r, "no_hallucinated_params", True),
+                "ambig_strategy": getattr(r, "ambig_strategy", "schema_compliance"),
+                "ambig_details": getattr(r, "ambig_details", ""),
+                "schema_required_present": getattr(r, "schema_required_present", None),
+                "schema_length_valid": getattr(r, "schema_length_valid", None),
+                "schema_enum_valid": getattr(r, "schema_enum_valid", None),
+                "schema_pattern_valid": getattr(r, "schema_pattern_valid", None),
+                "schema_nested_valid": getattr(r, "schema_nested_valid", None),
+            })
+
+        # Error-recovery-specific fields.
+        if r.category == "error_recovery":
+            entry.update({
+                "no_hallucinated_params": getattr(r, "no_hallucinated_params", True),
+                "ambig_strategy": getattr(r, "ambig_strategy", "error_recovery"),
                 "ambig_details": getattr(r, "ambig_details", ""),
             })
 
@@ -1205,6 +1498,19 @@ def run_tool_calling_benchmark(
                 "strategy", task.get("strategy", "assumption"),
             )
             r.ambig_details = exc_details or r.details
+
+        # Attach schema-compliance fields even for exceptions.
+        if task.get("category") == "schema_compliance":
+            r.no_hallucinated_params = True
+            r.ambig_strategy = "schema_compliance"
+            r.ambig_details = f"exception: {exc_details or r.details}"
+
+        # Attach error-recovery fields even for exceptions.
+        if task.get("category") == "error_recovery":
+            r.no_hallucinated_params = False
+            r.ambig_strategy = "error_recovery"
+            r.ambig_details = f"exception: {exc_details or r.details}"
+
         results.append(r)
         if idx < total:
             time.sleep(0.5)  # small stabilization gap
@@ -1232,7 +1538,7 @@ def main() -> None:
     """Standalone entry point for running the benchmark."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Tool-calling benchmark (Phase 1 + 2)")
+    parser = argparse.ArgumentParser(description="Tool-calling benchmark (Phase 1–3)")
     parser.add_argument(
         "--tasks", default="datasets/tool_calling_tasks.yaml",
         help="Path to the YAML task file",

@@ -2022,3 +2022,1951 @@ tasks:
       orchestration_accuracy: true
       data_flow_correct: true
       turns_correct: true
+# ──────────────────────────────────────────────────────────────────────────
+# Phase 3 — Schema Compliance
+#
+# Tests strict adherence to complex nested JSON schemas. Each task uses
+# the create_ticket tool with constraints: minLength, maxLength, pattern,
+# enum, required fields, nested objects (assignees), and arrays.
+#
+# Scoring: strict_compliance (all constraints satisfied?), required_present,
+# enum_valid, pattern_valid, length_valid, nested_valid.
+# ──────────────────────────────────────────────────────────────────────────
+
+
+  # ── schema_title_min_length_fail: title violates minLength (too short) ──
+  - id: schema_title_min_length_fail
+    category: schema_compliance
+    prompt: "Create a ticket with title 'Short' and priority p3"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "Short"
+        priority: "p3"
+    scoring:
+      strict_compliance: false
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "title violates minLength (too short)"
+
+
+  # ── schema_title_max_length_fail: title violates maxLength (too long) ──
+  - id: schema_title_max_length_fail
+    category: schema_compliance
+    prompt: "Create a ticket with this extremely long title that exceeds 200 chars: This is an extremely long ticket title that exceeds the maximum allowed length of 200 characters and should be rejected by schema validation rules"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "This is an extremely long ticket title that exceeds the maximum allowed length of 200 characters and should be rejected by schema validation rules"
+        priority: "p3"
+    scoring:
+      strict_compliance: false
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "title violates maxLength (too long)"
+
+
+  # ── schema_title_min_length_pass: all constraints satisfied (minimal valid) ──
+  - id: schema_title_min_length_pass
+    category: schema_compliance
+    prompt: "Create a ticket with title 'Valid title here' and priority p3"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "Valid title here"
+        priority: "p3"
+    scoring:
+      strict_compliance: true
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "all constraints satisfied (minimal valid)"
+
+
+  # ── schema_nested_valid: nested object with valid pattern ──
+  - id: schema_nested_valid
+    category: schema_compliance
+    prompt: "Create a P3 feature ticket titled 'Add dark mode support' for user alice with primary role"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "Add dark mode support"
+        priority: "p3"
+        labels: ["feature"]
+      assignees:
+        -
+          username: "alice"
+          role: "primary"
+    scoring:
+      strict_compliance: true
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "nested object with valid pattern"
+
+
+  # ── schema_nested_invalid_pattern: username violates pattern (contains @ and !) ──
+  - id: schema_nested_invalid_pattern
+    category: schema_compliance
+    prompt: "Create a P3 ticket titled 'Bad assignee' for user 'bad@user!' with primary role"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "Bad assignee"
+        priority: "p3"
+      assignees:
+        -
+          username: "bad@user!"
+          role: "primary"
+    scoring:
+      strict_compliance: false
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "username violates pattern (contains @ and !)"
+
+
+  # ── schema_invalid_label_enum: label 'critical' not in enum ──
+  - id: schema_invalid_label_enum
+    category: schema_compliance
+    prompt: "Create a ticket with title 'Invalid label test' and priority p2 and label 'critical'"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "Invalid label test"
+        priority: "p2"
+        labels: ["critical"]
+    scoring:
+      strict_compliance: false
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "label 'critical' not in enum"
+
+
+  # ── schema_invalid_priority_enum: priority 'p99' not in enum ──
+  - id: schema_invalid_priority_enum
+    category: schema_compliance
+    prompt: "Create a ticket titled 'Bad priority' with priority p99"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "Bad priority"
+        priority: "p99"
+    scoring:
+      strict_compliance: false
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "priority 'p99' not in enum"
+
+
+  # ── schema_valid_enums: all enums valid ──
+  - id: schema_valid_enums
+    category: schema_compliance
+    prompt: "Create a P0 security ticket titled 'SQL injection vulnerability' for user bob with secondary role"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "SQL injection vulnerability"
+        priority: "p0"
+        labels: ["security"]
+      assignees:
+        -
+          username: "bob"
+          role: "secondary"
+    scoring:
+      strict_compliance: true
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "all enums valid"
+
+
+  # ── schema_missing_priority: missing required field: priority ──
+  - id: schema_missing_priority
+    category: schema_compliance
+    prompt: "Create a ticket titled 'Missing priority' with label bug"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "Missing priority"
+        labels: ["bug"]
+    scoring:
+      strict_compliance: false
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "missing required field: priority"
+
+
+  # ── schema_missing_title: missing required field: title ──
+  - id: schema_missing_title
+    category: schema_compliance
+    prompt: "Create a P2 ticket with label feature for alice"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        priority: "p2"
+        labels: ["feature"]
+      assignees:
+        -
+          username: "alice"
+          role: "primary"
+    scoring:
+      strict_compliance: false
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "missing required field: title"
+
+
+  # ── schema_multi_labels: array items all valid enums ──
+  - id: schema_multi_labels
+    category: schema_compliance
+    prompt: "Create a P2 bug ticket titled 'Mobile login broken' with labels bug and enhancement"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "Mobile login broken"
+        priority: "p2"
+        labels: ["bug", "enhancement"]
+    scoring:
+      strict_compliance: true
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "array items all valid enums"
+
+
+  # ── schema_mixed_labels: label 'invalid_label' not in enum ──
+  - id: schema_mixed_labels
+    category: schema_compliance
+    prompt: "Create a ticket titled 'Mixed labels' with labels bug and invalid_label"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "Mixed labels"
+        priority: "p2"
+        labels: ["bug", "invalid_label"]
+    scoring:
+      strict_compliance: false
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "label 'invalid_label' not in enum"
+
+
+  # ── schema_multi_assignees: multiple nested objects valid ──
+  - id: schema_multi_assignees
+    category: schema_compliance
+    prompt: "Create a P2 ticket titled 'Team task' for alice primary and bob secondary"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "Team task"
+        priority: "p2"
+      assignees:
+        -
+          username: "alice"
+          role: "primary"
+        -
+          username: "bob"
+          role: "secondary"
+    scoring:
+      strict_compliance: true
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "multiple nested objects valid"
+
+
+  # ── schema_multi_assignees_invalid: username 'test@user' violates pattern ──
+  - id: schema_multi_assignees_invalid
+    category: schema_compliance
+    prompt: "Create a P2 ticket titled 'Bad team' for user 'test@user' primary and alice secondary"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "Bad team"
+        priority: "p2"
+      assignees:
+        -
+          username: "test@user"
+          role: "primary"
+        -
+          username: "alice"
+          role: "secondary"
+    scoring:
+      strict_compliance: false
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "username 'test@user' violates pattern"
+
+
+  # ── schema_with_description: all fields valid including optional description ──
+  - id: schema_with_description
+    category: schema_compliance
+    prompt: "Create a P1 bug ticket titled 'Dashboard not loading' with description 'Users report blank screen on load'"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "Dashboard not loading"
+        priority: "p1"
+        description: "Users report blank screen on load"
+        labels: ["bug"]
+    scoring:
+      strict_compliance: true
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "all fields valid including optional description"
+
+
+  # ── schema_invalid_role: assignee role 'admin' not in enum ──
+  - id: schema_invalid_role
+    category: schema_compliance
+    prompt: "Create a P2 ticket titled 'Bad role' for alice with role admin"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "Bad role"
+        priority: "p2"
+      assignees:
+        -
+          username: "alice"
+          role: "admin"
+    scoring:
+      strict_compliance: false
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "assignee role 'admin' not in enum"
+
+
+  # ── schema_minimal_valid: only required fields, no extras ──
+  - id: schema_minimal_valid
+    category: schema_compliance
+    prompt: "Create a P4 ticket titled 'Minimal ticket'"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "Minimal ticket"
+        priority: "p4"
+    scoring:
+      strict_compliance: true
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "only required fields, no extras"
+
+
+  # ── schema_missing_nested_user: nested assignee missing required username ──
+  - id: schema_missing_nested_user
+    category: schema_compliance
+    prompt: "Create a P2 ticket titled 'No username' for assignee with just role primary"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "No username"
+        priority: "p2"
+      assignees:
+        -
+          role: "primary"
+    scoring:
+      strict_compliance: false
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "nested assignee missing required username"
+
+
+  # ── schema_all_valid_complex: complex valid ticket with all fields ──
+  - id: schema_all_valid_complex
+    category: schema_compliance
+    prompt: "Create a P0 security ticket titled 'Critical XSS vulnerability' with description 'Reflected XSS in search endpoint' for alice primary"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "Critical XSS vulnerability"
+        priority: "p0"
+        description: "Reflected XSS in search endpoint"
+        labels: ["security"]
+      assignees:
+        -
+          username: "alice"
+          role: "primary"
+    scoring:
+      strict_compliance: true
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "complex valid ticket with all fields"
+
+
+  # ── schema_pattern_valid_edge: username with dots, dashes, underscores valid ──
+  - id: schema_pattern_valid_edge
+    category: schema_compliance
+    prompt: "Create a P2 ticket titled 'Edge case' for user 'a.b-c_d' with role primary"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected:
+      tool: create_ticket
+      params:
+        title: "Edge case"
+        priority: "p2"
+      assignees:
+        -
+          username: "a.b-c_d"
+          role: "primary"
+    scoring:
+      strict_compliance: true
+      required_present: true
+      enum_valid: true
+      pattern_valid: true
+      length_valid: true
+      nested_valid: true
+      constraint_detail: "username with dots, dashes, underscores valid"
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Phase 3 — Error Recovery
+#
+# Tests whether the model self-corrects when a tool returns an error.
+# Each task describes a sequence: model calls tool with bad params →
+# error response → model retries with corrected params.
+#
+# Scoring:
+#   - error_recovery: true if model corrects after error
+#   - self_corrected: did the model fix the bad params?
+#   - recovery_type: what kind of error was encountered
+# ──────────────────────────────────────────────────────────────────────────
+
+
+  # ── err_search_empty_query: empty required query param ──
+  - id: err_search_empty_query
+    category: error_recovery
+    prompt: "Search for information about machine learning"
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: search
+        params:
+          query: ""
+      - step: 2
+        tool: search
+        params:
+          query: "machine learning"
+    scoring:
+      error_recovery: true
+      self_corrected: true
+      recovery_type: "empty required query param"
+
+
+  # ── err_weather_unknown_location: unknown location → retry with valid location ──
+  - id: err_weather_unknown_location
+    category: error_recovery
+    prompt: "What's the weather like in Paris?"
+    tools:
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: get_weather
+        params:
+          location: "XYZ123"
+      - step: 2
+        tool: get_weather
+        params:
+          location: "Paris"
+    scoring:
+      error_recovery: true
+      self_corrected: true
+      recovery_type: "unknown location → retry with valid location"
+
+
+  # ── err_stock_unknown_symbol: unknown symbol → retry with valid symbol ──
+  - id: err_stock_unknown_symbol
+    category: error_recovery
+    prompt: "What's the price of AAPL stock?"
+    tools:
+      - name: get_stock_price
+        description: "Get the current stock price for a symbol"
+        parameters:
+          type: object
+          properties:
+            symbol:
+              type: string
+              description: "Stock ticker symbol (e.g. AAPL, NVDA, MSFT)"
+          required: [symbol]
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: get_stock_price
+        params:
+          symbol: "XYZ"
+      - step: 2
+        tool: get_stock_price
+        params:
+          symbol: "AAPL"
+    scoring:
+      error_recovery: true
+      self_corrected: true
+      recovery_type: "unknown symbol → retry with valid symbol"
+
+
+  # ── err_calc_empty_expr: empty expression → retry with valid expression ──
+  - id: err_calc_empty_expr
+    category: error_recovery
+    prompt: "Calculate 100 times 2"
+    tools:
+      - name: calculate
+        description: "Evaluate a mathematical expression"
+        parameters:
+          type: object
+          properties:
+            expression:
+              type: string
+              description: "A valid mathematical expression (e.g. '2 + 3 * 4')"
+          required: [expression]
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: calculate
+        params:
+          expression: ""
+      - step: 2
+        tool: calculate
+        params:
+          expression: "100 * 2"
+    scoring:
+      error_recovery: true
+      self_corrected: true
+      recovery_type: "empty expression → retry with valid expression"
+
+
+  # ── err_email_missing_fields: missing required subject/body → retry with all fields ──
+  - id: err_email_missing_fields
+    category: error_recovery
+    prompt: "Send an email to alice@example.com about the project update"
+    tools:
+      - name: send_email
+        description: "Send an email message"
+        parameters:
+          type: object
+          properties:
+            to:
+              type: string
+              description: "Recipient email address"
+            subject:
+              type: string
+              description: "Email subject line"
+            body:
+              type: string
+              description: "Email body content"
+          required: [to, subject, body]
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: send_email
+        params:
+          to: "alice@example.com"
+      - step: 2
+        tool: send_email
+        params:
+          to: "alice@example.com"
+          subject: "Project update"
+          body: "Hi, about the project."
+    scoring:
+      error_recovery: true
+      self_corrected: true
+      recovery_type: "missing required subject/body → retry with all fields"
+
+
+  # ── err_weather_bad_unit: invalid unit enum → retry with valid unit ──
+  - id: err_weather_bad_unit
+    category: error_recovery
+    prompt: "Get the weather in Tokyo in kelvin"
+    tools:
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: get_weather
+        params:
+          location: "Tokyo"
+          unit: "kelvin"
+      - step: 2
+        tool: get_weather
+        params:
+          location: "Tokyo"
+          unit: "celsius"
+    scoring:
+      error_recovery: true
+      self_corrected: true
+      recovery_type: "invalid unit enum → retry with valid unit"
+
+
+  # ── err_search_generic_query: generic query too vague → retry with specific query ──
+  - id: err_search_generic_query
+    category: error_recovery
+    prompt: "Find me something interesting"
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: search
+        params:
+          query: "something"
+      - step: 2
+        tool: search
+        params:
+          query: "interesting technology news"
+    scoring:
+      error_recovery: true
+      self_corrected: true
+      recovery_type: "generic query too vague → retry with specific query"
+
+
+  # ── err_email_bad_format: malformed email → retry with valid format ──
+  - id: err_email_bad_format
+    category: error_recovery
+    prompt: "Send an email to invalid-email about the project"
+    tools:
+      - name: send_email
+        description: "Send an email message"
+        parameters:
+          type: object
+          properties:
+            to:
+              type: string
+              description: "Recipient email address"
+            subject:
+              type: string
+              description: "Email subject line"
+            body:
+              type: string
+              description: "Email body content"
+          required: [to, subject, body]
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: send_email
+        params:
+          to: "invalid-email"
+          subject: "Project update"
+          body: "Hi."
+      - step: 2
+        tool: send_email
+        params:
+          to: "invalid-email@example.com"
+          subject: "Project update"
+          body: "Hi."
+    scoring:
+      error_recovery: true
+      self_corrected: true
+      recovery_type: "malformed email → retry with valid format"
+
+
+  # ── err_ticket_short_title: title too short → retry with valid title ──
+  - id: err_ticket_short_title
+    category: error_recovery
+    prompt: "Create a ticket titled 'X' and priority p2"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: create_ticket
+        params:
+          title: "X"
+          priority: "p2"
+      - step: 2
+        tool: create_ticket
+        params:
+          title: "Title is too short"
+          priority: "p2"
+    scoring:
+      error_recovery: true
+      self_corrected: true
+      recovery_type: "title too short → retry with valid title"
+
+
+  # ── err_ticket_invalid_label: invalid label enum → retry with valid label ──
+  - id: err_ticket_invalid_label
+    category: error_recovery
+    prompt: "Create a ticket titled 'Label test' priority p1 with label urgent"
+    tools:
+      - name: create_ticket
+        description: "Create a new issue ticket in a project management system"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              minLength: 5
+              maxLength: 200
+              description: "Ticket title, must be between 5 and 200 characters"
+            description:
+              type: string
+              maxLength: 2000
+              description: "Detailed ticket description"
+              default: ""
+            labels:
+              type: array
+              items:
+                type: string
+                enum: [bug, feature, enhancement, documentation, security]
+              description: "Labels for the ticket"
+              default: []
+            priority:
+              type: string
+              enum: [p0, p1, p2, p3, p4]
+              description: "Priority level"
+            assignees:
+              type: array
+              items:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    pattern: "^[a-zA-Z0-9._-]+$"
+                  role:
+                    type: string
+                    enum: [primary, secondary]
+                required: [username]
+              description: "People to assign to the ticket"
+              default: []
+          required: [title, priority]
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: create_ticket
+        params:
+          title: "Label test"
+          priority: "p1"
+          labels: ["urgent"]
+      - step: 2
+        tool: create_ticket
+        params:
+          title: "Label test"
+          priority: "p1"
+          labels: ["bug"]
+    scoring:
+      error_recovery: true
+      self_corrected: true
+      recovery_type: "invalid label enum → retry with valid label"
+
+
+  # ── err_stock_calc_chain: chain: stock then calculate (potential error in chain) ──
+  - id: err_stock_calc_chain
+    category: error_recovery
+    prompt: "Get MSFT price, then calculate a 10% increase"
+    tools:
+      - name: get_stock_price
+        description: "Get the current stock price for a symbol"
+        parameters:
+          type: object
+          properties:
+            symbol:
+              type: string
+              description: "Stock ticker symbol (e.g. AAPL, NVDA, MSFT)"
+          required: [symbol]
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: get_stock_price
+        params:
+          symbol: "MSFT"
+      - step: 2
+        tool: calculate
+        params:
+          expression: "420 * 1.10"
+    scoring:
+      error_recovery: true
+      self_corrected: true
+      recovery_type: "chain: stock then calculate (potential error in chain)"
+
+
+  # ── err_weather_stock_chain: parallel chain: weather + stock ──
+  - id: err_weather_stock_chain
+    category: error_recovery
+    prompt: "Check weather in Sydney and NVDA stock price"
+    tools:
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: get_weather
+        params:
+          location: "Sydney"
+      - step: 2
+        tool: get_stock_price
+        params:
+          symbol: "NVDA"
+    scoring:
+      error_recovery: true
+      self_corrected: true
+      recovery_type: "parallel chain: weather + stock"
+
+
+  # ── err_search_stock_chain: cross-domain chain: search + stock ──
+  - id: err_search_stock_chain
+    category: error_recovery
+    prompt: "Search for climate change news and get Google stock price"
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: search
+        params:
+          query: "climate change news 2026"
+      - step: 2
+        tool: get_stock_price
+        params:
+          symbol: "GOOGL"
+    scoring:
+      error_recovery: true
+      self_corrected: true
+      recovery_type: "cross-domain chain: search + stock"
+
+
+  # ── err_weather_multi_location: multi-city weather (error if one location unknown) ──
+  - id: err_weather_multi_location
+    category: error_recovery
+    prompt: "Get the weather in three cities: Tokyo, London, and Paris"
+    tools:
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+    expected_turns: 3
+    expected_sequence:
+      - step: 1
+        tool: get_weather
+        params:
+          location: "Tokyo"
+      - step: 2
+        tool: get_weather
+        params:
+          location: "London"
+      - step: 3
+        tool: get_weather
+        params:
+          location: "Paris"
+    scoring:
+      error_recovery: true
+      self_corrected: true
+      recovery_type: "multi-city weather (error if one location unknown)"
+
+
+  # ── err_meeting_missing_attendees: missing required attendees → retry with attendees ──
+  - id: err_meeting_missing_attendees
+    category: error_recovery
+    prompt: "Schedule a meeting called 'Sprint Review' for 2026-08-01 at 10am"
+    tools:
+      - name: schedule_meeting
+        description: "Schedule a calendar meeting"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              description: "Meeting title"
+            datetime:
+              type: string
+              description: "Meeting datetime in ISO format (e.g. '2026-07-25T14:00:00')"
+            attendees:
+              type: array
+              items:
+                type: string
+              description: "List of attendee email addresses"
+          required: [title, datetime, attendees]
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: schedule_meeting
+        params:
+          title: "Sprint Review"
+          datetime: "2026-08-01T10:00:00"
+      - step: 2
+        tool: schedule_meeting
+        params:
+          title: "Sprint Review"
+          datetime: "2026-08-01T10:00:00"
+          attendees: ["alice@example.com"]
+    scoring:
+      error_recovery: true
+      self_corrected: true
+      recovery_type: "missing required attendees → retry with attendees"
+
+
+  # ── err_calc_chain: empty expression → retry with compound expression ──
+  - id: err_calc_chain
+    category: error_recovery
+    prompt: "Calculate 100 + 200, then multiply by 3"
+    tools:
+      - name: calculate
+        description: "Evaluate a mathematical expression"
+        parameters:
+          type: object
+          properties:
+            expression:
+              type: string
+              description: "A valid mathematical expression (e.g. '2 + 3 * 4')"
+          required: [expression]
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: calculate
+        params:
+          expression: ""
+      - step: 2
+        tool: calculate
+        params:
+          expression: "(100 + 200) * 3"
+    scoring:
+      error_recovery: true
+      self_corrected: true
+      recovery_type: "empty expression → retry with compound expression"
+
+
+  # ── err_stock_currency_chain: cross-domain chain: stock + currency ──
+  - id: err_stock_currency_chain
+    category: error_recovery
+    prompt: "Get NVDA price and convert 100 USD to EUR"
+    tools:
+      - name: get_stock_price
+        description: "Get the current stock price for a symbol"
+        parameters:
+          type: object
+          properties:
+            symbol:
+              type: string
+              description: "Stock ticker symbol (e.g. AAPL, NVDA, MSFT)"
+          required: [symbol]
+    expected_turns: 2
+    expected_sequence:
+      - step: 1
+        tool: get_stock_price
+        params:
+          symbol: "NVDA"
+      - step: 2
+        tool: convert_currency
+        params:
+          amount: 100
+          from_currency: "USD"
+          to_currency: "EUR"
+    scoring:
+      error_recovery: true
+      self_corrected: true
+      recovery_type: "cross-domain chain: stock + currency"
+
