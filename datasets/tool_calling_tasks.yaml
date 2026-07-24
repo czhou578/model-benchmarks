@@ -799,6 +799,407 @@ tasks:
       param_completeness: 1.0
       param_correctness: true
 
+# ── ambiguous / underspecified — no tool needed (3 tasks) ────────────────
+  - id: ambiguous_no_tool_joke
+    category: ambiguous
+    strategy: no_tool
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+      - name: convert_currency
+        description: "Convert an amount from one currency to another"
+        parameters:
+          type: object
+          properties:
+            amount:
+              type: number
+              description: "The amount to convert"
+            from_currency:
+              type: string
+              description: "Source currency code (e.g. USD, EUR, JPY)"
+            to_currency:
+              type: string
+              description: "Target currency code"
+          required: [amount, from_currency, to_currency]
+    prompt: "Tell me a joke"
+    expected:
+      tool: null
+    scoring:
+      strategy: no_tool
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  - id: ambiguous_no_tool_identity
+    category: ambiguous
+    strategy: no_tool
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+      - name: convert_currency
+        description: "Convert an amount from one currency to another"
+        parameters:
+          type: object
+          properties:
+            amount:
+              type: number
+              description: "The amount to convert"
+            from_currency:
+              type: string
+              description: "Source currency code (e.g. USD, EUR, JPY)"
+            to_currency:
+              type: string
+              description: "Target currency code"
+          required: [amount, from_currency, to_currency]
+    prompt: "What kind of AI are you?"
+    expected:
+      tool: null
+    scoring:
+      strategy: no_tool
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  - id: ambiguous_no_tool_math
+    category: ambiguous
+    strategy: no_tool
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+      - name: calculate
+        description: "Evaluate a mathematical expression"
+        parameters:
+          type: object
+          properties:
+            expression:
+              type: string
+              description: "A valid mathematical expression (e.g. '2 + 3 * 4')"
+          required: [expression]
+    prompt: "What is 42 divided by 6?"
+    expected:
+      tool: null
+    scoring:
+      strategy: no_tool
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  # ── ambiguous / underspecified — model should ask for clarification (3 tasks) ──
+  - id: ambiguous_underspecified_email
+    category: ambiguous
+    strategy: underspecified
+    tools:
+      - name: send_email
+        description: "Send an email message"
+        parameters:
+          type: object
+          properties:
+            to:
+              type: string
+              description: "Recipient email address"
+            subject:
+              type: string
+              description: "Email subject line"
+            body:
+              type: string
+              description: "Email body content"
+          required: [to, subject, body]
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+    prompt: "Send me an email to remind me about the meeting"
+    expected:
+      tool: null  # missing recipient, subject, body — should clarify
+    scoring:
+      strategy: underspecified
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  - id: ambiguous_underspecified_weather
+    category: ambiguous
+    strategy: underspecified
+    tools:
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+    prompt: "What's the weather?"
+    expected:
+      tool: null  # no location specified — should clarify
+    scoring:
+      strategy: underspecified
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  - id: ambiguous_underspecified_search
+    category: ambiguous
+    strategy: underspecified
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+      - name: convert_currency
+        description: "Convert an amount from one currency to another"
+        parameters:
+          type: object
+          properties:
+            amount:
+              type: number
+              description: "The amount to convert"
+            from_currency:
+              type: string
+              description: "Source currency code (e.g. USD, EUR, JPY)"
+            to_currency:
+              type: string
+              description: "Target currency code"
+          required: [amount, from_currency, to_currency]
+    prompt: "Look up something for me about technology"
+    expected:
+      tool: null  # too vague — should clarify what exactly to look up
+    scoring:
+      strategy: underspecified
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  # ── ambiguous / underspecified — reasonable default (2 tasks) ─────────────
+  - id: ambiguous_assumption_country
+    category: ambiguous
+    strategy: assumption
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+      - name: get_weather
+        description: "Get the current weather for a location"
+        parameters:
+          type: object
+          properties:
+            location:
+              type: string
+              description: "City or location name"
+            unit:
+              type: string
+              enum: [celsius, fahrenheit]
+              description: "Temperature unit"
+              default: celsius
+          required: [location]
+      - name: convert_currency
+        description: "Convert an amount from one currency to another"
+        parameters:
+          type: object
+          properties:
+            amount:
+              type: number
+              description: "The amount to convert"
+            from_currency:
+              type: string
+              description: "Source currency code (e.g. USD, EUR, JPY)"
+            to_currency:
+              type: string
+              description: "Target currency code"
+          required: [amount, from_currency, to_currency]
+    prompt: "Tell me about some European country"
+    expected:
+      tool: search
+      params:
+        query: "European country"
+    scoring:
+      strategy: assumption
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
+  - id: ambiguous_assumption_plan
+    category: ambiguous
+    strategy: assumption
+    tools:
+      - name: search
+        description: "Search the web for information"
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: "The search query"
+            max_results:
+              type: integer
+              description: "Maximum number of results to return"
+              default: 5
+          required: [query]
+      - name: schedule_meeting
+        description: "Schedule a calendar meeting"
+        parameters:
+          type: object
+          properties:
+            title:
+              type: string
+              description: "Meeting title"
+            datetime:
+              type: string
+              description: "Meeting datetime in ISO format"
+            attendees:
+              type: array
+              items:
+                type: string
+              description: "List of attendee email addresses"
+          required: [title, datetime, attendees]
+    prompt: "Plan a vacation for me somewhere"
+    expected:
+      tool: search
+      params:
+        query: "vacation destinations"
+    scoring:
+      strategy: assumption
+      tool_accuracy: true
+      param_completeness: 1.0
+      param_correctness: true
+
 # ──────────────────────────────────────────────────────────────────────────
 # Phase 2 — Multi-Tool Chaining
 #
