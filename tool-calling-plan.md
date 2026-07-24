@@ -453,13 +453,16 @@ This is simpler — no mock server needed. The tools are declarative schemas pas
 - **Failure modes**: `schema_constraint_violation`, `error_no_retry`, `error_retry_invalid`.
 - Total tasks: ~85 across 10 categories.
 
-### Phase 4 — Integration & Reporting
+### Phase 4 — Integration & Reporting ✅ DONE
 
-- Wire into `core_runner.py`.
-- Add composite score calculation.
-- Add failure mode reporting.
-- Write results to `tool_calling.json` alongside other benchmark outputs.
-- Estimated time: 1 day.
+- **Weighted composite score** implemented in `_compute_weighted_composite()`:
+  - `tool_accuracy (0.25)`, `param_completeness (0.15)`, `param_correctness (0.20)`,
+    `multi_tool (0.20)`, `schema_compliance (0.10)`, `refusal (0.10)`.
+  - Falls back to category `pass_rate` when a specific field is missing.
+  - Exposed via `composite_components` in the output JSON.
+- **Duplicate tool-calling block** in `core_runner.py` removed (was running the benchmark twice).
+- **core_runner.py summary** now includes `composite_components` and prints the breakdown.
+- Total tasks: 85 across 10 categories.
 
 ---
 

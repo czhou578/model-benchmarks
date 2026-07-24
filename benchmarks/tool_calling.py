@@ -373,7 +373,6 @@ def _score_schema_compliance_task(
                         f"{param_name}: too long (len={len(param_value)}, max={prop_schema['maxLength']})"
                     )
             if "pattern" in prop_schema:
-                import re
                 if not re.match(prop_schema["pattern"], param_value):
                     results["pattern_valid"] = False
                     details_parts.append(
@@ -1079,6 +1078,48 @@ def _run_multi_turn_task(
     return result
 
 
+# --------------------------------------------------------------------------- #
+# Weighted composite score
+# --------------------------------------------------------------------------- #
+
+# Default weights per the plan.  Each key maps to the ``category_scores``
+# field name that provides the component value.
+_WEIGHTS: dict[str, tuple[str, str]] = {
+    "tool_accuracy": ("single_tool", "tool_accuracy"),
+    "param_completeness": ("single_tool", "param_completeness_avg"),
+    "param_correctness": ("single_tool", "param_correctness_avg"),
+    "multi_tool": ("multi_tool", "multi_tool_score_avg"),
+    "schema_compliance": ("schema_compliance", "strict_compliance"),
+    "refusal": ("refusal", "correct_refusal_or_default"),
+}
+
+
+def _compute_weighted_composite(
+    category_scores: dict[str, dict[str, Any]],
+) -> tuple[float, dict[str, float]]:
+    """Compute the weighted composite score across categories.
+
+    Returns:
+        ``(composite, components)`` where *components* is a dict of the
+        individual (unweighted) component values used.
+    """
+    components: dict[str, float] = {}
+    composite = 0.0
+    for key, (cat, field) in _WEIGHTS.items():
+        score = category_scores.get(cat, {}).get(field)
+        if score is None:
+            # Fallback: use pass_rate if the category exists but the
+            # specific field is missing.  If the category is entirely
+            # absent, the component is 0.0.
+            fallback = category_scores.get(cat, {}).get("pass_rate")
+            score = fallback if fallback is not None else 0.0
+        components[key] = round(float(score), 4)
+        composite += components[key]
+
+    composite = round(composite, 4)
+    return composite, components
+
+
 def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
     """Compute category scores, failure modes, and the composite score."""
 
@@ -1253,9 +1294,10 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
         category_scores[cat] = cat_score
 
     total_correct = sum(1 for r in results if r.correct)
-    composite = round(
-        statistics.mean(r.composite_score for r in results), 4
-    ) if results else 0.0
+    # Compute the weighted composite score from category scores.
+    composite, _weighted_components = (
+        _compute_weighted_composite(category_scores)
+    ) if category_scores else (0.0, {})
 
     # Failure modes
     failure_modes: dict[str, int] = {
@@ -1378,7 +1420,7 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
 
         per_task_serialized.append(entry)
 
-    return BenchmarkResult(
+    agg = BenchmarkResult(
         config=config,
         total_tasks=len(results),
         total_correct=total_correct,
@@ -1387,6 +1429,10 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
         category_scores=category_scores,
         failure_modes=failure_modes,
     )
+    # Attach composite components so run_tool_calling_benchmark() can include
+    # them in the returned dict.
+    agg.composite_components = _weighted_components  # type: ignore[attr-defined]
+    return agg
 
 
 # --------------------------------------------------------------------------- #
@@ -1412,7 +1458,8 @@ def run_tool_calling_benchmark(
 
     Returns:
         Dict with ``config``, ``total_tasks``, ``composite_score``,
-        ``category_scores``, ``per_task``, and ``failure_modes``.
+        ``composite_components``, ``category_scores``, ``per_task``, and
+        ``failure_modes``.
     """
 
     _, tasks = load_tasks(tasks_path)
@@ -1523,6 +1570,9 @@ def run_tool_calling_benchmark(
         "total_tasks": aggregated.total_tasks,
         "total_correct": aggregated.total_correct,
         "composite_score": aggregated.composite_score,
+        "composite_components": getattr(
+            aggregated, "composite_components", {}
+        ),
         "category_scores": aggregated.category_scores,
         "per_task": aggregated.per_task,
         "failure_modes": aggregated.failure_modes,

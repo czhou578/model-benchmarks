@@ -1252,47 +1252,7 @@ def main():
                 for k, v in prefill_results.get("per_length", {}).items()
             }
 
-        # Architecture-based FLOP estimation — fetch server config then estimate
-        print("[core_runner] running FLOP analysis")
-        from benchmarks.architecture_flops import run_flops_analysis
-
-        flop_lengths = cfg.get("flop_analysis_lengths", [512, 2048, 8192, 32768])
-        # Fetch the model config from the running vLLM server
-        server_config: dict[str, Any] | None = None
-        try:
-            server_config = _get_server_model_config(client)
-        except Exception as exc:
-            print(f"[core_runner] warning: could not fetch server config: {exc}")
-        # Tool-calling benchmark (Phase 1 + 2)
-        try:
-            from benchmarks.tool_calling import run_tool_calling_benchmark
-
-            tc_tasks = cfg.get("tool_calling_tasks", "datasets/tool_calling_tasks.yaml")
-            tc_task_set = cfg.get("tool_calling_task_set", "full")
-            tc_max_tokens = cfg.get("tool_calling_max_tokens", 256)
-            print(f"[core_runner] running tool-calling benchmark (task_set={tc_task_set})")
-            tc_result = run_tool_calling_benchmark(
-                client,
-                tasks_path=tc_tasks,
-                task_set=tc_task_set,
-                max_tokens=tc_max_tokens,
-            )
-            save_json(run_dir / "tool_calling.json", tc_result)
-            summary["tool_calling"] = {
-                "composite_score": tc_result.get("composite_score"),
-                "total_tasks": tc_result.get("total_tasks"),
-                "total_correct": tc_result.get("total_correct"),
-                "categories": list(tc_result.get("category_scores", {}).keys()),
-            }
-            print(
-                f"[core_runner] tool_calling: "
-                f"score={tc_result['composite_score']} "
-                f"{tc_result['total_correct']}/{tc_result['total_tasks']}"
-            )
-        except Exception as exc:
-            print(f"[core_runner] warning: tool-calling benchmark failed: {exc}")
-
-        # Architecture-based FLOP estimation — fetch server config then estimate
+        # Architecture-based FLOP estimation
         print("[core_runner] running FLOP analysis")
         from benchmarks.architecture_flops import run_flops_analysis
 
@@ -1319,7 +1279,7 @@ def main():
             save_json(run_dir / f"{name}.json", plugin_results)
             summary[name] = plugin_results
 
-        # Tool-calling benchmark (Phase 1 + 2)
+        # Tool-calling benchmark (Phase 1–3)
         try:
             from benchmarks.tool_calling import run_tool_calling_benchmark
 
@@ -1336,14 +1296,17 @@ def main():
             save_json(run_dir / "tool_calling.json", tc_result)
             summary["tool_calling"] = {
                 "composite_score": tc_result.get("composite_score"),
+                "composite_components": tc_result.get("composite_components"),
                 "total_tasks": tc_result.get("total_tasks"),
                 "total_correct": tc_result.get("total_correct"),
                 "categories": list(tc_result.get("category_scores", {}).keys()),
             }
+            components = tc_result.get("composite_components", {})
             print(
                 f"[core_runner] tool_calling: "
                 f"score={tc_result['composite_score']} "
-                f"{tc_result['total_correct']}/{tc_result['total_tasks']}"
+                f"{tc_result['total_correct']}/{tc_result['total_tasks']}  "
+                f"components={components}"
             )
         except Exception as exc:
             print(f"[core_runner] warning: tool-calling benchmark failed: {exc}")
