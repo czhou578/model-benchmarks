@@ -1,0 +1,546 @@
+{
+  "config": {
+    "benchmark_version": "1.0",
+    "task_file": "datasets/tool_calling_tasks.yaml",
+    "task_set": "full",
+    "max_tokens": 256,
+    "temperature": 0.0,
+    "start_time": "2026-07-24T01:37:25.410981+00:00",
+    "tool_definitions_count": 8,
+    "end_time": "2026-07-24T01:38:26.826210+00:00"
+  },
+  "total_tasks": 24,
+  "total_correct": 15,
+  "composite_score": 0.6458,
+  "category_scores": {
+    "ambiguous": {
+      "pass_count": 0,
+      "total": 1,
+      "pass_rate": 0.0,
+      "tool_accuracy": 0.0,
+      "param_completeness_avg": 0.0,
+      "param_correctness_avg": 0.0,
+      "composite_avg": 0.0
+    },
+    "calculate_basic": {
+      "pass_count": 2,
+      "total": 3,
+      "pass_rate": 0.6667,
+      "tool_accuracy": 0.6667,
+      "param_completeness_avg": 0.6667,
+      "param_correctness_avg": 0.6667,
+      "composite_avg": 0.6667
+    },
+    "currency_basic": {
+      "pass_count": 3,
+      "total": 3,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "email_basic": {
+      "pass_count": 1,
+      "total": 2,
+      "pass_rate": 0.5,
+      "tool_accuracy": 0.5,
+      "param_completeness_avg": 0.5,
+      "param_correctness_avg": 0.5,
+      "composite_avg": 0.5
+    },
+    "meeting_basic": {
+      "pass_count": 0,
+      "total": 2,
+      "pass_rate": 0.0,
+      "tool_accuracy": 0.0,
+      "param_completeness_avg": 0.0,
+      "param_correctness_avg": 0.0,
+      "composite_avg": 0.0
+    },
+    "refusal": {
+      "pass_count": 2,
+      "total": 2,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "search_basic": {
+      "pass_count": 2,
+      "total": 2,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "search_params": {
+      "pass_count": 1,
+      "total": 1,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "stock_basic": {
+      "pass_count": 1,
+      "total": 2,
+      "pass_rate": 0.5,
+      "tool_accuracy": 0.5,
+      "param_completeness_avg": 0.5,
+      "param_correctness_avg": 0.5,
+      "composite_avg": 0.5
+    },
+    "ticket_basic": {
+      "pass_count": 1,
+      "total": 2,
+      "pass_rate": 0.5,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 0.75,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 0.75
+    },
+    "ticket_complex": {
+      "pass_count": 0,
+      "total": 1,
+      "pass_rate": 0.0,
+      "tool_accuracy": 0.0,
+      "param_completeness_avg": 0.0,
+      "param_correctness_avg": 0.0,
+      "composite_avg": 0.0
+    },
+    "weather_basic": {
+      "pass_count": 1,
+      "total": 1,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "weather_enum": {
+      "pass_count": 1,
+      "total": 2,
+      "pass_rate": 0.5,
+      "tool_accuracy": 0.5,
+      "param_completeness_avg": 0.5,
+      "param_correctness_avg": 0.5,
+      "composite_avg": 0.5
+    }
+  },
+  "per_task": [
+    {
+      "task_id": "search_tech_news",
+      "category": "search_basic",
+      "prompt": "Find me the latest news about AI chip startups",
+      "expected_tool": "search",
+      "actual_tool": "search",
+      "tool_call_id": "chatcmpl-tool-8de15a46a89715ec",
+      "actual_params": {
+        "query": "latest news AI chip startups",
+        "max_results": 5
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": ""
+    },
+    {
+      "task_id": "search_recipe",
+      "category": "search_basic",
+      "prompt": "Search for a traditional Italian pasta recipe",
+      "expected_tool": "search",
+      "actual_tool": "search",
+      "tool_call_id": "chatcmpl-tool-9316222d663b92b5",
+      "actual_params": {
+        "query": "traditional Italian pasta recipe",
+        "max_results": 5
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": ""
+    },
+    {
+      "task_id": "search_specific_params",
+      "category": "search_params",
+      "prompt": "Search for 'quantum computing breakthrough' with only 3 results",
+      "expected_tool": "search",
+      "actual_tool": "search",
+      "tool_call_id": "chatcmpl-tool-bf46d2f823c7e43e",
+      "actual_params": {
+        "query": "quantum computing breakthrough",
+        "max_results": 3
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": ""
+    },
+    {
+      "task_id": "weather_default_unit",
+      "category": "weather_basic",
+      "prompt": "Tell me the weather in Sydney",
+      "expected_tool": "get_weather",
+      "actual_tool": "get_weather",
+      "tool_call_id": "chatcmpl-tool-a8ea4b8d8b74043a",
+      "actual_params": {
+        "location": "Sydney"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": ""
+    },
+    {
+      "task_id": "weather_tokyo_celsius",
+      "category": "weather_enum",
+      "prompt": "How hot is Tokyo right now?",
+      "expected_tool": "get_weather",
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 0.0,
+      "params_valid": false,
+      "composite_score": 0.0,
+      "details": "Expected tool=get_weather, got no tool"
+    },
+    {
+      "task_id": "weather_london_fahrenheit",
+      "category": "weather_enum",
+      "prompt": "What's the weather in London in Fahrenheit?",
+      "expected_tool": "get_weather",
+      "actual_tool": "get_weather",
+      "tool_call_id": "chatcmpl-tool-9ba8e1ce846af353",
+      "actual_params": {
+        "location": "London",
+        "unit": "fahrenheit"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": ""
+    },
+    {
+      "task_id": "currency_usd_jpy",
+      "category": "currency_basic",
+      "prompt": "Convert 1000 USD to Japanese Yen",
+      "expected_tool": "convert_currency",
+      "actual_tool": "convert_currency",
+      "tool_call_id": "chatcmpl-tool-8c387b451ea1fc06",
+      "actual_params": {
+        "amount": 1000,
+        "from_currency": "USD",
+        "to_currency": "JPY"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": ""
+    },
+    {
+      "task_id": "currency_small_amount",
+      "category": "currency_basic",
+      "prompt": "How much is 0.5 EUR in GBP?",
+      "expected_tool": "convert_currency",
+      "actual_tool": "convert_currency",
+      "tool_call_id": "chatcmpl-tool-9bb1ec34cf373da8",
+      "actual_params": {
+        "amount": 0.5,
+        "from_currency": "EUR",
+        "to_currency": "GBP"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": ""
+    },
+    {
+      "task_id": "currency_reverse",
+      "category": "currency_basic",
+      "prompt": "I have 500 British pounds. What is that in US dollars?",
+      "expected_tool": "convert_currency",
+      "actual_tool": "convert_currency",
+      "tool_call_id": "chatcmpl-tool-b0a05b0dbe6313d4",
+      "actual_params": {
+        "amount": 500,
+        "from_currency": "GBP",
+        "to_currency": "USD"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": ""
+    },
+    {
+      "task_id": "stock_nvda",
+      "category": "stock_basic",
+      "prompt": "What's the current price of NVIDIA stock?",
+      "expected_tool": "get_stock_price",
+      "actual_tool": "get_stock_price",
+      "tool_call_id": "chatcmpl-tool-9ddcfc198ba92f88",
+      "actual_params": {
+        "symbol": "NVDA"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": ""
+    },
+    {
+      "task_id": "stock_tesla",
+      "category": "stock_basic",
+      "prompt": "Look up the stock price for Tesla",
+      "expected_tool": "get_stock_price",
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 0.0,
+      "params_valid": false,
+      "composite_score": 0.0,
+      "details": "Expected tool=get_stock_price, got no tool"
+    },
+    {
+      "task_id": "calc_simple",
+      "category": "calculate_basic",
+      "prompt": "What is 150 multiplied by 1.2?",
+      "expected_tool": "calculate",
+      "actual_tool": "calculate",
+      "tool_call_id": "chatcmpl-tool-8c9ebdd5bd4b7ce7",
+      "actual_params": {
+        "expression": "150 * 1.2"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": ""
+    },
+    {
+      "task_id": "calc_percentage",
+      "category": "calculate_basic",
+      "prompt": "Calculate 20% of 250",
+      "expected_tool": "calculate",
+      "actual_tool": "calculate",
+      "tool_call_id": "chatcmpl-tool-80302ed08b6fe164",
+      "actual_params": {
+        "expression": "0.20 * 250"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": ""
+    },
+    {
+      "task_id": "calc_complex",
+      "category": "calculate_basic",
+      "prompt": "Evaluate the expression: (100 + 200) * 3 / 4",
+      "expected_tool": "calculate",
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 0.0,
+      "params_valid": false,
+      "composite_score": 0.0,
+      "details": "Expected tool=calculate, got no tool"
+    },
+    {
+      "task_id": "ticket_simple",
+      "category": "ticket_basic",
+      "prompt": "Create a P2 bug ticket titled 'Login page broken on mobile'",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-acb9406d09ab9947",
+      "actual_params": {
+        "title": "Login page broken on mobile"
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 0.5,
+      "params_valid": true,
+      "composite_score": 0.5,
+      "details": "Missing params: ['priority']"
+    },
+    {
+      "task_id": "ticket_high_priority",
+      "category": "ticket_basic",
+      "prompt": "Create a security P0 ticket: 'SQL injection in user profile endpoint'",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-b6c130ced561b33f",
+      "actual_params": {
+        "title": "SQL injection in user profile endpoint",
+        "priority": "p0"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": ""
+    },
+    {
+      "task_id": "ticket_with_assignee",
+      "category": "ticket_complex",
+      "prompt": "Create a P3 feature ticket titled 'Add dark mode support' for user alice",
+      "expected_tool": "create_ticket",
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 0.0,
+      "params_valid": false,
+      "composite_score": 0.0,
+      "details": "Expected tool=create_ticket, got no tool"
+    },
+    {
+      "task_id": "email_simple",
+      "category": "email_basic",
+      "prompt": "Send an email to bob@example.com with subject 'Meeting Tomorrow' and body 'Hi Bob, just a reminder about our meeting tomorrow at 3pm.'",
+      "expected_tool": "send_email",
+      "actual_tool": "send_email",
+      "tool_call_id": "chatcmpl-tool-8f7fb8b95875a5b5",
+      "actual_params": {
+        "to": "bob@example.com",
+        "subject": "Meeting Tomorrow",
+        "body": "Hi Bob, just a reminder about our meeting tomorrow at 3pm."
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": ""
+    },
+    {
+      "task_id": "email_subject_only",
+      "category": "email_basic",
+      "prompt": "Email sarah@company.com about the project update",
+      "expected_tool": "send_email",
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 0.0,
+      "params_valid": false,
+      "composite_score": 0.0,
+      "details": "Expected tool=send_email, got no tool"
+    },
+    {
+      "task_id": "meeting_basic",
+      "category": "meeting_basic",
+      "prompt": "Schedule a team standup every Monday at 9am. Title it 'Weekly Standup'.",
+      "expected_tool": "schedule_meeting",
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 0.0,
+      "params_valid": false,
+      "composite_score": 0.0,
+      "details": "Expected tool=schedule_meeting, got no tool"
+    },
+    {
+      "task_id": "meeting_with_attendees",
+      "category": "meeting_basic",
+      "prompt": "Book a 1:1 meeting called 'Sprint Review' for July 30 at 2pm with alice@co.com and bob@co.com",
+      "expected_tool": "schedule_meeting",
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 0.0,
+      "params_valid": false,
+      "composite_score": 0.0,
+      "details": "Expected tool=schedule_meeting, got no tool"
+    },
+    {
+      "task_id": "ambiguous_generic",
+      "category": "ambiguous",
+      "prompt": "Find me something about Japan",
+      "expected_tool": "search",
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 0.0,
+      "params_valid": false,
+      "composite_score": 0.0,
+      "details": "Expected tool=search, got no tool"
+    },
+    {
+      "task_id": "refusal_joke",
+      "category": "refusal",
+      "prompt": "Tell me a joke",
+      "expected_tool": null,
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": ""
+    },
+    {
+      "task_id": "refusal_identity",
+      "category": "refusal",
+      "prompt": "What is your name?",
+      "expected_tool": null,
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": ""
+    }
+  ],
+  "failure_modes": {
+    "wrong_tool_selected": 0,
+    "missing_required_param": 8,
+    "invalid_enum_value": 0,
+    "wrong_param_type": 0,
+    "incorrect_refusal": 0,
+    "unnecessary_tool_call": 0,
+    "request_failed": 0
+  }
+}
