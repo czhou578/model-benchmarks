@@ -57,6 +57,10 @@ class TaskResult:
     composite_score: float          # tool_correct × params_complete × params_valid
     details: str = ""               # human-readable reason for failure
     raw_response: dict[str, Any] = field(default_factory=dict)
+    # Dynamic attributes for ambiguous-task scoring (set after construction).
+    no_hallucinated_params: bool = True
+    ambig_strategy: str = "assumption"
+    ambig_details: str = ""
 
 
 @dataclass
@@ -202,12 +206,119 @@ def _score_params(
 
 
 # --------------------------------------------------------------------------- #
+# Ambiguous-task scoring
+# --------------------------------------------------------------------------- #
+
+
+_CLARIFICATION_KEYWORDS = [
+    "which", "what is", "could you", "would you", "can you", "do you",
+    "please clarify", "more information", "specifically", "help me",
+    "i'm not sure", "i don't know", "what would", "i can", "which one",
+    "could you tell", "are you asking", "let me know",
+]
+
+
+def _has_clarification(text: str) -> bool:
+    """Check whether *text* contains clarification language (a question or
+    request for more detail) rather than a definitive answer."""
+    if not text:
+        return False
+    # Ask a question
+    if "?" in text:
+        return True
+    # Ask for more info
+    return any(
+        keyword in text.lower()
+        for keyword in _CLARIFICATION_KEYWORDS[:5]
+    )
+
+
+def _score_ambiguous_task(
+    task_result: TaskResult,
+    response_content: str | None,
+    task: dict,
+) -> tuple[bool, bool, str]:
+    """Score an ambiguous / underspecified task.
+
+    Returns:
+        (correct, no_hallucinated_params, details)
+    """
+
+    strategy = task.get("scoring", {}).get(
+        "strategy", task.get("strategy", "assumption"),
+    )
+    expected_tool = task.get("expected", {}).get("tool")
+
+    # --- Case 1: no_tool — model should not call any tool ---
+    if strategy == "no_tool":
+        return (
+            task_result.actual_tool is None,
+            True,
+            "",
+        )
+
+    # --- Case 2: underspecified — model should clarify, not call a tool.
+    # However, if the model calls a tool with reasonable params (no
+    # hallucination), accept it as a transparent default rather than
+    # penalising for calling a tool at all.
+    if strategy == "underspecified":
+        if task_result.actual_tool is None:
+            # No tool call. Check if the model asked for clarification
+            # or gave a direct, appropriate answer.
+            has_clar = _has_clarification(response_content or "")
+            return (
+                has_clar,
+                True,
+                "" if has_clar else "no clarification",
+            )
+        # Model called a tool. Check params for hallucination.
+        expected_params = task.get("expected", {}).get("params", {})
+        actual_params = task_result.actual_params or {}
+        no_halluc = True
+        if expected_params:
+            for key in actual_params:
+                if key not in expected_params:
+                    no_halluc = False
+                    break
+                if expected_params[key] is not None and actual_params[key] != expected_params[key]:
+                    no_halluc = False
+                    break
+        # Underspecified but reasonable — pass if no params were
+        # hallucinated, even though a tool was called.
+        return (no_halluc, no_halluc, "reasonable default" if no_halluc else "hallucinated params")
+
+    # --- Case 3: assumption — model may make a reasonable default call ---
+    if expected_tool is None:
+        # No specific tool expected. If model called one, it's a hallucination.
+        return (task_result.actual_tool is None, True, "unexpected tool call")
+
+    # A tool call is expected as a reasonable default.
+    # Check that params are not hallucinated beyond what the task expects.
+    expected_params = task.get("expected", {}).get("params", {})
+    actual_params = task_result.actual_params or {}
+
+    no_halluc = True
+    if expected_params:
+        # Every actual param key must be in expected_params,
+        # and every value must match.
+        for key, value in actual_params.items():
+            if key not in expected_params:
+                no_halluc = False
+                break
+            if expected_params[key] is not None and actual_params[key] != expected_params[key]:
+                no_halluc = False
+                break
+
+    return (no_halluc, no_halluc, "" if no_halluc else "hallucinated params")
+
+
+# --------------------------------------------------------------------------- #
 # Mock tool executor — deterministic simulated responses
 # --------------------------------------------------------------------------- #
 
 # Deterministic responses that the benchmark uses to simulate tool outputs.
 # The multi-turn loop calls these instead of hitting a real API.
-_MOCK_TOOL_RESPONSES: dict[str, dict[str, Any]] = {
+_MOCK_TOOL_RESPONSES: dict[str, Any] = {
     "get_stock_price": {
         "NVDA": {"price": 150.0, "symbol": "NVDA", "change_pct": 2.3},
         "AAPL": {"price": 190.0, "symbol": "AAPL", "change_pct": -0.5},
@@ -324,7 +435,7 @@ def _build_tools_definition(tools_yaml: list[dict]) -> list[dict]:
 # --------------------------------------------------------------------------- #
 
 
-def load_tasks(path: str | Path) -> list[dict]:
+def load_tasks(path: str | Path) -> tuple[Any, list[dict[str, Any]]]:
     """Load the task YAML and return (config, tasks) tuple."""
     with open(path) as f:
         data = yaml.safe_load(f)
@@ -380,7 +491,7 @@ def _run_task(
         resp.raise_for_status()
         response = resp.json()
     except Exception as exc:
-        return TaskResult(
+        result = TaskResult(
             task_id=task["id"],
             category=task.get("category", "unknown"),
             prompt=task["prompt"],
@@ -396,13 +507,26 @@ def _run_task(
             details=f"Request failed: {exc}",
             raw_response={"error": str(exc)},
         )
+        # For ambiguous tasks, request failure means no params were produced.
+        if task.get("category") == "ambiguous":
+            result.no_hallucinated_params = True
+            result.ambig_strategy = task.get("scoring", {}).get(
+                "strategy", task.get("strategy", "assumption"),
+            )
+            result.ambig_details = f"request failed: {exc}"
+        return result
 
     actual_tool, actual_params = _parse_tool_calls(response)
     call_id = None
+    response_content = None  # captured for ambiguous-task scoring
     if actual_tool:
         tc = (response.get("choices") or [{}])[0].get("message", {}).get("tool_calls", [])
         if tc:
             call_id = tc[0].get("id")
+    else:
+        # No tool call — capture any content text (for clarification check).
+        message = (response.get("choices") or [{}])[0].get("message", {})
+        response_content = message.get("content")
 
     # --- Scoring ---
     # Determine required params from the expected tool schema
@@ -430,6 +554,35 @@ def _run_task(
 
     correct = tool_correct and params_complete >= scoring.get("param_completeness", 1.0)
     details = ""
+
+    # Default values for non-ambiguous tasks.
+    ambig_correct = correct
+    ambig_no_halluc = True
+    ambig_details = ""
+
+    # ── Ambiguous-task overlay scoring ────────────────────────────────────
+    if task.get("category") == "ambiguous":
+        score_correct, score_no_halluc, score_details = _score_ambiguous_task(
+            TaskResult(
+                task_id=task["id"], category=task.get("category", "unknown"),
+                prompt=task["prompt"], expected_tool=expected_tool,
+                actual_tool=actual_tool, tool_call_id=call_id,
+                actual_params=actual_params, correct=False,
+                tool_correct=False, params_complete=0.0,
+                params_valid=False, composite_score=0.0, details="",
+            ),
+            response_content,
+            task,
+        )
+        ambig_correct = score_correct
+        ambig_no_halluc = score_no_halluc
+        ambig_details = score_details
+
+        # For ambiguous tasks, correct requires BOTH standard AND ambiguous scoring
+        if not ambig_correct:
+            correct = False
+
+    # Standard details (tool/param mismatch)
     if not tool_correct:
         expected_display = expected_tool or "no tool"
         actual_display = actual_tool or "no tool"
@@ -440,7 +593,14 @@ def _run_task(
     elif not params_valid:
         details = "Parameter value(s) failed schema validation"
 
-    return TaskResult(
+    # Append ambiguity-specific details (for ambiguous tasks)
+    if task.get("category") == "ambiguous" and ambig_details:
+        if details:
+            details += f"; {ambig_details}"
+        else:
+            details = ambig_details
+
+    result = TaskResult(
         task_id=task["id"],
         category=task.get("category", "unknown"),
         prompt=task["prompt"],
@@ -456,6 +616,16 @@ def _run_task(
         details=details,
         raw_response=response,
     )
+
+    # Attach ambiguity-specific fields for ambiguous tasks.
+    if task.get("category") == "ambiguous":
+        result.no_hallucinated_params = ambig_no_halluc
+        result.ambig_strategy = task.get("scoring", {}).get(
+            "strategy", task.get("strategy", "assumption"),
+        )
+        result.ambig_details = ambig_details
+
+    return result
 
 
 # --------------------------------------------------------------------------- #
@@ -537,6 +707,8 @@ def _run_multi_turn_task(
     messages = [{"role": "user", "content": prompt}]
     trace: list[ToolCallTrace] = []
     actual_sequence: list[dict[str, Any]] = []
+    response: dict[str, Any] = {}
+    tool_calls: list[tuple[str, dict[str, Any]]] = []
 
     # Track intermediate values that flow between turns.
     # e.g. {"step_1_result": 150, "step_2_input_from_step_1": 150}
@@ -795,9 +967,39 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
                 "multi_tool_score_avg": round(
                     statistics.mean(multi_scores), 4
                 ) if multi_scores else None,
-                "avg_chain_length": round(
-                    statistics.mean(getattr(r, "trace", []) and len(r.trace) or 0 for r in cat_results), 2
+                "avg_chain_length": (
+                    round(
+                        statistics.mean([len(getattr(r, "trace", [])) for r in cat_results]),
+                        2,
+                    ) if cat_results else None
                 ),
+            })
+
+        # Add ambiguous-task-specific fields for the ambiguous category.
+        if cat == "ambiguous":
+            correct_default = sum(1 for r in cat_results if r.correct)
+            no_halluc = sum(
+                1 for r in cat_results
+                if getattr(r, "no_hallucinated_params", True)
+            )
+            # A clarifying response is one where the model didn't hallucinate
+            # params and either clarified (underspecified) or made a valid default.
+            asked_clarification = sum(
+                1 for r in cat_results
+                if getattr(r, "ambig_strategy", None) == "underspecified"
+                and r.actual_tool is None
+                and getattr(r, "ambig_details", "") != "no clarification"
+            )
+            cat_score.update({
+                "correct_refusal_or_default": round(
+                    correct_default / total, 4
+                ) if total else None,
+                "no_hallucinated_params": round(
+                    no_halluc / total, 4
+                ) if total else None,
+                "clarification_rate": round(
+                    asked_clarification / total, 4
+                ) if total else None,
             })
 
         category_scores[cat] = cat_score
@@ -819,6 +1021,7 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
         "wrong_tool_sequence": 0,
         "data_flow_error": 0,
         "wrong_turn_count": 0,
+        "hallucinated_param_value": 0,
     }
     for r in results:
         if not r.correct:
@@ -839,6 +1042,10 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
                     failure_modes["data_flow_error"] += 1
                 if not r.turns_correct:
                     failure_modes["wrong_turn_count"] += 1
+
+            # Track hallucinated params for ambiguous tasks.
+            if getattr(r, "no_hallucinated_params", True) is False:
+                failure_modes["hallucinated_param_value"] += 1
 
     per_task_serialized = []
     for r in results:
@@ -867,6 +1074,15 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
                 "chain_length": len(r.trace),
                 "tool_sequence": [t.tool_name for t in r.trace if t.tool_name],
             })
+
+        # Ambiguous-task-specific fields.
+        if r.category == "ambiguous":
+            entry.update({
+                "no_hallucinated_params": getattr(r, "no_hallucinated_params", True),
+                "ambig_strategy": getattr(r, "ambig_strategy", "assumption"),
+                "ambig_details": getattr(r, "ambig_details", ""),
+            })
+
         per_task_serialized.append(entry)
 
     return BenchmarkResult(
@@ -957,6 +1173,7 @@ def run_tool_calling_benchmark(
             f"[tool_calling] {idx}/{total}: {task['id']} "
             f"(expected: {desc})"
         )
+        exc_details = None
         try:
             if is_multi:
                 r = _run_multi_turn_task(
@@ -965,6 +1182,7 @@ def run_tool_calling_benchmark(
             else:
                 r = _run_task(client, task, tools_definition, max_tokens=max_tokens)
         except Exception as exc:
+            exc_details = f"exception: {exc}"
             r = TaskResult(
                 task_id=task["id"],
                 category=task.get("category", "unknown"),
@@ -980,6 +1198,13 @@ def run_tool_calling_benchmark(
                 composite_score=0.0,
                 details=f"Exception: {exc}",
             )
+        # Attach ambiguity fields even for exceptions.
+        if task.get("category") == "ambiguous":
+            r.no_hallucinated_params = True
+            r.ambig_strategy = task.get("scoring", {}).get(
+                "strategy", task.get("strategy", "assumption"),
+            )
+            r.ambig_details = exc_details or r.details
         results.append(r)
         if idx < total:
             time.sleep(0.5)  # small stabilization gap

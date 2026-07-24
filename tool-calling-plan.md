@@ -478,3 +478,7 @@ Once implemented, this benchmark lets you answer:
 - **Tool documentation quality:** Measure whether adding tool descriptions / docstrings improves performance.
 - **Adversarial tool calls:** Prompts designed to trick the model into calling tools with wrong args (e.g., SQL injection in parameters, prompt injection via tool output).
 - **Cross-modal tool calls:** Image generation tools, audio tools, code execution — does tool calling hold up beyond text params?
+
+For ambiguous task scoring, how should we handle prompts where the model calls a tool with very generic parameters? (e.g., Find me something about Japan.). Shold this count as a pass (reasonable default) or a failure (hallucinated parameter)
+
+- If the model calls a broadly-appropriate tool with only info from the prompt, count it as a pass. The model made a transparent default.
