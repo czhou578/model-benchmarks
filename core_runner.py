@@ -47,6 +47,7 @@ import time
 import requests
 import yaml
 from dataclasses import dataclass, field
+from typing import Any
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -779,6 +780,29 @@ def _percentile(data: list[float], pct: float) -> float:
     if f == c:
         return s[f]
     return s[f] + (s[c] - s[f]) * (k - f)
+
+
+def _stat_summary(values: list[float], suffix: str = "s") -> dict[str, float | None]:
+    """Compute avg / median / p95 / min / max for a list of floats."""
+    if not values:
+        return {
+            f"avg_{suffix}": None,
+            f"median_{suffix}": None,
+            f"p95_{suffix}": None,
+            f"min_{suffix}": None,
+            f"max_{suffix}": None,
+        }
+    s = sorted(values)
+    k = (len(s) - 1) * 0.95
+    f, c = int(k), min(int(k) + 1, len(s) - 1)
+    p95 = s[f] + (s[c] - s[f]) * (k - f) if f != c else s[f]
+    return {
+        f"avg_{suffix}": round(statistics.mean(values), 4),
+        f"median_{suffix}": round(statistics.median(values), 4),
+        f"p95_{suffix}": round(p95, 4),
+        f"min_{suffix}": round(min(values), 4),
+        f"max_{suffix}": round(max(values), 4),
+    }
 
 
 # --------------------------------------------------------------------------- #

@@ -17,13 +17,12 @@ Output file: ttft_breakdown.json
 
 from __future__ import annotations
 
-import statistics
 import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
-from core_runner import ModelClient, GpuMonitor
+from core_runner import ModelClient, GpuMonitor, _stat_summary
 
 
 # --------------------------------------------------------------------------- #
@@ -65,28 +64,6 @@ def _ms(v: float | None) -> float | None:
     """Convert seconds to ms, preserving None."""
     return round(v * 1000, 4) if v is not None else None
 
-
-def _stat_summary(values: list[float]) -> dict[str, Any]:
-    """Compute avg, median, p95, min, max for a list of floats."""
-    if not values:
-        return {
-            "avg_ms": None,
-            "median_ms": None,
-            "p95_ms": None,
-            "min_ms": None,
-            "max_ms": None,
-        }
-    s = sorted(values)
-    k = (len(s) - 1) * 0.95
-    f, c = int(k), min(int(k) + 1, len(s) - 1)
-    p95 = s[f] + (s[c] - s[f]) * (k - f) if f != c else s[f]
-    return {
-        "avg_ms": round(statistics.mean(values), 4),
-        "median_ms": round(statistics.median(values), 4),
-        "p95_ms": round(p95, 4),
-        "min_ms": round(min(values), 4),
-        "max_ms": round(max(values), 4),
-    }
 
 # --------------------------------------------------------------------------- #
 # Main benchmark function
@@ -290,10 +267,10 @@ def run_ttft_breakdown(
             "n_failed": n_failed,
             "per_request": per_request_serialized,
             "aggregated": {
-                "ttft": _stat_summary(ttfts),
-                "scheduler_delay": _stat_summary(sched_delays),
-                "prefill_time": _stat_summary(prefills),
-                "first_decode": _stat_summary(first_decs),
+                "ttft": _stat_summary(ttfts, suffix="ms"),
+                "scheduler_delay": _stat_summary(sched_delays, suffix="ms"),
+                "prefill_time": _stat_summary(prefills, suffix="ms"),
+                "first_decode": _stat_summary(first_decs, suffix="ms"),
                 "gpu": gpu_summary or {},
             },
         }

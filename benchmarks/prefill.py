@@ -6,7 +6,6 @@ benchmark lengths must use the tokenizer and chat template of the running model.
 
 from __future__ import annotations
 
-import statistics
 import time
 import uuid
 from dataclasses import dataclass
@@ -15,7 +14,7 @@ from typing import Any, Protocol
 
 import requests
 
-from core_runner import ModelClient
+from core_runner import ModelClient, _stat_summary
 
 
 class TokenCount(Protocol):
@@ -184,21 +183,7 @@ def prepare_exact_prompt(
 # --------------------------------------------------------------------------- #
 
 
-def _stat_summary(values: list[float]) -> dict[str, Any]:
-    """Compute avg, median, p95, min, max for a list of floats."""
-    if not values:
-        return {"avg_s": None, "median_s": None, "p95_s": None, "min_s": None, "max_s": None}
-    s = sorted(values)
-    k = (len(s) - 1) * 0.95
-    f, c = int(k), min(int(k) + 1, len(s) - 1)
-    p95 = s[f] + (s[c] - s[f]) * (k - f) if f != c else s[f]
-    return {
-        "avg_s": round(statistics.mean(values), 4),
-        "median_s": round(statistics.median(values), 4),
-        "p95_s": round(p95, 4),
-        "min_s": round(min(values), 4),
-        "max_s": round(max(values), 4),
-    }
+# _stat_summary is imported from core_runner.
 
 
 @dataclass(frozen=True)

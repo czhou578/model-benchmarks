@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Literal, Mapping, cast
+from typing import Any, Callable, Mapping
 
 
 @dataclass(frozen=True)
@@ -1246,61 +1246,6 @@ class ModelFlopsEstimator:
         return out
 
 
-def compute_flops(
-    model_config: dict[str, Any],
-    *,
-    mode: Literal["decode", "prefill"],
-    sequence_length: int,
-    logits_tokens: int = 1,
-) -> dict[str, Any]:
-    """Return Qwen3.6-35B text-inference FLOPs.
-
-    Args:
-        model_config: model configuration dict.
-        mode: ``"decode"`` or ``"prefill"``.
-        sequence_length: context length for decode, or prompt length for prefill.
-        logits_tokens: number of logits positions (prefill default: 1).
-
-    Returns:
-        Dict with ``estimate_status``, ``architecture``, ``flops``,
-        ``assumptions``, and ``warnings``.
-    """
-    normalized = normalize_config(model_config)
-    missing = missing_required_fields(normalized)
-    if missing:
-        return {
-            "estimate_status": "unsupported",
-            "warnings": ["missing configuration fields: " + ", ".join(missing)],
-        }
-    dimension_errors = validate_fixed_dimensions(normalized)
-    if dimension_errors:
-        return {
-            "estimate_status": "unsupported",
-            "warnings": [
-                "config dimensions do not match Qwen3.6-35B: "
-                + "; ".join(dimension_errors)
-            ],
-        }
-    features = detect_features(normalized)
-    try:
-        estimator = ModelFlopsEstimator(normalized, features)
-    except ValueError as exc:
-        return {"estimate_status": "unsupported", "warnings": [str(exc)]}
-
-    flops = (
-        estimator.decode_model_flops(sequence_length)
-        if mode == "decode"
-        else estimator.prefill_flops(sequence_length, logits_tokens=logits_tokens)
-    )
-    return {
-        "architecture": features.to_dict(),
-        "estimate_status": estimator.estimate_status,
-        "flops": flops,
-        "assumptions": estimator.assumptions,
-        "warnings": [],
-    }
-
-
 def _model_label(raw: dict[str, Any]) -> str:
     """Derive a short model label from the config."""
     model_type = str(raw.get("model_type", "unknown")).lower()
@@ -1310,22 +1255,6 @@ def _model_label(raw: dict[str, Any]) -> str:
     if model_type.startswith("qwen3_5"):
         return "qwen3.5-35b-a3b"
     return model_type.replace("_", "-")
-
-
-def _is_complete_config(config: Mapping[str, Any]) -> bool:
-    """Check whether *config* already contains all required fields (no lookup needed).
-
-    ``head_dim`` is excluded because it may be derived from
-    ``hidden_size/num_attention_heads``.
-    """
-    required = (
-        "hidden_size",
-        "num_hidden_layers",
-        "vocab_size",
-        "num_attention_heads",
-        "num_key_value_heads",
-    )
-    return all(k in config and config[k] is not None for k in required)
 
 
 def run_flops_analysis(
@@ -1338,10 +1267,9 @@ def run_flops_analysis(
 ) -> dict[str, Any]:
     """Return a complete FLOPs analysis document for the Qwen3.6-35B config.
 
-    If the config already contains all required architecture fields (as in
-    tests or a complete server response) it is used directly.  Otherwise the
-    function resolves the config from local files, HuggingFace, or the vLLM
-    server.
+    If the config is already complete (has all required fields) it is used
+    directly.  Otherwise the function resolves the config from local files,
+    HuggingFace, or the vLLM server via ``load_architecture_config``.
 
     Args:
         model_config: the benchmark YAML config dict or a complete model config.
@@ -1355,8 +1283,16 @@ def run_flops_analysis(
     if prefill_lengths is None:
         prefill_lengths = [512, 2048, 8192, 32768]
 
-    # If the config already has all required fields, use it directly
-    if _is_complete_config(model_config):
+    # Fast path: if the config is already complete (has all required fields),
+    # use it directly instead of trying file/HF lookups.
+    required = (
+        "hidden_size",
+        "num_hidden_layers",
+        "vocab_size",
+        "num_attention_heads",
+        "num_key_value_heads",
+    )
+    if all(k in model_config and model_config[k] is not None for k in required):
         normalized = normalize_config(model_config)
         missing = missing_required_fields(normalized)
         if missing:
@@ -1441,10 +1377,8 @@ def run_flops_analysis(
         "flops": {
             "decode": decode_results,
             "prefill": prefill_results,
-            "assumptions": estimator.assumptions,
         },
         "assumptions": estimator.assumptions,
-        "warnings": list(estimator.assumptions),
     }
 
 

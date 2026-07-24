@@ -211,6 +211,11 @@ def _score_params(
     return round(completeness, 4), all_valid
 
 
+def _tools_match(expected: str | None, actual: str | None) -> bool:
+    """Return True if actual matches expected (or both are None / no tool)."""
+    return actual == expected or (expected is None and actual is None)
+
+
 # --------------------------------------------------------------------------- #
 # Ambiguous-task scoring
 # --------------------------------------------------------------------------- #
@@ -240,7 +245,8 @@ def _has_clarification(text: str) -> bool:
 
 
 def _score_ambiguous_task(
-    task_result: TaskResult,
+    actual_tool: str | None,
+    actual_params: dict[str, Any] | None,
     response_content: str | None,
     task: dict,
 ) -> tuple[bool, bool, str]:
@@ -257,31 +263,20 @@ def _score_ambiguous_task(
 
     # --- Case 1: no_tool — model should not call any tool ---
     if strategy == "no_tool":
-        return (
-            task_result.actual_tool is None,
-            True,
-            "",
-        )
+        return (actual_tool is None, True, "")
 
     # --- Case 2: underspecified — model should clarify, not call a tool.
     # However, if the model calls a tool with reasonable params (no
     # hallucination), accept it as a transparent default rather than
     # penalising for calling a tool at all.
     if strategy == "underspecified":
-        if task_result.actual_tool is None:
-            # No tool call. Check if the model asked for clarification
-            # or gave a direct, appropriate answer.
+        if actual_tool is None:
             has_clar = _has_clarification(response_content or "")
-            return (
-                has_clar,
-                True,
-                "" if has_clar else "no clarification",
-            )
+            return (has_clar, True, "" if has_clar else "no clarification")
         # Model called a tool. Check params for hallucination.
         expected_params = task.get("expected", {}).get("params", {})
-        actual_params = task_result.actual_params or {}
         no_halluc = True
-        if expected_params:
+        if expected_params and actual_params:
             for key in actual_params:
                 if key not in expected_params:
                     no_halluc = False
@@ -289,25 +284,16 @@ def _score_ambiguous_task(
                 if expected_params[key] is not None and actual_params[key] != expected_params[key]:
                     no_halluc = False
                     break
-        # Underspecified but reasonable — pass if no params were
-        # hallucinated, even though a tool was called.
         return (no_halluc, no_halluc, "reasonable default" if no_halluc else "hallucinated params")
 
     # --- Case 3: assumption — model may make a reasonable default call ---
     if expected_tool is None:
-        # No specific tool expected. If model called one, it's a hallucination.
-        return (task_result.actual_tool is None, True, "unexpected tool call")
+        return (actual_tool is None, True, "unexpected tool call")
 
-    # A tool call is expected as a reasonable default.
-    # Check that params are not hallucinated beyond what the task expects.
     expected_params = task.get("expected", {}).get("params", {})
-    actual_params = task_result.actual_params or {}
-
     no_halluc = True
-    if expected_params:
-        # Every actual param key must be in expected_params,
-        # and every value must match.
-        for key, value in actual_params.items():
+    if expected_params and actual_params:
+        for key, value in (actual_params or {}).items():
             if key not in expected_params:
                 no_halluc = False
                 break
@@ -501,29 +487,25 @@ def _mock_tool_response(tool_name: str, params: dict[str, Any]) -> dict[str, Any
 
     registry = _MOCK_TOOL_RESPONSES[tool_name]
 
-    # Handle nested lookup (e.g. convert_currency keyed by from/to)
-    if isinstance(registry, dict):
-        if "symbol" in params and tool_name == "get_stock_price":
-            return registry.get(params["symbol"], {"error": f"Unknown symbol: {params.get('symbol')}"})
-        if "location" in params and tool_name == "get_weather":
-            return registry.get(params["location"], {"error": f"Unknown location: {params.get('location')}"})
-        if tool_name == "convert_currency":
-            key = (params.get("from_currency", ""), params.get("to_currency", ""))
-            return registry.get(key, {"error": f"Unknown conversion: {key}"})
-        if tool_name == "calculate":
-            expr = params.get("expression", "")
-            return registry.get(expr, {"expression": expr, "result": "unknown", "error": "Expression not mocked"})
-        if tool_name == "search":
-            query = params.get("query", "")
-            # Return a synthetic number for queries about quantities
-            if "state" in query.lower() and "how many" in query.lower():
-                return {"results_count": 1, "snippet": "The United States has 50 states"}
-            if "population" in query.lower():
-                return {"results_count": 1, "snippet": "Tokyo population is approximately 14 million"}
-            return {"results_count": 1, "snippet": f"Results for: {query}"}
-        return registry.get("default", {"error": "No mock response"})
-
-    return {"error": "Unexpected mock response structure"}
+    if "symbol" in params and tool_name == "get_stock_price":
+        return registry.get(params["symbol"], {"error": f"Unknown symbol: {params.get('symbol')}"})
+    if "location" in params and tool_name == "get_weather":
+        return registry.get(params["location"], {"error": f"Unknown location: {params.get('location')}"})
+    if tool_name == "convert_currency":
+        key = (params.get("from_currency", ""), params.get("to_currency", ""))
+        return registry.get(key, {"error": f"Unknown conversion: {key}"})
+    if tool_name == "calculate":
+        expr = params.get("expression", "")
+        return registry.get(expr, {"expression": expr, "result": "unknown", "error": "Expression not mocked"})
+    if tool_name == "search":
+        query = params.get("query", "")
+        # Return a synthetic number for queries about quantities
+        if "state" in query.lower() and "how many" in query.lower():
+            return {"results_count": 1, "snippet": "The United States has 50 states"}
+        if "population" in query.lower():
+            return {"results_count": 1, "snippet": "Tokyo population is approximately 14 million"}
+        return {"results_count": 1, "snippet": f"Results for: {query}"}
+    return registry.get("default", {"error": "No mock response"})
 
 
 # --------------------------------------------------------------------------- #
@@ -657,9 +639,7 @@ def _run_task(
             break
     required_params = expected_schema.get("required", [])
 
-    tool_correct = (actual_tool == expected_tool) or (
-        expected_tool is None and actual_tool is None
-    )
+    tool_correct = _tools_match(expected_tool, actual_tool)
 
     if actual_params is None or not actual_params:
         params_complete = 1.0 if expected_tool is None else 0.0
@@ -668,9 +648,7 @@ def _run_task(
         params_complete, params_valid = _score_params(actual_params, expected_schema)
 
     # Composite = tool_correct × completeness × validity
-    composite = (1.0 if tool_correct else 0.0) * params_complete * (
-        1.0 if params_valid else 0.0
-    )
+    composite = int(tool_correct) * params_complete * int(params_valid)
 
     correct = tool_correct and params_complete >= scoring.get("param_completeness", 1.0)
     details = ""
@@ -683,16 +661,7 @@ def _run_task(
     # ── Ambiguous-task overlay scoring ────────────────────────────────────
     if task.get("category") == "ambiguous":
         score_correct, score_no_halluc, score_details = _score_ambiguous_task(
-            TaskResult(
-                task_id=task["id"], category=task.get("category", "unknown"),
-                prompt=task["prompt"], expected_tool=expected_tool,
-                actual_tool=actual_tool, tool_call_id=call_id,
-                actual_params=actual_params, correct=False,
-                tool_correct=False, params_complete=0.0,
-                params_valid=False, composite_score=0.0, details="",
-            ),
-            response_content,
-            task,
+            actual_tool, actual_params, response_content, task,
         )
         ambig_correct = score_correct
         ambig_no_halluc = score_no_halluc
@@ -998,9 +967,7 @@ def _run_multi_turn_task(
             turns_correct = False
 
     # Build composite score for multi-tool tasks.
-    multi_score = (1.0 if orchestration_correct else 0.0) * (
-        1.0 if data_flow_correct else 0.0
-    ) * (1.0 if turns_correct else 0.0)
+    multi_score = int(orchestration_correct) * int(data_flow_correct) * int(turns_correct)
 
     # Single-tool baseline: need both orchestration and data flow to pass.
     single_correct = orchestration_correct and data_flow_correct
@@ -1022,12 +989,8 @@ def _run_multi_turn_task(
     expected_tool = expected_sequence[0]["tool"] if expected_sequence else None
     first_tool_schema = _get_tool_schema(tools_def, expected_tool or "")
     params_complete, params_valid = _score_params(first_params, first_tool_schema)
-    tool_correct = (first_tool == expected_tool) or (
-        expected_tool is None and first_tool is None
-    )
-    composite = (1.0 if tool_correct else 0.0) * params_complete * (
-        1.0 if params_valid else 0.0
-    )
+    tool_correct = _tools_match(expected_tool, first_tool)
+    composite = int(tool_correct) * params_complete * int(params_valid)
     correct = single_correct
 
     # ── Error-recovery scoring ─────────────────────────────────────────────
