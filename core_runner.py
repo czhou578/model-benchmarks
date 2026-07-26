@@ -466,36 +466,6 @@ class ModelClient:
                 f"The model weights are likely still being loaded from disk."
             )
 
-    def tokenize_prompt(self, prompt: str) -> TokenizedPrompt:
-        if self.chat:
-            payload = {
-                "model": self.model_name,
-                "messages": [{"role": "user", "content": prompt}],
-                # Match normal chat-completion rendering.
-                "add_generation_prompt": True,
-            }
-        else:
-            payload = {
-                "model": self.model_name,
-                "prompt": prompt,
-                "add_special_tokens": True,
-            }
-
-        response = requests.post(
-            f"{self.base_url}/tokenize",
-            headers=self.headers,
-            json=payload,
-            timeout=300,
-        )
-
-        response.raise_for_status()
-        data = response.json()
-
-        tokens = data.get("tokens", [])
-        count = data.get("count", len(tokens))
-
-        return TokenizedPrompt(count=count, tokens=tokens)
-
     def generate(
         self,
         prompt: str,
@@ -1257,12 +1227,6 @@ def main():
             "status": flops_result.get("estimate_status"),
             "model": flops_result.get("architecture", {}).get("model", "unknown"),
         }
-
-        for name, fn in _REGISTERED_BENCHMARKS.items():
-            print(f"[core_runner] running registered benchmark: {name}")
-            plugin_results = fn(client, cfg)
-            save_json(run_dir / f"{name}.json", plugin_results)
-            summary[name] = plugin_results
 
         # Tool-calling benchmark (Phase 1–3)
         try:
