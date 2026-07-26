@@ -38,6 +38,99 @@ class CalibratedPrompt:
         return self.actual_tokens == self.requested_tokens
 
 
+@dataclass(frozen=True)
+class PrefillRequestResult:
+    """Result from a single prefill request."""
+
+    index: int
+    success: bool
+    prompt_tokens: int
+    prompt_tokens_exact: bool
+    client_ttft_s: float
+    total_time_s: float
+    effective_prefill_tps: float | None
+    cache_isolation_method: str
+    error: str = ""
+    start_time: float | None = None
+    end_time: float | None = None
+    # vLLM server-side metrics
+    cached_tokens: int = 0
+    server_ttft_s: float | None = None
+    queue_time_s: float | None = None
+    prefill_time_s: float | None = None
+    engine_prefill_tps: float | None = None
+
+
+def _empty_stats() -> dict[str, None]:
+    """Return a None-filled stat dict used as a fallback when there's no data."""
+    return {"avg_s": None, "median_s": None, "p95_s": None, "min_s": None, "max_s": None}
+
+
+def _per_request_summary(r: PrefillRequestResult) -> dict[str, Any]:
+    """Serialize a PrefillRequestResult for JSON output."""
+    return {
+        "index": r.index,
+        "success": r.success,
+        "prompt_tokens": r.prompt_tokens,
+        "prompt_tokens_exact": r.prompt_tokens_exact,
+        "client_ttft_s": round(r.client_ttft_s, 4),
+        "total_time_s": round(r.total_time_s, 4),
+        "effective_prefill_tps": r.effective_prefill_tps,
+        "engine_prefill_tps": r.engine_prefill_tps,
+        "cached_tokens": r.cached_tokens,
+        "server_ttft_s": r.server_ttft_s,
+        "queue_time_s": r.queue_time_s,
+        "prefill_time_s": r.prefill_time_s,
+        "cache_isolation_method": r.cache_isolation_method,
+        "start_time": r.start_time,
+        "end_time": r.end_time,
+        "error": r.error,
+    }
+
+
+def _error_result(
+    idx: int,
+    exc: BaseException,
+    is_server_unreachable: bool,
+    is_oom: bool,
+    cache_method: str,
+    req_start: float,
+    *,
+    is_status_change: bool = False,
+    status_to_set: str | None = None,
+) -> tuple[PrefillRequestResult, str | None, bool]:
+    """Build a failed PrefillRequestResult and return (result, new_status, should_stop).
+
+    *is_status_change* controls whether the helper sets a status string that the
+    caller should apply to ``length_status`` (used by the HTTPError/OOM handler
+    to distinguish ``"oom"`` from the generic ``"success"`` status).
+    """
+    err_msg = "server_unreachable" if is_server_unreachable else str(exc)
+    new_status = "server_unavailable" if is_server_unreachable else (status_to_set if is_status_change else None)
+    new_stopped = is_server_unreachable or is_oom
+    return (
+        PrefillRequestResult(
+            index=idx,
+            success=False,
+            prompt_tokens=0,
+            prompt_tokens_exact=False,
+            client_ttft_s=0.0,
+            total_time_s=0.0,
+            effective_prefill_tps=None,
+            cache_isolation_method=cache_method,
+            error=err_msg,
+            start_time=req_start,
+            end_time=time.monotonic(),
+            cached_tokens=0,
+            server_ttft_s=None,
+            queue_time_s=None,
+            prefill_time_s=None,
+        ),
+        new_status,
+        new_stopped,
+    )
+
+
 _PASSAGES = (
     "The survey vessel crossed the continental shelf before dawn. Its sonar "
     "mapped ridges, sediment fans, and narrow channels while the navigation "
@@ -179,43 +272,12 @@ def prepare_exact_prompt(
 
 
 # --------------------------------------------------------------------------- #
-# Benchmark helpers
-# --------------------------------------------------------------------------- #
-
-
-# _stat_summary is imported from core_runner.
-
-
-@dataclass(frozen=True)
-class PrefillRequestResult:
-    """Result from a single prefill request."""
-
-    index: int
-    success: bool
-    prompt_tokens: int
-    prompt_tokens_exact: bool
-    client_ttft_s: float
-    total_time_s: float
-    effective_prefill_tps: float | None
-    cache_isolation_method: str
-    error: str = ""
-    start_time: float | None = None
-    end_time: float | None = None
-    # vLLM server-side metrics
-    cached_tokens: int = 0
-    server_ttft_s: float | None = None
-    queue_time_s: float | None = None
-    prefill_time_s: float | None = None
-    engine_prefill_tps: float | None = None
-
-
-# --------------------------------------------------------------------------- #
 # Main benchmark function
 # --------------------------------------------------------------------------- #
 
 def run_prefill_scaling(
     client: ModelClient,
-    target_lengths: list[int] = [],
+    target_lengths: list[int] | None = None,
     repetitions: int = 5,
     gpu_monitor=None,
 ) -> dict[str, Any]:
@@ -323,66 +385,32 @@ def run_prefill_scaling(
                     queue_time_s=gen.queue_time_s,
                     prefill_time_s=gen.prefill_time_s,
                 )
-            except requests.exceptions.ConnectionError:
-                length_status = "server_unavailable"
-                stopped = True
-                req_result = PrefillRequestResult(
-                    index=req_idx,
-                    success=False,
-                    prompt_tokens=0,
-                    prompt_tokens_exact=False,
-                    client_ttft_s=0.0,
-                    total_time_s=0.0,
-                    effective_prefill_tps=None,
-                    cache_isolation_method=cache_isolation_method,
-                    error="server_unreachable",
-                    start_time=req_start,
-                    end_time=time.monotonic(),
-                    cached_tokens=0,
-                    server_ttft_s=None,
-                    queue_time_s=None,
-                    prefill_time_s=None,
+            except requests.exceptions.ConnectionError as exc:
+                req_result, new_status, new_stopped = _error_result(
+                    req_idx, exc, is_server_unreachable=True, is_oom=False,
+                    cache_method=cache_isolation_method, req_start=req_start,
                 )
+                if new_status:
+                    length_status = new_status
+                stopped = stopped or new_stopped
             except requests.exceptions.HTTPError as exc:
-                msg = str(exc).lower()
-                if "memory" in msg or "oom" in msg:
-                    length_status = "oom"
-                    stopped = True
-                req_result = PrefillRequestResult(
-                    index=req_idx,
-                    success=False,
-                    prompt_tokens=0,
-                    prompt_tokens_exact=False,
-                    client_ttft_s=0.0,
-                    total_time_s=0.0,
-                    effective_prefill_tps=None,
-                    cache_isolation_method=cache_isolation_method,
-                    error=str(exc),
-                    start_time=req_start,
-                    end_time=time.monotonic(),
-                    cached_tokens=0,
-                    server_ttft_s=None,
-                    queue_time_s=None,
-                    prefill_time_s=None,
+                is_oom = "memory" in str(exc).lower() or "oom" in str(exc).lower()
+                req_result, new_status, new_stopped = _error_result(
+                    req_idx, exc, is_server_unreachable=False, is_oom=is_oom,
+                    cache_method=cache_isolation_method, req_start=req_start,
+                    is_status_change=is_oom, status_to_set="oom",
                 )
+                if new_status:
+                    length_status = new_status
+                stopped = stopped or new_stopped
             except Exception as exc:
-                req_result = PrefillRequestResult(
-                    index=req_idx,
-                    success=False,
-                    prompt_tokens=0,
-                    prompt_tokens_exact=False,
-                    client_ttft_s=0.0,
-                    total_time_s=0.0,
-                    effective_prefill_tps=None,
-                    cache_isolation_method=cache_isolation_method,
-                    error=str(exc),
-                    start_time=req_start,
-                    end_time=time.monotonic(),
-                    cached_tokens=0,
-                    server_ttft_s=None,
-                    queue_time_s=None,
-                    prefill_time_s=None,
+                req_result, new_status, new_stopped = _error_result(
+                    req_idx, exc, is_server_unreachable=False, is_oom=False,
+                    cache_method=cache_isolation_method, req_start=req_start,
                 )
+                if new_status:
+                    length_status = new_status
+                stopped = stopped or new_stopped
 
             if req_result is not None:
                 length_results.append(req_result)
@@ -416,30 +444,13 @@ def run_prefill_scaling(
             "n_requests": len(length_results),
             "n_success": len(successes),
             "per_request": [
-                {
-                    "index": r.index,
-                    "success": r.success,
-                    "prompt_tokens": r.prompt_tokens,
-                    "prompt_tokens_exact": r.prompt_tokens_exact,
-                    "client_ttft_s": round(r.client_ttft_s, 4),
-                    "total_time_s": round(r.total_time_s, 4),
-                    "effective_prefill_tps": r.effective_prefill_tps,
-                    "engine_prefill_tps": r.engine_prefill_tps,
-                    "cached_tokens": r.cached_tokens,
-                    "server_ttft_s": r.server_ttft_s,
-                    "queue_time_s": r.queue_time_s,
-                    "prefill_time_s": r.prefill_time_s,
-                    "cache_isolation_method": r.cache_isolation_method,
-                    "start_time": r.start_time,
-                    "end_time": r.end_time,
-                    "error": r.error,
-                }
+                _per_request_summary(r)
                 for r in length_results
             ],
             "aggregated": {
                 "ttft": _stat_summary(ttfts),
-                "effective_prefill_tps": _stat_summary(tps) if tps else {"avg_s": None, "median_s": None, "p95_s": None, "min_s": None, "max_s": None},
-                "engine_prefill_tps": _stat_summary(engine_tps) if engine_tps else {"avg_s": None, "median_s": None, "p95_s": None, "min_s": None, "max_s": None},
+                "effective_prefill_tps": _stat_summary(tps) if tps else _empty_stats(),
+                "engine_prefill_tps": _stat_summary(engine_tps) if engine_tps else _empty_stats(),
                 "gpu": gpu_summary if gpu_summary else {},
             },
         }
