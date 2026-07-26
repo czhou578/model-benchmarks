@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from typing import Any
 from core_runner import ModelClient, GpuMonitor, _stat_summary
@@ -38,7 +38,6 @@ class TtftRequestResult:
     success: bool
     # Token counts
     prompt_tokens: int
-    prompt_tokens_exact: bool
     output_tokens: int
     # Client-side wall-clock (ms) — None when request failed
     ttft_ms: float | None
@@ -53,6 +52,19 @@ class TtftRequestResult:
     first_decode_ms: float | None = None
     # Error
     error: str = ""
+
+    @classmethod
+    def error(cls, *, index: int, exc: BaseException) -> TtftRequestResult:
+        """Return a failed request result."""
+        return cls(
+            index=index,
+            success=False,
+            prompt_tokens=0,
+            output_tokens=0,
+            ttft_ms=0.0,
+            total_time_ms=0.0,
+            error=str(exc),
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -151,18 +163,9 @@ def run_ttft_breakdown(
                     length_status = "oom"
                     stopped = True
 
-                length_results.append(
-                    TtftRequestResult(
-                        index=req_idx,
-                        success=False,
-                        prompt_tokens=0,
-                        prompt_tokens_exact=False,
-                        output_tokens=0,
-                        ttft_ms=0.0,
-                        total_time_ms=0.0,
-                        error=str(exc),
-                    )
-                )
+                length_results.append(TtftRequestResult.error(
+                    index=req_idx, exc=exc,
+                ))
                 continue
 
             # Extract server-side metrics (may be None)
@@ -170,47 +173,28 @@ def run_ttft_breakdown(
             prefill_s = gen.prefill_time_s
             server_ttft = gen.time_to_first_token_s
 
-            # Compute derived breakdown (ms)
-            sched_delay_s = None
-            pref_s = None
-            first_dec_s = None
-
-            if queue_s is not None:
-                sched_delay_s = queue_s
-            if prefill_s is not None:
-                pref_s = prefill_s
-
             # first_decode = TTFT − queue − prefill
-            if (
-                queue_s is not None
-                and prefill_s is not None
-                and server_ttft is not None
-            ):
-                first_dec_s = max(0.0, server_ttft - queue_s - prefill_s)
-            elif server_ttft is not None:
-                first_dec_s = server_ttft
-
-            client_ttft_ms = _ms(gen.ttft_s) if gen.ttft_s is not None else None
-            total_ms = _ms(gen.total_time_s) if gen.total_time_s is not None else None
-
-            length_results.append(
-                TtftRequestResult(
-                    index=req_idx,
-                    success=True,
-                    prompt_tokens=gen.prompt_tokens,
-                    prompt_tokens_exact=gen.prompt_tokens_exact,
-                    output_tokens=gen.output_tokens,
-                    ttft_ms=client_ttft_ms,
-                    total_time_ms=total_ms,
-                    queue_time_s=queue_s,
-                    prefill_time_s=prefill_s,
-                    server_ttft_s=server_ttft,
-                    scheduler_delay_ms=_ms(sched_delay_s),
-                    prefill_ms=_ms(pref_s),
-                    first_decode_ms=_ms(first_dec_s),
-                    error="",
-                )
+            first_dec_s = (
+                max(0.0, server_ttft - queue_s - prefill_s)
+                if queue_s is not None and prefill_s is not None and server_ttft is not None
+                else server_ttft
             )
+
+            length_results.append(TtftRequestResult(
+                index=req_idx,
+                success=True,
+                prompt_tokens=gen.prompt_tokens,
+                output_tokens=gen.output_tokens,
+                ttft_ms=_ms(gen.ttft_s),
+                total_time_ms=_ms(gen.total_time_s),
+                queue_time_s=queue_s,
+                prefill_time_s=prefill_s,
+                server_ttft_s=server_ttft,
+                scheduler_delay_ms=_ms(queue_s),
+                prefill_ms=_ms(prefill_s),
+                first_decode_ms=_ms(first_dec_s),
+                error="",
+            ))
 
             if req_idx < repetitions - 1:
                 time.sleep(0.5)  # stabilization gap
@@ -236,24 +220,7 @@ def run_ttft_breakdown(
         ]
 
         # Serialize per-request data for JSON output
-        per_request_serialized = [
-            {
-                "index": r.index,
-                "success": r.success,
-                "prompt_tokens": r.prompt_tokens,
-                "prompt_tokens_exact": r.prompt_tokens_exact,
-                "output_tokens": r.output_tokens,
-                "ttft_ms": r.ttft_ms,
-                "total_time_ms": r.total_time_ms,
-                "queue_time_s": r.queue_time_s,
-                "prefill_time_s": r.prefill_time_s,
-                "server_ttft_s": r.server_ttft_s,
-                "scheduler_delay_ms": r.scheduler_delay_ms,
-                "first_decode_ms": r.first_decode_ms,
-                "error": r.error,
-            }
-            for r in length_results
-        ]
+        per_request_serialized = [asdict(r) for r in length_results]
 
         # Use first success's prompt_tokens as actual_tokens
         actual_tokens = successes[0].prompt_tokens if successes else length
