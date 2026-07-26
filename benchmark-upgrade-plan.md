@@ -1,4 +1,4 @@
-# Benchmark Upgrade Roadmap --- v2
+# Benchmark Upgrade Roadmap --- v3
 
 ## Current Strengths
 
@@ -10,6 +10,9 @@ Your suite already measures the fundamentals well:
 -   Concurrency scaling
 -   GPU power and memory
 -   Environment fingerprinting
+-   Speculative decoding comparison
+-   Tool-calling ability (single-tool, multi-tool, schema compliance, error recovery)
+-   FLOPs/parameter estimation from architecture config
 
 This already puts it ahead of many inference benchmark suites.
 
@@ -114,7 +117,7 @@ retained for reference only — the implementation lives in Phase 1.
 
 Compare: - Default KV cache - FP8 KV cache
 
-Measure: - Memory/token - Decode speed - Prefill speed - Maximum context
+Measure: - Memory/token - Decode speed - Prefill speed - Maximum
 capacity
 
 **Implemented (partial):** GPU memory tracking (avg/peak MiB) is captured in every
@@ -122,10 +125,13 @@ benchmark via `GpuMonitor` and included in per-length telemetry windows. Energy-
 computed for prefill workloads. A side-by-side KV-cache-mode comparison benchmark
 is not yet implemented, but the instrumentation is ready to add it.
 
-Compare: - Default KV cache - FP8 KV cache
-
-Measure: - Memory/token - Decode speed - Prefill speed - Maximum context
-capacity
+**Implemented (additional):** `benchmarks/architecture_flops.py` — loads, normalizes,
+and validates model architecture config from local files, HuggingFace, or the vLLM
+server. Detects FFN type (dense/MoE), token-mixer type (full/linear attention, hybrid),
+MoE routing, and quantization. Provides per-component FLOPs estimators (GatedDeltaNet,
+FullAttention, MoeFFN, LmHead) composed into a `ModelFlopsEstimator` that returns
+per-layer and per-request decode/prefill FLOPs + memory traffic breakdowns. Output:
+`flops_analysis.json`.
 
 # Phase 4 --- Concurrency & Scheduling
 
@@ -142,6 +148,20 @@ per-request TTFT/latency stats (avg/median/p95/min/max). GPU telemetry is not ye
 integrated into this module (tracked in other benchmarks). Configurable via
 `concurrency_levels` and `requests_per_level` in the model YAML.
 
+# Phase 5 --- Tool-Calling Evaluation (New)
+
+## ~~11. Tool-Calling Benchmark~~ ✅ **DONE**
+
+Evaluate models on: - Single-tool invocation - Multi-tool chaining - Schema
+compliance - Error recovery - Ambiguous/underspecified prompts
+
+**Implemented:** `benchmarks/tool_calling.py:run_tool_calling_benchmark()` — runs a
+YAML-defined task suite with per-task scoring (tool selection, param completeness,
+param correctness, schema constraint validation, multi-tool orchestration, error
+self-correction). Produces a weighted composite score across 6 categories, per-task
+details with failure-mode attribution, and a lite mode for quick regression checks.
+Output: `tool_calling.json`.
+
 # Phase 6 --- Hardware Instrumentation
 
 Collect alongside every benchmark: - SM utilization - Tensor Core
@@ -150,6 +170,12 @@ usage - PCIe/NVLink traffic (where applicable)
 
 Correlate hardware telemetry with performance changes.
 
+**Implemented (partial):** `GpuMonitor` samples GPU utilization, memory (used/total),
+power draw, and energy at 1 Hz. Per-length telemetry windows record avg/peak utilization,
+avg/peak power, avg/peak memory, total energy (Wh), and incremental energy above idle.
+Results written to `gpu_samples.csv` + summary in JSON. Missing: SM utilization, tensor
+core, HBM bandwidth, clocks, temperature, PCIe/NVLink.
+
 # Phase 7 --- Systems Analysis
 
 ## 10. Roofline Analysis
@@ -157,21 +183,43 @@ Correlate hardware telemetry with performance changes.
 Estimate whether workloads are limited by: - Compute - Memory
 bandwidth - Scheduler overhead - Kernel launch overhead
 
+**Implemented (partial):** `benchmarks/architecture_flops.py` provides per-component
+FLOPs and memory-traffic (weight bytes, KV read/write, activation bytes) estimates for
+decode and prefill. This is the theoretical ceiling side; the empirical side (measured
+bandwidth/utilization from `GpuMonitor`) is not yet correlated into a roofline plot or
+bottleneck diagnosis.
+
+## 12. MoE Analysis (partial)
+
+Estimate: - Per-expert load — Router efficiency — Communication overhead.
+
+**Implemented (partial):** `benchmarks/architecture_flops.py` includes per-expert FLOPs
+breakdown (routed experts, shared expert, router, shared-expert gate) and MoE parameter
+counts. Not yet implemented: measured router efficiency (load balance), expert
+communication overhead, or comparison of measured vs theoretical throughput.
+
 # Recommended Implementation Order
 
 ~~1.~~ ~~Context-aware decode & prefill curves~~ ✅ **DONE**
-~~2.~~ ~~Speculative decoding metrics~~ ✅ **DONE**
-~~3.~~ ~~Prefix cache & deep-context benchmarks~~ ✅ **DONE**
-~~4.~~ ~~Concurrency saturation~~ ✅ **DONE**
+~~2.~~ ~~Prefill scaling curve~~ ✅ **DONE**
+~~3.~~ ~~TTFT breakdown~~ ✅ **DONE**
+~~4.~~ ~~Speculative decoding metrics~~ ✅ **DONE**
 ~~5.~~ ~~Reasoning-token analysis~~ ✅ **DONE**
-6.  Scheduling benchmark (chunked prefill, async scheduling)
-7.  Prefix cache reuse benchmark (cold vs. repeated prompt)
-8.  Configuration sweeps (attention, MoE, batch size, spec-dec configs)
-9.  Coding benchmarks (HumanEval/MBPP)
-10. Accuracy benchmarks (GSM8K/AIME/GPQA)
-11. Hardware telemetry expansion (SM, tensor core, HBM bandwidth, clocks, temperature)
-12. Roofline & MoE analysis
-13. Quality-per-speed metrics
+~~6.~~ ~~Concurrency saturation~~ ✅ **DONE**
+~~7.~~ ~~Deep context benchmark~~ ✅ **DONE**
+~~8.~~ ~~KV cache evaluation (telemetry)~~ ✅ **DONE** (partial)
+~~9.~~ ~~Speculative efficiency~~ ✅ **DONE**
+~~10.~~ ~~Tool-calling benchmark~~ ✅ **DONE**
+~~11.~~ ~~Architecture/FLOPs estimation~~ ✅ **DONE**
+12. Prefix cache reuse benchmark (cold vs. repeated prompt)
+13. Scheduling benchmark (chunked prefill, async scheduling)
+14. Configuration sweeps (attention, MoE, batch size, spec-dec configs)
+15. Hardware telemetry expansion (SM, tensor core, HBM bandwidth, clocks, temperature)
+16. Roofline analysis (correlate measured vs theoretical)
+17. MoE analysis (router efficiency, load balance, communication overhead)
+18. Coding benchmarks (HumanEval/MBPP)
+19. Accuracy benchmarks (GSM8K/AIME/GPQA)
+20. Quality-per-speed metrics
 
 # Philosophy
 
