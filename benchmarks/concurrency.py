@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import time
 import concurrent.futures
-from pathlib import Path
 from typing import Any
 
 from core_runner import (
@@ -18,7 +17,6 @@ from core_runner import (
     _stat_summary,
     build_prompt_of_length,
     count_tokens,
-    load_model_config,
 )
 
 
@@ -117,19 +115,3 @@ def run_concurrency_test(
         }
 
     return results
-
-
-if __name__ == "__main__":
-    import json
-    import sys
-
-    cfg_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("models/qwen3.6_35b_redhat_nvfp4.yml")
-    cfg = load_model_config(cfg_path)
-    client = ModelClient(
-        cfg["endpoint"]["base_url"],
-        cfg["endpoint"]["model_name"],
-        cfg["endpoint"].get("api_key"),
-        cfg["endpoint"].get("chat", True),
-    )
-    results = run_concurrency_test(client, concurrency_levels=[1, 2, 4], requests_per_level=3)
-    print(json.dumps(results, indent=2))
