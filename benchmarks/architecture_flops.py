@@ -1056,69 +1056,82 @@ class ModelFlopsEstimator:
         }
         return result
 
-    def decode_model_flops(self, context_length: int) -> dict[str, Any]:
-        if context_length < 0:
-            raise ValueError("context_length must be non-negative")
+    def _compose_components(
+        self,
+        components: list[dict[str, Any]],
+        *,
+        mode: str,
+        sequence_length: int,
+    ) -> dict[str, Any]:
         matmul: dict[str, float] = {}
         non_matmul: dict[str, float] = {}
         omitted: set[str] = set()
 
-        assert self._moe is not None
-        moe = self._moe.decode_flops()
+        for comp in components:
+            result = comp["result"]
+            name_map = comp.get("name_map")
+            if name_map:
+                for name, value in result.matmul_breakdown.items():
+                    matmul[name_map.get(name, name)] = value * comp["matmul_m"]
+            else:
+                self._add_scaled(matmul, result.matmul_breakdown, comp["matmul_m"])
+            self._add_scaled(
+                non_matmul, result.non_matmul_breakdown,
+                comp["non_matmul_m"], comp.get("nmm_prefix", ""),
+            )
+            omitted.update(result.omitted_non_matmul)
+
+        result = self._finalize(
+            mode=mode,
+            sequence_length=sequence_length,
+            matmul=matmul,
+            non_matmul=non_matmul,
+            omitted=omitted,
+        )
+        return result
+
+    def decode_model_flops(self, context_length: int) -> dict[str, Any]:
+        if context_length < 0:
+            raise ValueError("context_length must be non-negative")
+
         moe_names = {
             "routed_experts": "moe_routed",
             "shared_expert": "moe_shared",
             "router": "moe_router",
             "shared_expert_gate": "moe_shared_gate",
         }
-        for name, value in moe.matmul_breakdown.items():
-            matmul[moe_names[name]] = value * self._l
-        self._add_scaled(non_matmul, moe.non_matmul_breakdown, self._l, "moe_")
-        omitted.update(moe.omitted_non_matmul)
-
+        components: list[dict[str, Any]] = [{
+            "result": self._moe.decode_flops(),
+            "matmul_m": self._l, "non_matmul_m": self._l,
+            "name_map": moe_names, "nmm_prefix": "moe_",
+        }]
         if self._full_attn:
-            attention = self._full_attn.decode_flops(context_length)
-            self._add_scaled(
-                matmul,
-                attention.matmul_breakdown,
-                self.full_attention_layers,
-            )
-            self._add_scaled(
-                non_matmul,
-                attention.non_matmul_breakdown,
-                self.full_attention_layers,
-            )
-            omitted.update(attention.omitted_non_matmul)
-
-        delta: ComponentResult | None = None
+            components.append({
+                "result": self._full_attn.decode_flops(context_length),
+                "matmul_m": self.full_attention_layers,
+                "non_matmul_m": self.full_attention_layers,
+            })
         if self._delta:
-            delta = self._delta.decode_flops()
-            self._add_scaled(
-                matmul,
-                delta.matmul_breakdown,
-                self.linear_attention_layers,
-            )
-            self._add_scaled(
-                non_matmul,
-                delta.non_matmul_breakdown,
-                self.linear_attention_layers,
-            )
-            omitted.update(delta.omitted_non_matmul)
+            delta_result = self._delta.decode_flops()
+            components.append({
+                "result": delta_result,
+                "matmul_m": self.linear_attention_layers,
+                "non_matmul_m": self.linear_attention_layers,
+            })
+        components.append({
+            "result": self._lm.decode_flops(),
+            "matmul_m": 1, "non_matmul_m": 1,
+        })
 
-        lm = self._lm.decode_flops()
-        self._add_scaled(matmul, lm.matmul_breakdown, 1)
-        omitted.update(lm.omitted_non_matmul)
-        result = self._finalize(
+        result = self._compose_components(
+            components,
             mode="decode",
             sequence_length=context_length,
-            matmul=matmul,
-            non_matmul=non_matmul,
-            omitted=omitted,
         )
-        if delta is not None:
+        if self._delta:
             result["state_traffic_bytes"] = {
-                "linear_state_bytes_read": delta.kv_read_bytes * self.linear_attention_layers,
-                "linear_state_bytes_written": delta.kv_write_bytes * self.linear_attention_layers,
+                "linear_state_bytes_read": delta_result.kv_read_bytes * self.linear_attention_layers,
+                "linear_state_bytes_written": delta_result.kv_write_bytes * self.linear_attention_layers,
             }
         return result
 
@@ -1129,70 +1142,46 @@ class ModelFlopsEstimator:
     def prefill_flops(self, S: int, logits_tokens: int = 1) -> dict[str, Any]:
         if S <= 0:
             raise ValueError("sequence length must be positive")
-        matmul: dict[str, float] = {}
-        non_matmul: dict[str, float] = {}
-        omitted: set[str] = set()
 
-        assert self._moe is not None
-        moe = self._moe.decode_flops()
         moe_names = {
             "routed_experts": "moe_routed",
             "shared_expert": "moe_shared",
             "router": "moe_router",
             "shared_expert_gate": "moe_shared_gate",
         }
-        for name, value in moe.matmul_breakdown.items():
-            matmul[moe_names[name]] = value * S * self._l
-        self._add_scaled(
-            non_matmul, moe.non_matmul_breakdown, S * self._l, "moe_"
-        )
-        omitted.update(moe.omitted_non_matmul)
-
+        components: list[dict[str, Any]] = [{
+            "result": self._moe.decode_flops(),
+            "matmul_m": S * self._l, "non_matmul_m": S * self._l,
+            "name_map": moe_names, "nmm_prefix": "moe_",
+        }]
         if self._full_attn:
-            attention = self._full_attn.prefill_flops(S)
-            self._add_scaled(
-                matmul,
-                attention.matmul_breakdown,
-                self.full_attention_layers,
-            )
-            self._add_scaled(
-                non_matmul,
-                attention.non_matmul_breakdown,
-                self.full_attention_layers,
-            )
-            omitted.update(attention.omitted_non_matmul)
-
-        delta: ComponentResult | None = None
+            components.append({
+                "result": self._full_attn.prefill_flops(S),
+                "matmul_m": S * self.full_attention_layers,
+                "non_matmul_m": S * self.full_attention_layers,
+            })
         if self._delta:
-            delta = self._delta.prefill_flops(S)
-            self._add_scaled(
-                matmul,
-                delta.matmul_breakdown,
-                self.linear_attention_layers,
-            )
-            self._add_scaled(
-                non_matmul,
-                delta.non_matmul_breakdown,
-                self.linear_attention_layers,
-            )
-            omitted.update(delta.omitted_non_matmul)
+            delta_result = self._delta.prefill_flops(S)
+            components.append({
+                "result": delta_result,
+                "matmul_m": S * self.linear_attention_layers,
+                "non_matmul_m": S * self.linear_attention_layers,
+            })
+        components.append({
+            "result": self._lm.prefill_flops(logits_tokens=logits_tokens),
+            "matmul_m": 1, "non_matmul_m": 1,
+        })
 
-        lm = self._lm.prefill_flops(logits_tokens=logits_tokens)
-        self._add_scaled(matmul, lm.matmul_breakdown, 1)
-        omitted.update(lm.omitted_non_matmul)
-        result = self._finalize(
+        result = self._compose_components(
+            components,
             mode="prefill",
             sequence_length=S,
-            matmul=matmul,
-            non_matmul=non_matmul,
-            omitted=omitted,
         )
         result["logits_tokens"] = logits_tokens
-        if delta is not None:
-            _delta = delta
+        if self._delta:
             result["state_traffic_bytes"] = {
-                "linear_state_bytes_read": float(_delta.kv_read_bytes * self.linear_attention_layers),
-                "linear_state_bytes_written": float(_delta.kv_write_bytes * self.linear_attention_layers),
+                "linear_state_bytes_read": float(delta_result.kv_read_bytes * self.linear_attention_layers),
+                "linear_state_bytes_written": float(delta_result.kv_write_bytes * self.linear_attention_layers),
             }
         return result
 
