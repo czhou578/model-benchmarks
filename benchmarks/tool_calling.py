@@ -41,6 +41,22 @@ from core_runner import ModelClient
 
 
 # --------------------------------------------------------------------------- #
+# URL building — shared across all request paths
+# --------------------------------------------------------------------------- #
+
+
+def _build_completion_url(client: ModelClient) -> str:
+    """Return the ``chat/completions`` URL for the given client.
+
+    Handles both ``http://host/v1`` and ``http://host`` base URLs.
+    """
+    base = client.base_url.rstrip("/")
+    if base.endswith("/v1"):
+        return f"{base}/chat/completions"
+    return f"{base}/v1/chat/completions"
+
+
+# --------------------------------------------------------------------------- #
 # Data structures
 # --------------------------------------------------------------------------- #
 
@@ -115,28 +131,45 @@ class MultiTurnTaskResult(TaskResult):
 # --------------------------------------------------------------------------- #
 
 
-def _parse_tool_calls(response: dict[str, Any]) -> tuple[str | None, dict[str, Any] | None]:
+def _parse_all_tool_calls(response: dict[str, Any]) -> list[tuple[str, dict[str, Any] | None]]:
+    """Extract all tool calls from a vLLM response.
+
+    Returns:
+        A list of ``(tool_name, arguments_dict)`` tuples.
+    """
+    choices = response.get("choices")
+    if not choices:
+        return []
+
+    message = choices[0].get("message", {})
+    tool_calls = message.get("tool_calls")
+    if not tool_calls:
+        return []
+
+    calls: list[tuple[str, dict[str, Any] | None]] = []
+    for tc in tool_calls:
+        name = tc.get("function", {}).get("name")
+        try:
+            args = json.loads(tc.get("function", {}).get("arguments", "{}"))
+        except json.JSONDecodeError:
+            args = None
+        if name:
+            calls.append((name, args))
+    return calls
+
+
+def _parse_tool_calls(
+    response: dict[str, Any],
+) -> tuple[str | None, dict[str, Any] | None]:
     """Extract the first tool call from a vLLM OpenAI response.
 
     Returns:
         (tool_name_or_None, arguments_dict_or_None)
     """
-    choices = response.get("choices")
-    if not choices:
-        return None, None
-
-    message = choices[0].get("message", {})
-    tool_calls = message.get("tool_calls")
-    if not tool_calls:
-        return None, None
-
-    first = tool_calls[0]
-    name = first.get("function", {}).get("name")
-    try:
-        args = json.loads(first.get("function", {}).get("arguments", "{}"))
-    except json.JSONDecodeError:
-        args = {}
-    return name, args
+    all_calls = _parse_all_tool_calls(response)
+    if all_calls:
+        return all_calls[0]
+    return None, None
 
 
 def _validate_param_type(value: Any, expected_type: str) -> bool:
@@ -550,6 +583,116 @@ def load_tasks(path: str | Path) -> tuple[Any, list[dict[str, Any]]]:
 
 
 # --------------------------------------------------------------------------- #
+# Category overlay scoring — dispatch helper
+# --------------------------------------------------------------------------- #
+
+
+def _apply_overlay_scoring(
+    result: TaskResult,
+    task: dict,
+    tools_def: list[dict],
+    actual_tool: str | None,
+    actual_params: dict[str, Any] | None,
+    response_content: str | None,
+) -> tuple[bool, str]:
+    """Run category-specific overlay scoring and attach fields to *result*.
+
+    For ambiguous / schema-compliance / error-recovery tasks this recomputes
+    correctness and appends extra detail text.
+
+    Returns:
+        ``(final_correct, final_details)`` so the caller can use them in the
+        TaskResult constructor.
+    """
+    category = task.get("category", "unknown")
+    scoring = task.get("scoring", {})
+    details = result.details
+
+    # ── Default overlay fields (always set) ─────────────────────────────────
+    result.no_hallucinated_params = True
+    result.ambig_strategy = task.get("scoring", {}).get(
+        "strategy", task.get("strategy", "assumption"),
+    )
+    result.ambig_details = ""
+
+    # ── Ambiguous tasks ─────────────────────────────────────────────────────
+    if category == "ambiguous":
+        score_correct, score_no_halluc, score_details = _score_ambiguous_task(
+            actual_tool, actual_params, response_content, task,
+        )
+        result.no_hallucinated_params = score_no_halluc
+        result.ambig_strategy = task.get("scoring", {}).get(
+            "strategy", task.get("strategy", "assumption"),
+        )
+        result.ambig_details = score_details
+
+        # For ambiguous tasks, correct requires BOTH standard AND ambiguous scoring
+        if not score_correct:
+            result.correct = False
+
+        if score_details:
+            details = f"{details}; {score_details}" if details else score_details
+
+    # ── Schema-compliance tasks ─────────────────────────────────────────────
+    if category == "schema_compliance":
+        actual_schema = _get_tool_schema(tools_def, actual_tool or "")
+        schema_ok, schema_constraint_results, schema_details = (
+            _score_schema_compliance_task(
+                actual_params, actual_schema, task.get("scoring", {}),
+            )
+        )
+        result.no_hallucinated_params = schema_ok
+        result.ambig_strategy = "schema_compliance"
+        result.ambig_details = schema_details
+        for key, val in schema_constraint_results.items():
+            setattr(result, f"schema_{key}", val)
+
+        if not schema_ok:
+            result.correct = False
+            details = f"Schema violations: {schema_details}"
+
+    # ── Default details for non-ambiguous tasks ─────────────────────────────
+    if category not in ("ambiguous", "schema_compliance"):
+        expected_tool = task["expected"].get("tool")
+        required_params = _get_tool_schema(tools_def, expected_tool or "").get("required", [])
+        if not result.tool_correct:
+            expected_display = expected_tool or "no tool"
+            actual_display = actual_tool or "no tool"
+            details = f"Expected tool={expected_display}, got {actual_display}"
+        elif result.params_complete < scoring.get("param_completeness", 1.0):
+            missing = [p for p in required_params if p not in (actual_params or {})]
+            details = f"Missing params: {missing}"
+        elif not result.params_valid:
+            details = "Parameter value(s) failed schema validation"
+
+    result.details = details
+    return result.correct, result.details
+
+
+def _attach_overlay_defaults(result: TaskResult, task: dict, reason: str) -> None:
+    """Set overlay fields on an exception result.
+
+    This is called for tasks that failed before normal scoring could
+    populate the dynamic attributes.
+    """
+    category = task.get("category", "unknown")
+    if category == "ambiguous":
+        result.no_hallucinated_params = True
+        result.ambig_strategy = task.get("scoring", {}).get(
+            "strategy", task.get("strategy", "assumption"),
+        )
+        result.ambig_details = reason
+    elif category == "schema_compliance":
+        result.no_hallucinated_params = True
+        result.ambig_strategy = "schema_compliance"
+        result.ambig_details = reason
+    elif category == "error_recovery":
+        result.no_hallucinated_params = False
+        result.ambig_strategy = "error_recovery"
+        result.ambig_details = reason
+
+
+# --------------------------------------------------------------------------- #
 # Run a single task
 # --------------------------------------------------------------------------- #
 
@@ -565,13 +708,7 @@ def _run_task(
     expected_tool = task["expected"].get("tool")       # null → refusal
     scoring = task.get("scoring", {})
 
-    # vLLM supports tool calling via the OpenAI-compatible /v1/chat/completions
-    # endpoint.  The base_url may or may not already include /v1 — handle both.
-    base = client.base_url.rstrip("/")
-    if base.endswith("/v1"):
-        url = f"{base}/chat/completions"
-    else:
-        url = f"{base}/v1/chat/completions"
+    url = _build_completion_url(client)
 
     payload = {
         "model": client.model_name,
@@ -609,13 +746,7 @@ def _run_task(
             details=f"Request failed: {exc}",
             raw_response={"error": str(exc)},
         )
-        # For ambiguous tasks, request failure means no params were produced.
-        if task.get("category") == "ambiguous":
-            result.no_hallucinated_params = True
-            result.ambig_strategy = task.get("scoring", {}).get(
-                "strategy", task.get("strategy", "assumption"),
-            )
-            result.ambig_details = f"request failed: {exc}"
+        _attach_overlay_defaults(result, task, f"request failed: {exc}")
         return result
 
     actual_tool, actual_params = _parse_tool_calls(response)
@@ -631,13 +762,7 @@ def _run_task(
         response_content = message.get("content")
 
     # --- Scoring ---
-    # Determine required params from the expected tool schema
-    expected_schema = {}
-    for t in tools_def:
-        if t["function"]["name"] == (expected_tool or ""):
-            expected_schema = t["function"].get("parameters", {})
-            break
-    required_params = expected_schema.get("required", [])
+    expected_schema = _get_tool_schema(tools_def, expected_tool or "")
 
     tool_correct = _tools_match(expected_tool, actual_tool)
 
@@ -651,65 +776,8 @@ def _run_task(
     composite = int(tool_correct) * params_complete * int(params_valid)
 
     correct = tool_correct and params_complete >= scoring.get("param_completeness", 1.0)
-    details = ""
 
-    # Default values for non-ambiguous tasks.
-    ambig_correct = correct
-    ambig_no_halluc = True
-    ambig_details = ""
-
-    # ── Ambiguous-task overlay scoring ────────────────────────────────────
-    if task.get("category") == "ambiguous":
-        score_correct, score_no_halluc, score_details = _score_ambiguous_task(
-            actual_tool, actual_params, response_content, task,
-        )
-        ambig_correct = score_correct
-        ambig_no_halluc = score_no_halluc
-        ambig_details = score_details
-
-        # For ambiguous tasks, correct requires BOTH standard AND ambiguous scoring
-        if not ambig_correct:
-            correct = False
-
-    # Default values for schema-compliance scoring (overridden if category matches).
-    schema_ok = True
-    schema_constraint_results: dict[str, bool] = {}
-    schema_details = ""
-
-    # ── Schema-compliance overlay scoring ───────────────────────────────────
-    if task.get("category") == "schema_compliance":
-        # Get the tool schema for the expected tool
-        actual_schema = {}
-        for t in tools_def:
-            if t["function"]["name"] == actual_tool:
-                actual_schema = t["function"].get("parameters", {})
-                break
-
-        schema_ok, schema_constraint_results, schema_details = _score_schema_compliance_task(
-            actual_params, actual_schema, task.get("scoring", {}),
-        )
-        if not schema_ok:
-            correct = False
-            details = f"Schema violations: {schema_details}"
-
-    # Standard details (tool/param mismatch)
-    if not tool_correct:
-        expected_display = expected_tool or "no tool"
-        actual_display = actual_tool or "no tool"
-        details = f"Expected tool={expected_display}, got {actual_display}"
-    elif params_complete < scoring.get("param_completeness", 1.0):
-        missing = [p for p in required_params if p not in (actual_params or {})]
-        details = f"Missing params: {missing}"
-    elif not params_valid:
-        details = "Parameter value(s) failed schema validation"
-
-    # Append ambiguity-specific details (for ambiguous tasks)
-    if task.get("category") == "ambiguous" and ambig_details:
-        if details:
-            details += f"; {ambig_details}"
-        else:
-            details = ambig_details
-
+    # Build standard result with overlay scoring applied in-place.
     result = TaskResult(
         task_id=task["id"],
         category=task.get("category", "unknown"),
@@ -723,25 +791,10 @@ def _run_task(
         params_complete=round(params_complete, 4),
         params_valid=params_valid,
         composite_score=round(composite, 4),
-        details=details,
+        details="",
         raw_response=response,
     )
-
-    # Attach ambiguity-specific fields for ambiguous tasks.
-    if task.get("category") == "ambiguous":
-        result.no_hallucinated_params = ambig_no_halluc
-        result.ambig_strategy = task.get("scoring", {}).get(
-            "strategy", task.get("strategy", "assumption"),
-        )
-        result.ambig_details = ambig_details
-
-    # Attach schema-compliance fields for schema_compliance tasks.
-    if task.get("category") == "schema_compliance":
-        result.no_hallucinated_params = schema_ok
-        result.ambig_strategy = "schema_compliance"
-        result.ambig_details = schema_details
-        for key, val in schema_constraint_results.items():
-            setattr(result, f"schema_{key}", val)
+    _apply_overlay_scoring(result, task, tools_def, actual_tool, actual_params, response_content)
 
     return result
 
@@ -749,32 +802,6 @@ def _run_task(
 # --------------------------------------------------------------------------- #
 # Multi-turn helpers
 # --------------------------------------------------------------------------- #
-
-
-def _parse_all_tool_calls(response: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
-    """Extract all tool calls from a vLLM response.
-
-    Returns a list of (tool_name, arguments_dict) tuples.
-    """
-    choices = response.get("choices")
-    if not choices:
-        return []
-
-    message = choices[0].get("message", {})
-    tool_calls = message.get("tool_calls")
-    if not tool_calls:
-        return []
-
-    calls = []
-    for tc in tool_calls:
-        name = tc.get("function", {}).get("name")
-        try:
-            args = json.loads(tc.get("function", {}).get("arguments", "{}"))
-        except json.JSONDecodeError:
-            args = {}
-        if name:
-            calls.append((name, args))
-    return calls
 
 
 def _get_tool_schema(
@@ -815,18 +842,14 @@ def _run_multi_turn_task(
     max_turns = max(expected_turns, 5)  # safety cap
 
     # vLLM URL
-    base = client.base_url.rstrip("/")
-    if base.endswith("/v1"):
-        url = f"{base}/chat/completions"
-    else:
-        url = f"{base}/v1/chat/completions"
+    url = _build_completion_url(client)
 
     # Initialise the conversation with just the user prompt.
     messages = [{"role": "user", "content": prompt}]
     trace: list[ToolCallTrace] = []
     actual_sequence: list[dict[str, Any]] = []
     response: dict[str, Any] = {}
-    tool_calls: list[tuple[str, dict[str, Any]]] = []
+    tool_calls: list[tuple[str, dict[str, Any] | None]] = []
 
     # Track intermediate values that flow between turns.
     # e.g. {"step_1_result": 150, "step_2_input_from_step_1": 150}
@@ -1324,7 +1347,30 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
                     elif not getattr(r, "no_hallucinated_params", True):
                         failure_modes["error_retry_invalid"] += 1
 
-    per_task_serialized = []
+    _OVERLAY_FIELDS: dict[str, list[tuple[str, str, Any]]] = {
+        "ambiguous": [
+            ("no_hallucinated_params", "no_hallucinated_params", True),
+            ("ambig_strategy", "ambig_strategy", "assumption"),
+            ("ambig_details", "ambig_details", ""),
+        ],
+        "schema_compliance": [
+            ("no_hallucinated_params", "no_hallucinated_params", True),
+            ("ambig_strategy", "ambig_strategy", "schema_compliance"),
+            ("ambig_details", "ambig_details", ""),
+            ("schema_required_present", "schema_required_present", None),
+            ("schema_length_valid", "schema_length_valid", None),
+            ("schema_enum_valid", "schema_enum_valid", None),
+            ("schema_pattern_valid", "schema_pattern_valid", None),
+            ("schema_nested_valid", "schema_nested_valid", None),
+        ],
+        "error_recovery": [
+            ("no_hallucinated_params", "no_hallucinated_params", True),
+            ("ambig_strategy", "ambig_strategy", "error_recovery"),
+            ("ambig_details", "ambig_details", ""),
+        ],
+    }
+
+    per_task_serialized: list[dict[str, Any]] = []
     for r in results:
         entry: dict[str, Any] = {
             "task_id": r.task_id,
@@ -1341,6 +1387,8 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
             "composite_score": r.composite_score,
             "details": r.details,
         }
+
+        # Multi-turn extras.
         if isinstance(r, MultiTurnTaskResult):
             entry.update({
                 "orchestration_correct": r.orchestration_correct,
@@ -1352,34 +1400,9 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
                 "tool_sequence": [t.tool_name for t in r.trace if t.tool_name],
             })
 
-        # Ambiguous-task-specific fields.
-        if r.category == "ambiguous":
-            entry.update({
-                "no_hallucinated_params": getattr(r, "no_hallucinated_params", True),
-                "ambig_strategy": getattr(r, "ambig_strategy", "assumption"),
-                "ambig_details": getattr(r, "ambig_details", ""),
-            })
-
-        # Schema-compliance-specific fields.
-        if r.category == "schema_compliance":
-            entry.update({
-                "no_hallucinated_params": getattr(r, "no_hallucinated_params", True),
-                "ambig_strategy": getattr(r, "ambig_strategy", "schema_compliance"),
-                "ambig_details": getattr(r, "ambig_details", ""),
-                "schema_required_present": getattr(r, "schema_required_present", None),
-                "schema_length_valid": getattr(r, "schema_length_valid", None),
-                "schema_enum_valid": getattr(r, "schema_enum_valid", None),
-                "schema_pattern_valid": getattr(r, "schema_pattern_valid", None),
-                "schema_nested_valid": getattr(r, "schema_nested_valid", None),
-            })
-
-        # Error-recovery-specific fields.
-        if r.category == "error_recovery":
-            entry.update({
-                "no_hallucinated_params": getattr(r, "no_hallucinated_params", True),
-                "ambig_strategy": getattr(r, "ambig_strategy", "error_recovery"),
-                "ambig_details": getattr(r, "ambig_details", ""),
-            })
+        # Overlay-specific extras.
+        for out_key, in_key, default in _OVERLAY_FIELDS.get(r.category, []):
+            entry[out_key] = getattr(r, in_key, default)
 
         per_task_serialized.append(entry)
 
@@ -1501,25 +1524,7 @@ def run_tool_calling_benchmark(
                 composite_score=0.0,
                 details=f"Exception: {exc}",
             )
-        # Attach ambiguity fields even for exceptions.
-        if task.get("category") == "ambiguous":
-            r.no_hallucinated_params = True
-            r.ambig_strategy = task.get("scoring", {}).get(
-                "strategy", task.get("strategy", "assumption"),
-            )
-            r.ambig_details = exc_details or r.details
-
-        # Attach schema-compliance fields even for exceptions.
-        if task.get("category") == "schema_compliance":
-            r.no_hallucinated_params = True
-            r.ambig_strategy = "schema_compliance"
-            r.ambig_details = f"exception: {exc_details or r.details}"
-
-        # Attach error-recovery fields even for exceptions.
-        if task.get("category") == "error_recovery":
-            r.no_hallucinated_params = False
-            r.ambig_strategy = "error_recovery"
-            r.ambig_details = f"exception: {exc_details or r.details}"
+            _attach_overlay_defaults(r, task, exc_details)
 
         results.append(r)
         if idx < total:
