@@ -7,7 +7,6 @@ build/
 .venv/
 
 # Benchmark output
-results/
 tool_calling.json
 
 # Backups / temp files
