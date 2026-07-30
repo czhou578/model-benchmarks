@@ -1,0 +1,58 @@
+{
+  "per_prompt": [
+    {
+      "thinking_tokens": 632,
+      "answer_tokens": 192,
+      "reasoning_text_preview": "Here's a thinking process:\n\n1.  **Understand the User's Request:**\n   - Problem: A train travels 60 miles in 45 minutes.\n   - Qu",
+      "answer_text_preview": "\n\nTo find the speed in miles per hour (mph), use the formula:\n\n**Speed = Distance \u00f7 Time**\n\n1. **Convert time to hours:**  \n   S",
+      "ratio_thinking_to_answer": 3.292,
+      "prompt_preview": "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show"
+    },
+    {
+      "thinking_tokens": 500,
+      "answer_tokens": 129,
+      "reasoning_text_preview": "Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - Statement: \"A farmer has 17 sheep, all but 9 die. How many are left",
+      "answer_text_preview": "\n\nThe answer is **9**.\n\n**Step-by-step reasoning:**\n1. The farmer starts with a total of 17 sheep.\n2. The key phrase is `\"all bu",
+      "ratio_thinking_to_answer": 3.876,
+      "prompt_preview": "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning "
+    },
+    {
+      "thinking_tokens": 641,
+      "answer_tokens": 87,
+      "reasoning_text_preview": "Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - Problem: \"if a train travels 60 miles in 45 minutes, what is its sp",
+      "answer_text_preview": "\n\nTo find the speed in miles per hour (mph), use the formula: **Speed = Distance \u00f7 Time**.\n\n1. **Convert the time to hours:**  \n",
+      "ratio_thinking_to_answer": 7.368,
+      "prompt_preview": "<antThinking>\nI'll work through this problem step by step.\n</antThinking>\nSolve:"
+    },
+    {
+      "thinking_tokens": 662,
+      "answer_tokens": 32,
+      "reasoning_text_preview": "Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - Statement: \"A farmer has 17 sheep, all but 9 die. How many are left",
+      "answer_text_preview": "\n\n**9** \n\nThe phrase \"all but 9 die\" means that 9 survived. (The starting number of 17 is just extra information.)",
+      "ratio_thinking_to_answer": 20.688,
+      "prompt_preview": "<antThinking>\nLet me think through this carefully.\n</antThinking>\nA farmer has 1"
+    },
+    {
+      "thinking_tokens": 977,
+      "answer_tokens": 0,
+      "reasoning_text_preview": "Here's a thinking process:\n\n1.  **Understand the User's Request:**\n   - **Given:** A bag with 3 red marbles and 5 blue marbles.\n",
+      "answer_text_preview": "",
+      "ratio_thinking_to_answer": null,
+      "prompt_preview": "<antThinking>\nLet me break this down systematically.\n</antThinking>\nA bag contai"
+    },
+    {
+      "thinking_tokens": 986,
+      "answer_tokens": 0,
+      "reasoning_text_preview": "Here's a thinking process:\n\n1.  **Understand the User Request:**\n   - **Task:** Write a Python function to find the longest pali",
+      "answer_text_preview": "",
+      "ratio_thinking_to_answer": null,
+      "prompt_preview": "<antThinking>\nI need to analyze this problem step by step.\n</antThinking>\nWrite "
+    }
+  ],
+  "thinking_tokens_avg": 733,
+  "thinking_tokens_max": 986,
+  "thinking_tokens_median": 651.5,
+  "answer_tokens_avg": 73.3,
+  "answer_tokens_max": 192,
+  "answer_tokens_median": 59.5
+}

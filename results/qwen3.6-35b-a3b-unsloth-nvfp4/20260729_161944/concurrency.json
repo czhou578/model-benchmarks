@@ -1,0 +1,367 @@
+{
+  "config": {
+    "concurrency_levels": [
+      1,
+      2,
+      4,
+      8,
+      16
+    ],
+    "requests_per_level": 5,
+    "max_tokens": 256,
+    "temperature": 0.0,
+    "prompt_tokens": 256
+  },
+  "per_concurrency_level": {
+    "1": {
+      "wall_time_s": 12.525,
+      "total_output_tokens": 1280,
+      "aggregate_throughput_tok_s": 102.2,
+      "n_requests": 5,
+      "n_success": 5,
+      "n_failed": 0,
+      "success_rate": 1.0,
+      "ttft": {
+        "avg_s": 0.1392,
+        "median_s": 0.1383,
+        "p95_s": 0.1425,
+        "min_s": 0.1372,
+        "max_s": 0.1434
+      },
+      "total_time_s": {
+        "avg_s": 2.5046,
+        "median_s": 2.4962,
+        "p95_s": 2.552,
+        "min_s": 2.4655,
+        "max_s": 2.5646
+      },
+      "individual_requests": [
+        {
+          "index": 0,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.1389,
+          "total_time_s": 2.4952,
+          "error": ""
+        },
+        {
+          "index": 1,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.1381,
+          "total_time_s": 2.5646,
+          "error": ""
+        },
+        {
+          "index": 2,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.1383,
+          "total_time_s": 2.4962,
+          "error": ""
+        },
+        {
+          "index": 3,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.1372,
+          "total_time_s": 2.4655,
+          "error": ""
+        },
+        {
+          "index": 4,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.1434,
+          "total_time_s": 2.5014,
+          "error": ""
+        }
+      ]
+    },
+    "2": {
+      "wall_time_s": 9.328,
+      "total_output_tokens": 1280,
+      "aggregate_throughput_tok_s": 137.2,
+      "n_requests": 5,
+      "n_success": 5,
+      "n_failed": 0,
+      "success_rate": 1.0,
+      "ttft": {
+        "avg_s": 0.4822,
+        "median_s": 0.3361,
+        "p95_s": 0.9127,
+        "min_s": 0.2148,
+        "max_s": 0.9857
+      },
+      "total_time_s": {
+        "avg_s": 3.2494,
+        "median_s": 3.1944,
+        "p95_s": 3.7277,
+        "min_s": 2.6077,
+        "max_s": 3.7279
+      },
+      "individual_requests": [
+        {
+          "index": 0,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.621,
+          "total_time_s": 3.7279,
+          "error": ""
+        },
+        {
+          "index": 1,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.9857,
+          "total_time_s": 3.727,
+          "error": ""
+        },
+        {
+          "index": 3,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.2148,
+          "total_time_s": 2.9899,
+          "error": ""
+        },
+        {
+          "index": 2,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.2532,
+          "total_time_s": 3.1944,
+          "error": ""
+        },
+        {
+          "index": 4,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.3361,
+          "total_time_s": 2.6077,
+          "error": ""
+        }
+      ]
+    },
+    "4": {
+      "wall_time_s": 6.179,
+      "total_output_tokens": 1280,
+      "aggregate_throughput_tok_s": 207.1,
+      "n_requests": 5,
+      "n_success": 5,
+      "n_failed": 0,
+      "success_rate": 1.0,
+      "ttft": {
+        "avg_s": 0.2914,
+        "median_s": 0.3315,
+        "p95_s": 0.3326,
+        "min_s": 0.1691,
+        "max_s": 0.3327
+      },
+      "total_time_s": {
+        "avg_s": 3.4604,
+        "median_s": 3.7079,
+        "p95_s": 3.709,
+        "min_s": 2.5028,
+        "max_s": 3.7092
+      },
+      "individual_requests": [
+        {
+          "index": 1,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.3327,
+          "total_time_s": 3.6737,
+          "error": ""
+        },
+        {
+          "index": 0,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.2916,
+          "total_time_s": 3.7092,
+          "error": ""
+        },
+        {
+          "index": 3,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.3315,
+          "total_time_s": 3.7079,
+          "error": ""
+        },
+        {
+          "index": 2,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.3321,
+          "total_time_s": 3.7082,
+          "error": ""
+        },
+        {
+          "index": 4,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.1691,
+          "total_time_s": 2.5028,
+          "error": ""
+        }
+      ]
+    },
+    "8": {
+      "wall_time_s": 4.565,
+      "total_output_tokens": 1280,
+      "aggregate_throughput_tok_s": 280.4,
+      "n_requests": 5,
+      "n_success": 5,
+      "n_failed": 0,
+      "success_rate": 1.0,
+      "ttft": {
+        "avg_s": 0.3394,
+        "median_s": 0.3487,
+        "p95_s": 0.3506,
+        "min_s": 0.2987,
+        "max_s": 0.3506
+      },
+      "total_time_s": {
+        "avg_s": 4.4912,
+        "median_s": 4.5002,
+        "p95_s": 4.556,
+        "min_s": 4.4104,
+        "max_s": 4.5626
+      },
+      "individual_requests": [
+        {
+          "index": 0,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.3506,
+          "total_time_s": 4.4104,
+          "error": ""
+        },
+        {
+          "index": 4,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.3486,
+          "total_time_s": 4.453,
+          "error": ""
+        },
+        {
+          "index": 1,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.2987,
+          "total_time_s": 4.5002,
+          "error": ""
+        },
+        {
+          "index": 3,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.3487,
+          "total_time_s": 4.5295,
+          "error": ""
+        },
+        {
+          "index": 2,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.3504,
+          "total_time_s": 4.5626,
+          "error": ""
+        }
+      ]
+    },
+    "16": {
+      "wall_time_s": 4.7,
+      "total_output_tokens": 1280,
+      "aggregate_throughput_tok_s": 272.3,
+      "n_requests": 5,
+      "n_success": 5,
+      "n_failed": 0,
+      "success_rate": 1.0,
+      "ttft": {
+        "avg_s": 0.3336,
+        "median_s": 0.3437,
+        "p95_s": 0.3447,
+        "min_s": 0.2922,
+        "max_s": 0.3449
+      },
+      "total_time_s": {
+        "avg_s": 4.5949,
+        "median_s": 4.5998,
+        "p95_s": 4.6825,
+        "min_s": 4.4826,
+        "max_s": 4.695
+      },
+      "individual_requests": [
+        {
+          "index": 0,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.2922,
+          "total_time_s": 4.4826,
+          "error": ""
+        },
+        {
+          "index": 3,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.3437,
+          "total_time_s": 4.5646,
+          "error": ""
+        },
+        {
+          "index": 1,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.3449,
+          "total_time_s": 4.5998,
+          "error": ""
+        },
+        {
+          "index": 2,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.3439,
+          "total_time_s": 4.6326,
+          "error": ""
+        },
+        {
+          "index": 4,
+          "success": true,
+          "prompt_tokens": 266,
+          "output_tokens": 256,
+          "ttft_s": 0.3432,
+          "total_time_s": 4.695,
+          "error": ""
+        }
+      ]
+    }
+  }
+}

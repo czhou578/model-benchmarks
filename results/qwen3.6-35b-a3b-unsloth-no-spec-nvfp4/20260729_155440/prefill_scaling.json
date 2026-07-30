@@ -1,0 +1,33 @@
+{
+  "config": {
+    "benchmark_version": "1.0",
+    "definition": "cold-cached prefill throughput across a geometric progression of prompt lengths",
+    "target_lengths": [
+      512,
+      2048
+    ],
+    "cache_isolation_method": "cache_salt",
+    "cache_preflight_supported": true,
+    "repetitions": 2,
+    "max_tokens": 1,
+    "temperature": 0.0,
+    "max_output_tokens": 1,
+    "prompt_workload": "document-like passages with field-record headers (deterministic)",
+    "server_cache_settings": {
+      "prefix_caching": true,
+      "cache_salt_enabled": true
+    },
+    "start_time": "2026-07-29T23:12:46.651908Z",
+    "end_time": "2026-07-29T23:12:46.651947Z"
+  },
+  "per_length": {
+    "512": {
+      "status": "request_error",
+      "error": "'ModelClient' object has no attribute 'tokenize_prompt'"
+    },
+    "2048": {
+      "status": "request_error",
+      "error": "'ModelClient' object has no attribute 'tokenize_prompt'"
+    }
+  }
+}
