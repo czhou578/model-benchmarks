@@ -1,0 +1,29 @@
+name: Auto-merge Dependabot
+
+# Auto-merges pull requests opened by Dependabot (dependency updates
+# and security updates) as soon as all required checks pass.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Grant the workflow's built-in GITHUB_TOKEN the permissions it needs:
+#   pull-requests: write  -> enable auto-merge on the PR
+#   contents: write       -> allowed to update the branch / merge
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    # Only act on PRs authored by Dependabot, never human PRs.
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Enable auto-merge
+        run: gh pr merge --auto --merge "$PR_URL"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
