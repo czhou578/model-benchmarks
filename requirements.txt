@@ -33,7 +33,7 @@ freetype-py==2.4.0
 h11==0.16.0
 httplib2==0.32.0
 hyperlink==21.0.0
-idna==3.6
+idna==3.15
 incremental==22.10.0
 iniconfig==2.3.0
 Jinja2==3.1.2
