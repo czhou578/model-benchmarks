@@ -32,10 +32,13 @@ CSS_MODULES = [
     "tokens.css",
     "layout.css",
     "frame.css",
+    "runs.css",
 ]
 JS_MODULES = [
     "core.js",
     "frame.js",
+    "runs.js",
+    "bars.js",
 ]
 
 # PR #42 and PR #44 (merged 2026-11-07) fixed the cache-salt placement and
