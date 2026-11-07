@@ -10,10 +10,10 @@
 #     number (-18 GiB), so gpu-memory-utilization alone gave a 47.5 GiB KV pool
 #     and left only 35 GiB free. --kv-cache-memory-bytes 16G fixes the pool at
 #     about 460K tokens, which still holds the 262K max length.
-# Run it with vLLM 0.25.1 (~/venvs/vllm025) through memory_guard.py, which
-# stops the run if MemAvailable drops low:
-#   PATH=~/venvs/vllm025/bin:$PATH ~/venvs/vllm025/bin/python memory_guard.py \
-#     --min-start-gib 60 -- ~/venvs/vllm025/bin/python -u core_runner.py \
+# Activate the venv that holds vLLM 0.25.1 (see docs/dgx-spark.md). Then run
+# the config through memory_guard.py, which stops the run if MemAvailable
+# drops low:
+#   python memory_guard.py --min-start-gib 60 -- python -u core_runner.py \
 #     --model models/qwen3.8_27b_nvidia_nvfp4.yml --compare-spec
 name: qwen3.8-27b-nvidia-nvfp4
 server:
@@ -54,8 +54,8 @@ server:
     - vllm
     - --load-format
     - fastsafetensors
-  # ~/.bashrc exports VLLM_USE_FASTOKENS=1, but the vLLM venv has no
-  # fastokens package, and vLLM then fails at startup.
+  # vLLM fails at startup when the shell turns on a tokenizer package that
+  # the venv does not hold. This setting turns it off. See docs/dgx-spark.md.
   environment:
     VLLM_USE_FASTOKENS: "0"
   startup_timeout_s: 900

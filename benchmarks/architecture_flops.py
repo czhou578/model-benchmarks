@@ -572,7 +572,7 @@ class GatedDeltaNetEstimator:
         kernel_size: int = 4,
         chunk_size: int = 64,
     ):
-    
+
         self.d = d
         self.num_key_heads = num_key_heads
         self.num_value_heads = num_value_heads

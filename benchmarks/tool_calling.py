@@ -13,7 +13,8 @@ Phase 3 — Schema Compliance & Error Recovery
   Error recovery: model self-corrects when a tool returns an error.
 
 Input : ``datasets/tool_calling_tasks.yaml``
-Output: ``tool_calling.json`` inside the run directory.
+Output: ``tool_calling.json`` inside the run directory. The standalone CLI
+writes ``results/tool_calling.json`` unless --output names another file.
 
 Usage::
 
@@ -37,7 +38,7 @@ import requests
 import yaml
 import re
 
-from core_runner import ModelClient
+from core_runner import ROOT, ModelClient
 
 
 # --------------------------------------------------------------------------- #
@@ -1678,7 +1679,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--output", type=str, default=None,
-        help="Output JSON file (default: tool_calling.json)",
+        help="Output JSON file (default: results/tool_calling.json in the repo)",
     )
     args = parser.parse_args()
 
@@ -1696,7 +1697,8 @@ def main() -> None:
         chat_template_kwargs={"enable_thinking": False} if args.disable_thinking else None,
     )
 
-    output_path = args.output or "tool_calling.json"
+    output_path = Path(args.output) if args.output else ROOT / "results" / "tool_calling.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w") as f:
         json.dump(result, f, indent=2, default=str)
     print(f"[tool_calling] results written to {output_path}")
