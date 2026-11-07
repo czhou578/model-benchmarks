@@ -1,249 +1,140 @@
 # Model Benchmarks
 
-An automated benchmarking suite for large language models — designed to compare different model weights, serving configurations, and inference parameters across a battery of production-relevant metrics.
+This Python harness measures how a local LLM performs when vLLM serves it. It records latency, decode speed, throughput under load, reasoning tokens, and tool-calling quality. The published results come from an NVIDIA DGX Spark (GB10 GPU, 121 GB unified memory). The harness is for people who tune vLLM on a single node. Use it to compare weight sources, quantizations, and server flags with one method.
 
-Built for GPU-level inference tuning (vLLM on single-node systems like NVIDIA DGX Spark), but extensible to any OpenAI-compatible endpoint.
+## What it measures
 
----
+A run executes the benchmarks below in sequence. Each benchmark writes one file to the run dir, `results/<name>/<timestamp>/`.
 
-## Quick Start
+| Benchmark | Output file | Main metric | Unit |
+|---|---|---|---|
+| Latency sweep | `latency.json` | Median and p99 TTFT, prompts of 32 to 16K tokens | s |
+| Deep context | `deep_context.json` | Median TTFT at 32K and 64K tokens | s |
+| TTFT breakdown | `ttft_breakdown.json` | Server queue time and post-queue time | ms |
+| Decode speed | `decode.json` | Mean decode rate at 512, 1K, and 2K output tokens | tokens/s |
+| Concurrency | `concurrency.json` | Aggregate throughput at 1 to 16 parallel requests | tokens/s |
+| Reasoning | `reasoning.json` | Thinking tokens and answer tokens per prompt | tokens |
+| Prefill scaling | `prefill_scaling.json` | Effective and engine prefill throughput per prompt length | tokens/s |
+| FLOP analysis | `flops_analysis.json` | Estimated FLOPs per decode token and per prefill | FLOPs |
+| Tool calling | `tool_calling.json` | Tasks passed (of 85) and composite score (0 to 6) | count, score |
+| Spec comparison | `spec_comparison.json` | Decode speed with speculative decoding on and off | tokens/s, % |
+
+Deep context runs only when the model config sets `context_lengths`. Spec comparison runs only with `--compare-spec`. A run also writes `environment.json`, `gpu_samples.csv`, `summary.json`, and the vLLM log. See [docs/results-schema.md](docs/results-schema.md) for each file and field.
+
+## Requirements
+
+- An NVIDIA GPU with a driver and `nvidia-smi`.
+- vLLM. The published results use vLLM 0.25.1. This harness drives vLLM; it does not install it.
+- Python 3.10 or later.
+- Hugging Face access to the model weights, and disk space for them.
+- On a DGX Spark: the setup notes in [docs/dgx-spark.md](docs/dgx-spark.md).
+
+## Install
 
 ```bash
-# Run all models defined in models/*.yml
-python batch_run.py
-
-# Run a single model
-python batch_run.py --model qwen3.6_35b_unsloth_nvfp4.yml
-
-# Dry run (see what would execute without running)
-python batch_run.py --dry-run
+git clone https://github.com/czhou578/model-benchmarks.git
+cd model-benchmarks
+pip install -e .            # to run benchmarks
+pip install -e ".[dev]"     # to run tests and lint
 ```
 
-Each run produces a timestamped directory under `results/<model_name>/<timestamp>/` containing structured JSON outputs.
+The runtime dependencies are `requests`, `PyYAML`, and `tiktoken`.
 
-### Run with a memory guard (DGX Spark)
+## Quickstart
 
-The GB10 shares 121 GB of unified memory with the CPU, and `nvidia-smi` reports GPU memory as `[N/A]`.
-`memory_guard.py` reads `/proc/meminfo` instead.
-It stops the run with SIGTERM when `MemAvailable` stays below the floor, and core_runner.py then stops vLLM.
+CAUTION: A large model can fill the unified memory of a DGX Spark and make the host unresponsive. Read [docs/dgx-spark.md](docs/dgx-spark.md) before the first run.
+
+Run these commands from the repo root. In the copy, edit `name:`, the `vllm serve` command, and `endpoint.model_name`.
 
 ```bash
-PATH=~/venvs/vllm025/bin:$PATH ~/venvs/vllm025/bin/python memory_guard.py \
-    --floor-gib 8 --warn-gib 16 --min-start-gib 60 -- \
-    ~/venvs/vllm025/bin/python -u core_runner.py \
-    --model models/qwen3.8_27b_nvidia_nvfp4.yml --compare-spec
+cp models/qwen3.8_27b_nvidia_nvfp4.yml models/my_model.yml   # copy an example model config
+python3 core_runner.py --model models/my_model.yml           # start vLLM, run, stop vLLM
+python3 dashboard.py                                         # write reports/dashboard.html
 ```
 
-The guard writes `memory_samples.csv` and `memory_guard.json` into the run directory.
-It exits with code 3 when it refuses to start or when it stops the run.
+Open `reports/dashboard.html` in a browser. To see new runs on each reload, run `python3 serve_dashboard.py` and open http://127.0.0.1:8080/dashboard.html.
 
----
+`python3 batch_run.py` runs every model config in `models/` in sequence. A full batch takes hours. See [docs/model-config.md](docs/model-config.md) for all model config keys.
 
-## Purpose
+## External mode
 
-This suite answers a fundamental question: **how much does the serving configuration and weight source matter, beyond just the model name?**
-
-The same base model (Qwen3.6-35B-A3B-NVFP4) has been benchmarked across five different configurations — different weight providers (NVIDIA, unsloth, RedHat), different MOE backends, with and without speculative decoding, with and without prefix caching. The data reveals that **config differences can produce 2–4× performance swings** — dwarfing the differences between model variants.
-
-### Key Questions
-
-- **Tool calling readiness**: How well do models handle tool use in production-like scenarios?
-- **Bottleneck identification**: Is prefill or decode the true bottleneck for a given use case?
-- **Speculative decoding ROI**: Does MTP spec decoding help or hurt depending on the config?
-- **Long context cost**: What happens at 32K and 64K context?
-- **Concurrency scaling**: How does throughput and latency scale with multiple simultaneous users?
-- **Reasoning overhead**: How much chain-of-thought does the model incur per task?
-
----
-
-## Benchmark Suite
-
-Each run executes 10 benchmarks. Every benchmark writes a JSON file to the run directory.
-
-| Benchmark | File | Measures |
-|-----------|------|----------|
-| **Latency Sweep** | `latency.json` | TTFT across prompt lengths 32–16K tokens (avg, median, p95, p99, prefill TPS) |
-| **Deep Context** | `deep_context.json` | TTFT & prefill throughput at 32K and 64K context lengths |
-| **TTFT Breakdown** | `ttft_breakdown.json` | Server queue time and post-queue time (prefill plus first decode); needs `--enable-per-request-metrics` |
-| **Decode Speed** | `decode.json` | Token generation rate at 512/1K/2K output lengths (avg, peak, min, median) |
-| **Concurrency** | `concurrency.json` | Throughput & latency at concurrency levels 1, 2, 4, 8, 16 |
-| **Reasoning** | `reasoning.json` | Thinking token count, answer token count, think/answer ratio |
-| **Tool Calling** | `tool_calling.json` | 85 tasks across 16 categories with multi-layered scoring (see below) |
-| **Prefill Scaling** | `prefill_scaling.json` | GPU power, memory, utilization during prefill |
-| **FLOP Analysis** | `flops_analysis.json` | Theoretical compute requirements from model architecture |
-| **Spec Comparison** | `spec_comparison.json` | Speculative vs. baseline decode (when run with `--compare-spec`) |
-
-### Tool Calling: 3 Phases, 85 Tasks
-
-The most comprehensive benchmark. Tests tool selection, parameter validation, multi-tool orchestration, and error recovery across three phases:
-
-| Phase | Category | What It Tests |
-|-------|----------|---------------|
-| **Phase 1** | Single-tool calls | Tool selection + parameter validation |
-| **Phase 2** | Multi-tool chaining | Multi-turn chains — model must orchestrate multiple tools in sequence |
-| **Phase 3** | Schema compliance & Error recovery | Strict JSON Schema constraints + model self-correction after errors |
-
-**Scoring** produces three levels of output:
-- **Per-task**: `correct`, `tool_correct`, `params_complete`, `params_valid`, `details`, `finish_reason` (`length` means the output hit `max_tokens`)
-- **Per-category**: pass rate, tool accuracy, param completeness/validity averages, plus a `single_tool` roll-up of every single-tool category
-- **Aggregate**: weighted **composite score** across 6 dimensions (tool accuracy, param completeness, param correctness, multi-tool, schema compliance, refusal) + **failure mode counts**
-
-[See the blog post](BLOG_POST.md) for a full breakdown of results.
-
-### GPU Telemetry
-
-The `GpuMonitor` class samples `nvidia-smi` every second during benchmark execution, capturing:
-- GPU utilization (%) and memory usage (MiB) — average and peak
-- Power draw (W) — average and peak
-- Energy consumed (Wh) — total and incremental above idle
-
-All raw samples are written to `gpu_samples.csv`.
-
----
-
-## Architecture
-
-```
-models/*.yml          → YAML configs: vLLM server flags + benchmark sweep params
-dashboard.py          → Build reports/dashboard.html from results/ (page modules in reports/dashboard/)
-core_runner.py        → Orchestration: start/stop vLLM, run benchmarks, collect telemetry
-benchmarks/*.py       → Individual benchmark implementations
-vllm_server.py        → Managed vLLM lifecycle (start, stop, health-check)
-batch_run.py          → Batch orchestrator: discover YAMLs, run sequentially, produce summary
-memory_guard.py       → Run a command, sample /proc/meminfo, stop the run when memory runs low
-```
-
-**Workflow:** The runner starts a vLLM server (managed mode) or connects to a running server (external mode), waits for the model to load, then runs each benchmark in sequence. Results are written as structured JSON.
-
----
-
-## Adding a New Model
-
-Create a YAML file in `models/`:
+In external mode, the harness uses an OpenAI-compatible server that already runs. It does not start or stop the server.
 
 ```yaml
-name: my-model-name
+name: my-model-8b-myorg-fp8
 server:
-  mode: managed            # "managed" = auto-start vLLM; "external" = connect to running server
-  command:
-    - vllm
-    - serve
-    - my-org/MyModel
-    - --host
-    - "127.0.0.1"
-    - --port
-    - "8000"
-    # ... all vLLM flags
-  startup_timeout_s: 600
-  shutdown_timeout_s: 30
-
+  mode: external
 endpoint:
   base_url: "http://127.0.0.1:8000"
-  model_name: "MyModel"
-
-# Optional: override benchmark parameters
-# prompt_lengths: [32, 128, 512, 2048, 8192, 16384]
-# decode_lengths: [512, 1024, 2048]
-# concurrency_levels: [1, 2, 4, 8, 16]
-# tool_calling_max_tokens: 4096        # a thinking model needs room before its first tool call
-# tool_calling_chat_template_kwargs: {enable_thinking: false}   # optional tool-only pass
+  model_name: "my-org/MyModel"
+  # api_key: "..."   # only if the server needs a key
 ```
 
-```bash
-python batch_run.py --model my-model-name.yml
-```
+- Set `server.mode: external` in the model config, or pass `--server-mode external`.
+- Start vLLM with `--enable-per-request-metrics`. Without it, the TTFT breakdown has no server data.
+- Run the harness on the server host. GPU telemetry reads the local `nvidia-smi`.
+- Do not use `--compare-spec`. It needs managed mode.
 
----
+The harness sends vLLM request fields such as `cache_salt`. Another server can ignore them. Then its TTFT values can include prefix-cache hits.
 
-## Adding Tool-Calling Tasks
+## Common flags
 
-Tasks are defined in `datasets/tool_calling_tasks.yaml`. Each task specifies:
-- `id` — unique identifier
-- `category` — scoring category (`single_tool`, `multi_tool`, `error_recovery`, etc.)
-- `prompt` — the user prompt
-- `tools` — available tool definitions (JSON Schema)
-- `expected` — expected tool name and parameters
-- `scoring` — category-specific scoring rules (e.g. `strategy: "assumption"`)
+`core_runner.py`:
 
----
+| Flag | Effect |
+|---|---|
+| `--model PATH` | Run this model config. Required. |
+| `--skip-latency`, `--skip-ttft`, `--skip-decode` | Skip the latency sweep, the TTFT breakdown, or decode speed. |
+| `--skip-reasoning`, `--skip-concurrency`, `--skip-prefill` | Skip reasoning, concurrency, or prefill scaling. |
+| `--server-mode {managed,external}` | Override `server.mode` from the model config. |
+| `--compare-spec` | Restart vLLM with and without `speculative_config`, then compare decode speed. |
+| `--results-dir DIR` | Write run dirs under `DIR`. The default is `results/` in the repo root. |
 
-## Output Structure
+FLOP analysis and tool calling have no skip flag.
 
-```
-results/
-└── <model_name>/
-    └── <YYYYMMDD_HHMMSS>/
-        ├── environment.json       # GPU, driver, CUDA, PyTorch, vLLM versions
-        ├── model_config.yml       # Config used for this run
-        ├── resolved_server.json   # Full vLLM command and metadata
-        ├── latency.json           # TTFT sweep across prompt lengths
-        ├── deep_context.json      # 32K/64K context performance
-        ├── ttft_breakdown.json    # TTFT component analysis
-        ├── decode.json            # Decode speed (avg/peak/min/median tok/s)
-        ├── concurrency.json       # Multi-level concurrency throughput & latency
-        ├── reasoning.json         # Chain-of-thought token analysis
-        ├── tool_calling.json      # 85-task tool calling results
-        ├── prefill_scaling.json   # GPU telemetry during prefill
-        ├── flops_analysis.json    # Theoretical FLOP estimates
-        ├── gpu_samples.csv        # Per-second GPU telemetry (raw)
-        ├── memory_samples.csv     # Unified-memory samples (memory_guard.py only)
-        ├── memory_guard.json      # Guard settings and lowest free memory
-        ├── vllm.log               # vLLM server stdout/stderr
-        └── summary.json           # Aggregate run summary
-```
+`batch_run.py`:
 
----
+| Flag | Effect |
+|---|---|
+| `--model FILE` | Run one model config. The path is relative to `models/`. |
+| `--dry-run` | List the model configs and their ports, then stop. |
+| `--jobs N` | Run up to `N` model configs in parallel. The default is 1. |
+| `--max-retries N` | Retry a failed run `N` times. The default is 1. |
+| `--no-retry` | Do not retry a failed run. |
+| `--output-dir DIR` | Write `summary.json` and `SUMMARY.md` to `DIR`. The default is the current directory. |
 
-## Dashboard
+Keep `--jobs 1` on a single GPU. Parallel runs share the GPU memory and the server ports. `batch_run.py` passes only `--model` to `core_runner.py`.
 
-```bash
-python3 dashboard.py            # writes reports/dashboard.html
-```
+## Published results
 
-The script reads every run under `results/` and writes one self-contained HTML page.
-Open the page in a browser; it needs no server and no network.
+The write-ups in [docs/results/](docs/results/) describe past runs. Each write-up names its date and the harness state. Runs before 2026-11-07 use the earlier tool-calling scorer and cache-salt placement. Do not compare their TTFT or tool-calling numbers with newer runs. [docs/dashboard.md](docs/dashboard.md) explains why.
 
-- One card per run, with status, spec-decoding, and pre-fix badges.
-- Charts for decode speed, TTFT, throughput under load, long-context TTFT, thinking tokens, the MTP speed-up, tool-calling scores, and memory headroom.
-- A Table toggle on each chart, and run filter chips above the charts.
+Test system, from `environment.json` in the run dirs:
 
-Runs made before 2026-11-07 carry a "Pre-fix scoring" badge: they used the old cache-salt placement and the old tool-calling scorer.
-The page source is in `reports/dashboard/`: `page.html`, the CSS modules, and the JS modules. `dashboard.py` joins them in the order of `CSS_MODULES` and `JS_MODULES`.
+| Component | Value |
+|---|---|
+| GPU | NVIDIA GB10 (DGX Spark, 121 GB unified memory) |
+| Driver | 580.173.02 (2026-11 runs), 580.159.03 (2026-07 runs) |
+| CUDA | 13.0 |
+| PyTorch | 2.11.0+cu130 |
+| vLLM | 0.25.1 |
 
----
+## Documentation
 
-## Results
+- [docs/model-config.md](docs/model-config.md): the keys of a model config.
+- [docs/results-schema.md](docs/results-schema.md): the files and fields in a run dir.
+- [docs/methodology.md](docs/methodology.md): how each benchmark measures.
+- [docs/tool-calling.md](docs/tool-calling.md): the tool-calling tasks and the scorer.
+- [docs/adding-a-benchmark.md](docs/adding-a-benchmark.md): how to add a benchmark.
+- [docs/dashboard.md](docs/dashboard.md): how to build, serve, and read the dashboard.
+- [docs/dgx-spark.md](docs/dgx-spark.md): DGX Spark setup and the memory guard.
+- [docs/results/](docs/results/): published result write-ups.
+- [docs/design/](docs/design/): design notes from the development of the harness.
 
-| Metric | Best Config | Value |
-|--------|-------------|-------|
-| Tool accuracy | unsloth (baseline) | **41.2%** (35/85) |
-| Decode speed | unsloth (spec) | **85.6 tok/s** avg, 181 peak |
-| Concurrency peak | nvidia (baseline) | **552 tok/s** at l16 |
-| Consistent latency | RedHat (Docker) | Most deterministic at short prompts |
+## Contributing
 
-See [SUMMARY.md](SUMMARY.md) for aggregated results. See [BLOG_POST.md](BLOG_POST.md) for a detailed analysis with comparison tables.
+- Run `ruff check .` and `pytest -q` before you open a pull request.
+- CI runs `ruff check .` and `pytest -q` on each push and pull request.
+- Keep each pull request small, with one topic.
 
----
-
-## Dependencies
-
-```
-pip install requests pyyaml
-```
-
-Optional (more accurate token counting):
-```
-pip install tiktoken
-```
-
-Requires: vLLM installed and available on the system path, `nvidia-smi` for GPU telemetry.
-
----
-
-## Design Decisions
-
-- **Sequential by default** — Models share a single GPU; parallel runs can cause port conflicts or OOM.
-- **JSON-first output** — Every benchmark writes structured JSON for easy programmatic comparison.
-- **Managed vLLM lifecycle** — The runner starts and stops vLLM itself in managed mode. In external mode, it connects to a pre-existing process.
-- **Cache-salt support** — Random cache salts prevent prefix-cache from contaminating latency measurements.
-- **Idempotent runs** — Each run writes to a new timestamped directory. Old results are never overwritten.
+See [LICENSE](LICENSE).
