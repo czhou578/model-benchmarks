@@ -21,6 +21,22 @@ python batch_run.py --dry-run
 
 Each run produces a timestamped directory under `results/<model_name>/<timestamp>/` containing structured JSON outputs.
 
+### Run with a memory guard (DGX Spark)
+
+The GB10 shares 121 GB of unified memory with the CPU, and `nvidia-smi` reports GPU memory as `[N/A]`.
+`memory_guard.py` reads `/proc/meminfo` instead.
+It stops the run with SIGTERM when `MemAvailable` stays below the floor, and core_runner.py then stops vLLM.
+
+```bash
+PATH=~/venvs/vllm025/bin:$PATH ~/venvs/vllm025/bin/python memory_guard.py \
+    --floor-gib 8 --warn-gib 16 --min-start-gib 60 -- \
+    ~/venvs/vllm025/bin/python -u core_runner.py \
+    --model models/qwen3.8_27b_nvidia_nvfp4.yml --compare-spec
+```
+
+The guard writes `memory_samples.csv` and `memory_guard.json` into the run directory.
+It exits with code 3 when it refuses to start or when it stops the run.
+
 ---
 
 ## Purpose
@@ -93,6 +109,7 @@ core_runner.py        → Orchestration: start/stop vLLM, run benchmarks, collec
 benchmarks/*.py       → Individual benchmark implementations
 vllm_server.py        → Managed vLLM lifecycle (start, stop, health-check)
 batch_run.py          → Batch orchestrator: discover YAMLs, run sequentially, produce summary
+memory_guard.py       → Run a command, sample /proc/meminfo, stop the run when memory runs low
 ```
 
 **Workflow:** The runner starts a vLLM server (managed mode) or connects to a running server (external mode), waits for the model to load, then runs each benchmark in sequence. Results are written as structured JSON.
@@ -168,6 +185,8 @@ results/
         ├── prefill_scaling.json   # GPU telemetry during prefill
         ├── flops_analysis.json    # Theoretical FLOP estimates
         ├── gpu_samples.csv        # Per-second GPU telemetry (raw)
+        ├── memory_samples.csv     # Unified-memory samples (memory_guard.py only)
+        ├── memory_guard.json      # Guard settings and lowest free memory
         ├── vllm.log               # vLLM server stdout/stderr
         └── summary.json           # Aggregate run summary
 ```
