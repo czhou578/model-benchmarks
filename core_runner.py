@@ -510,6 +510,39 @@ class ModelClient:
                 f"The model weights are likely still being loaded from disk."
             )
 
+    def tokenize_prompt(self, prompt: str) -> TokenizedPrompt:
+        """Count the tokens the server sees for *prompt* through ``/tokenize``.
+
+        In chat mode the request carries the same single user message as
+        ``generate`` and ``add_generation_prompt``, so the count includes the
+        chat template. The prefill benchmark uses this count to build prompts
+        of an exact token length.
+        """
+        if self.chat:
+            payload = {
+                "model": self.model_name,
+                "messages": [{"role": "user", "content": prompt}],
+                "add_generation_prompt": True,
+            }
+        else:
+            payload = {
+                "model": self.model_name,
+                "prompt": prompt,
+                "add_special_tokens": True,
+            }
+
+        response = requests.post(
+            f"{self.base_url}/tokenize",
+            headers=self.headers,
+            json=payload,
+            timeout=300,
+        )
+        response.raise_for_status()
+        data = response.json()
+        tokens = data.get("tokens") or []
+        count = data.get("count")
+        return TokenizedPrompt(count=int(count) if count is not None else len(tokens), tokens=tokens)
+
     def generate(
         self,
         prompt: str,
