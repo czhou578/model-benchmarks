@@ -16,6 +16,7 @@ offline from the file system.
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -39,12 +40,14 @@ JS_MODULES = [
     "frame.js",
     "runs.js",
     "bars.js",
+    "lines.js",
 ]
 
 # PR #42 and PR #44 (merged 2026-11-07) fixed the cache-salt placement and
 # the tool-calling scorer. Latency, deep-context, and tool-calling numbers
 # from earlier runs are not comparable with later runs.
 SCORING_FIX_DATE = datetime(2026, 11, 7)
+MAX_MEMORY_POINTS = 500
 
 
 def load_json(path: Path) -> Any:
@@ -165,6 +168,39 @@ def reasoning_info(summary: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+def memory_info(run_dir: Path) -> dict[str, Any] | None:
+    path = run_dir / "memory_samples.csv"
+    if not path.exists():
+        return None
+    samples = []
+    try:
+        with open(path, newline="") as fh:
+            for row in csv.DictReader(fh):
+                samples.append((
+                    float(row["elapsed_s"]),
+                    float(row["mem_available_gib"]),
+                    float(row["mem_total_gib"]),
+                ))
+    except (OSError, KeyError, ValueError):
+        return None
+    if not samples:
+        return None
+    step = max(1, len(samples) // MAX_MEMORY_POINTS)
+    points = samples[::step]
+    if points[-1] is not samples[-1]:
+        points.append(samples[-1])
+    guard = load_json(run_dir / "memory_guard.json") or {}
+    return {
+        "total_gib": samples[0][2],
+        "min_available_gib": min(s[1] for s in samples),
+        "floor_gib": guard.get("floor_gib"),
+        "warn_gib": guard.get("warn_gib"),
+        "stopped_for_memory": guard.get("stopped_for_memory"),
+        "duration_min": round(samples[-1][0] / 60, 1),
+        "points": [[round(t / 60, 2), avail] for t, avail, _ in points],
+    }
+
+
 def collect_run(run_dir: Path) -> dict[str, Any] | None:
     summary = load_json(run_dir / "summary.json")
     if not isinstance(summary, dict):
@@ -202,6 +238,7 @@ def collect_run(run_dir: Path) -> dict[str, Any] | None:
             "energy_wh": gpu.get("energy_wh"),
             "energy_per_token_wh": summary.get("energy_per_token_wh"),
         },
+        "memory": memory_info(run_dir),
     }
 
 
