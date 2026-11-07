@@ -203,6 +203,15 @@ python3 dashboard.py            # writes reports/dashboard.html
 The script reads every run under `results/` and writes one self-contained HTML page.
 Open the page in a browser; it needs no server and no network.
 
+### One press in VS Code
+
+Open the Run and Debug view, select **Dashboard**, and press the green arrow (or F5).
+The entry in `.vscode/launch.json` runs `serve_dashboard.py`. The script rebuilds the page and serves it on port 8080.
+VS Code forwards the port and opens the page in your browser. Reload the page after a run; the server rebuilds it on every request.
+Stop the server with the red square in the debug toolbar.
+
+Without VS Code, run `python3 serve_dashboard.py` and open http://127.0.0.1:8080/dashboard.html.
+
 - One card per run, with status, spec-decoding, and pre-fix badges.
 - Charts for decode speed, TTFT, throughput under load, long-context TTFT, thinking tokens, the MTP speed-up, tool-calling scores, and memory headroom.
 - A Table toggle on each chart, and run filter chips above the charts.
