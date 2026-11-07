@@ -22,10 +22,13 @@ import json
 import subprocess
 import sys
 import time
-import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+ROOT = Path(__file__).resolve().parent
+# core_runner.py writes its run directories here by default.
+RESULTS_DIR = ROOT / "results"
 
 # --------------------------------------------------------------------------- #
 # Colours (auto-disable when stdout is not a TTY)
@@ -150,13 +153,12 @@ def run_one_model(
 
         # core_runner writes summary.json to its run directory.
         # Try to find it by scanning the results tree.
-        results_dir = Path("results")
-        if results_dir.exists():
-            for sd in sorted(results_dir.glob(f"{name}/*/summary.json"), reverse=True):
+        if RESULTS_DIR.exists():
+            for sd in sorted(RESULTS_DIR.glob(f"{name}/*/summary.json"), reverse=True):
                 try:
                     with open(sd) as f:
                         summary = json.load(f)
-                    result["run_dir"] = str(sd.parent)
+                    result["run_dir"] = str(sd.parent.relative_to(ROOT))
                     result["summary"] = summary
                     result["status"] = "completed" if summary.get("status") == "completed" else "failed"
                     if result["status"] == "failed" and attempt < max_retries:

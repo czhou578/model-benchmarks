@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Run a benchmark command and stop it when system memory runs low.
 
-The DGX Spark GPU shares 121 GB of unified memory with the CPU, and
-nvidia-smi reports GPU memory as [N/A]. This guard reads /proc/meminfo:
+On a unified-memory machine, the GPU and the CPU share one memory pool.
+For example, the DGX Spark has 121 GB of unified memory, and nvidia-smi
+reports its GPU memory as [N/A]. This guard reads /proc/meminfo:
 
 - It refuses to start when MemAvailable is below --min-start-gib.
 - It samples memory every --interval-s seconds into a CSV file.
@@ -33,7 +34,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 GIB = 1024**3
-RUN_DIR_PATTERN = re.compile(r"writing results to (\S+)")
+# core_runner.py prints an absolute path, and the path can hold spaces.
+RUN_DIR_PATTERN = re.compile(r"writing results to (.+?)\s*$")
 CSV_FIELDS = [
     "elapsed_s",
     "timestamp",

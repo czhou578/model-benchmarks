@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "model-benchmarks"
+version = "0.1.0"
+description = "Benchmark harness for local LLMs served by vLLM"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.31",
+    "PyYAML>=6.0",
+    "tiktoken>=0.7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+[tool.setuptools]
+py-modules = ["core_runner", "batch_run", "dashboard", "memory_guard", "vllm_server"]
+packages = ["benchmarks"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E501"]
+
+# Known findings. Each one needs a code change outside the packaging work.
+[tool.ruff.lint.per-file-ignores]
+"batch_run.py" = ["F841"]  # batch_run discards the core_runner output.
+"benchmarks/architecture_flops.py" = ["E741"]  # `l` is the layer count.
+"benchmarks/tool_calling.py" = [
+    "F402",  # A loop variable shadows dataclasses.field.
+    "F601",  # The mock data repeats the ("USD", "JPY") key.
+]
+"benchmarks/ttft_breakdown.py" = ["F811"]  # The error() classmethod shadows the error field.
