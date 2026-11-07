@@ -18,6 +18,7 @@ server:
     - --moe-backend
     - flashinfer_cutlass
     - --enable-auto-tool-choice
+    - --enable-per-request-metrics
     - --tool-call-parser
     - qwen3_xml
     - --reasoning-parser

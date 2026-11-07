@@ -48,7 +48,7 @@ Each run executes 10 benchmarks. Every benchmark writes a JSON file to the run d
 |-----------|------|----------|
 | **Latency Sweep** | `latency.json` | TTFT across prompt lengths 32–16K tokens (avg, median, p95, p99, prefill TPS) |
 | **Deep Context** | `deep_context.json` | TTFT & prefill throughput at 32K and 64K context lengths |
-| **TTFT Breakdown** | `ttft_breakdown.json` | Queue time, prefill time, and decode overlap components |
+| **TTFT Breakdown** | `ttft_breakdown.json` | Server queue time and post-queue time (prefill plus first decode); needs `--enable-per-request-metrics` |
 | **Decode Speed** | `decode.json` | Token generation rate at 512/1K/2K output lengths (avg, peak, min, median) |
 | **Concurrency** | `concurrency.json` | Throughput & latency at concurrency levels 1, 2, 4, 8, 16 |
 | **Reasoning** | `reasoning.json` | Thinking token count, answer token count, think/answer ratio |

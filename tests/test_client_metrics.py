@@ -1,0 +1,124 @@
+"""Tests for the model client: cache salt placement and vLLM metrics parsing."""
+
+from __future__ import annotations
+
+import json
+from typing import Any
+
+import pytest
+
+import core_runner
+from core_runner import GenerationResult, ModelClient, _parse_server_metrics
+
+
+class _FakeResponse:
+    """Minimal stand-in for a streaming ``requests`` response."""
+
+    def __init__(self, lines: list[str], status_code: int = 200) -> None:
+        self._lines = lines
+        self.status_code = status_code
+
+    def __enter__(self) -> "_FakeResponse":
+        return self
+
+    def __exit__(self, *exc: Any) -> bool:
+        return False
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def iter_lines(self):
+        for line in self._lines:
+            yield line.encode("utf-8")
+
+
+def _sse(obj: dict[str, Any]) -> str:
+    return "data: " + json.dumps(obj)
+
+
+def _stream_with_metrics() -> list[str]:
+    """A vLLM stream: two deltas, then the final usage chunk with metrics."""
+    return [
+        _sse({"choices": [{"delta": {"reasoning": "think"}}]}),
+        _sse({"choices": [{"delta": {"content": "hello"}}]}),
+        _sse({
+            "choices": [],
+            "usage": {
+                "prompt_tokens": 12,
+                "completion_tokens": 2,
+                "prompt_tokens_details": {"cached_tokens": 7},
+            },
+            "metrics": {
+                "time_to_first_token_ms": 250.0,
+                "queue_time_ms": 50.0,
+                "generation_time_ms": 400.0,
+                "mean_itl_ms": 13.0,
+                "tokens_per_second": 75.0,
+            },
+        }),
+        "data: [DONE]",
+    ]
+
+
+def _patch_post(monkeypatch, lines: list[str], captured: list[dict]) -> None:
+    def fake_post(url, headers=None, json=None, stream=False, timeout=None):
+        captured.append(json)
+        return _FakeResponse(lines)
+
+    monkeypatch.setattr(core_runner.requests, "post", fake_post)
+
+
+def test_generate_sends_cache_salt_at_top_level(monkeypatch):
+    captured: list[dict] = []
+    _patch_post(monkeypatch, _stream_with_metrics(), captured)
+    client = ModelClient("http://127.0.0.1:8000", "m")
+
+    client.generate("hi", max_tokens=4, cache_salt="abc123")
+
+    payload = captured[0]
+    assert payload["cache_salt"] == "abc123"
+    assert "extra_body" not in payload
+    assert payload["messages"][0]["content"] == "hi"
+
+
+def test_generate_reads_vllm_metrics_and_cached_tokens(monkeypatch):
+    captured: list[dict] = []
+    _patch_post(monkeypatch, _stream_with_metrics(), captured)
+    client = ModelClient("http://127.0.0.1:8000", "m")
+
+    gen = client.generate("hi", max_tokens=4)
+
+    assert gen.time_to_first_token_s == pytest.approx(0.25)
+    assert gen.queue_time_s == pytest.approx(0.05)
+    assert gen.post_queue_time_s == pytest.approx(0.20)
+    assert gen.generation_time_s == pytest.approx(0.40)
+    assert gen.prefill_time_s is None
+    assert gen.cached_tokens == 7
+    assert gen.prompt_tokens == 12 and gen.prompt_tokens_exact
+    assert gen.output_tokens == 2 and gen.output_tokens_exact
+    assert gen.reasoning_text == "think" and gen.answer_text == "hello"
+    assert gen.server_metrics["tokens_per_second"] == 75.0
+
+
+def test_parse_server_metrics_without_object():
+    parsed = _parse_server_metrics(None)
+    assert all(value is None for value in parsed.values())
+
+
+def test_latency_and_deep_context_use_fresh_salts():
+    salts: list[str | None] = []
+
+    class _Client:
+        def generate(self, prompt, max_tokens=256, temperature=0.0, cache_salt=None):
+            salts.append(cache_salt)
+            return GenerationResult(
+                prompt_tokens=10, ttft_s=0.1, total_time_s=0.2,
+                output_text="x", output_tokens=1, prompt_tokens_exact=True,
+            )
+
+    core_runner.run_latency_sweep(_Client(), prompt_lengths=[32], repeats=3)
+    core_runner.run_deep_context(_Client(), context_lengths=[64], repeats=2)
+
+    assert len(salts) == 5
+    assert all(salts)
+    assert len(set(salts)) == 5

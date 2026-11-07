@@ -30,6 +30,7 @@ server:
     - --tool-call-parser
     - qwen3_xml
     - --enable-auto-tool-choice
+    - --enable-per-request-metrics
     - --generation-config
     - vllm
     - --moe-backend
