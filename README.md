@@ -89,6 +89,7 @@ All raw samples are written to `gpu_samples.csv`.
 
 ```
 models/*.yml          → YAML configs: vLLM server flags + benchmark sweep params
+dashboard.py          → Build reports/dashboard.html from results/ (page modules in reports/dashboard/)
 core_runner.py        → Orchestration: start/stop vLLM, run benchmarks, collect telemetry
 benchmarks/*.py       → Individual benchmark implementations
 vllm_server.py        → Managed vLLM lifecycle (start, stop, health-check)
@@ -171,6 +172,24 @@ results/
         ├── vllm.log               # vLLM server stdout/stderr
         └── summary.json           # Aggregate run summary
 ```
+
+---
+
+## Dashboard
+
+```bash
+python3 dashboard.py            # writes reports/dashboard.html
+```
+
+The script reads every run under `results/` and writes one self-contained HTML page.
+Open the page in a browser; it needs no server and no network.
+
+- One card per run, with status, spec-decoding, and pre-fix badges.
+- Charts for decode speed, TTFT, throughput under load, long-context TTFT, thinking tokens, the MTP speed-up, tool-calling scores, and memory headroom.
+- A Table toggle on each chart, and run filter chips above the charts.
+
+Runs made before 2026-11-07 carry a "Pre-fix scoring" badge: they used the old cache-salt placement and the old tool-calling scorer.
+The page source is in `reports/dashboard/`: `page.html`, the CSS modules, and the JS modules. `dashboard.py` joins them in the order of `CSS_MODULES` and `JS_MODULES`.
 
 ---
 

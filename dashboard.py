@@ -34,6 +34,7 @@ CSS_MODULES = [
     "layout.css",
     "frame.css",
     "runs.css",
+    "heat.css",
 ]
 JS_MODULES = [
     "core.js",
@@ -41,6 +42,7 @@ JS_MODULES = [
     "runs.js",
     "bars.js",
     "lines.js",
+    "scores.js",
 ]
 
 # PR #42 and PR #44 (merged 2026-11-07) fixed the cache-salt placement and
@@ -154,6 +156,33 @@ def concurrency_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+def median(values: list[float]) -> float | None:
+    values = sorted(v for v in values if isinstance(v, (int, float)))
+    if not values:
+        return None
+    mid = len(values) // 2
+    return values[mid] if len(values) % 2 else (values[mid - 1] + values[mid]) / 2
+
+
+def ttft_breakdown_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
+    # vLLM reports TTFT and queue time per request, but no prefill time.
+    # The client records post_queue_ms (TTFT minus queue) per request only,
+    # so the median comes from the per-request rows.
+    per_length = (summary.get("ttft_breakdown") or {}).get("per_length")
+    rows = []
+    for length, v in by_int_key(per_length):
+        agg = v.get("aggregated") or {}
+        requests = [r for r in v.get("per_request") or [] if r.get("success")]
+        post_queue = median([r.get("post_queue_ms") for r in requests])
+        rows.append({
+            "x": length,
+            "ttft_median_ms": (agg.get("ttft") or {}).get("median_ms"),
+            "queue_median_ms": (agg.get("scheduler_delay") or {}).get("median_ms"),
+            "post_queue_median_ms": None if post_queue is None else round(post_queue, 1),
+        })
+    return rows
+
+
 def reasoning_info(summary: dict[str, Any]) -> dict[str, Any] | None:
     r = summary.get("reasoning")
     if not isinstance(r, dict):
@@ -166,6 +195,45 @@ def reasoning_info(summary: dict[str, Any]) -> dict[str, Any] | None:
         "answer_median": r.get("answer_tokens_median"),
         "prompts": len(r.get("per_prompt") or []),
     }
+
+
+def tool_calling_info(summary: dict[str, Any], run_dir: Path) -> dict[str, Any] | None:
+    tc = summary.get("tool_calling")
+    if not isinstance(tc, dict):
+        return None
+    info = {
+        "composite": tc.get("composite_score"),
+        "components": tc.get("composite_components") or {},
+        "total": tc.get("total_tasks"),
+        "correct": tc.get("total_correct"),
+        "failure_modes": tc.get("failure_modes"),
+        "categories": None,
+    }
+    detail = load_json(run_dir / "tool_calling.json")
+    if isinstance(detail, dict) and isinstance(detail.get("category_scores"), dict):
+        info["categories"] = {
+            name: {"pass_rate": score.get("pass_rate"), "total": score.get("total")}
+            for name, score in detail["category_scores"].items()
+            if isinstance(score, dict)
+        }
+        info["failure_modes"] = info["failure_modes"] or detail.get("failure_modes")
+    return info
+
+
+def spec_info(summary: dict[str, Any]) -> list[dict[str, Any]] | None:
+    comparison = summary.get("spec_comparison")
+    if not isinstance(comparison, dict):
+        return None
+    enabled = dict(by_int_key(comparison.get("spec_enabled")))
+    disabled = dict(by_int_key(comparison.get("spec_disabled")))
+    rows = []
+    for length in sorted(set(enabled) | set(disabled)):
+        rows.append({
+            "x": length,
+            "spec": enabled.get(length, {}).get("tok_per_sec_avg"),
+            "baseline": disabled.get(length, {}).get("tok_per_sec_avg"),
+        })
+    return rows
 
 
 def memory_info(run_dir: Path) -> dict[str, Any] | None:
@@ -228,9 +296,12 @@ def collect_run(run_dir: Path) -> dict[str, Any] | None:
         "server": server_info(run_dir),
         "latency": latency_rows(summary),
         "deep_context": deep_context_rows(summary),
+        "ttft_breakdown": ttft_breakdown_rows(summary),
         "decode": decode_rows(summary.get("decode")),
         "concurrency": concurrency_rows(summary),
         "reasoning": reasoning_info(summary),
+        "tool_calling": tool_calling_info(summary, run_dir),
+        "spec": spec_info(summary),
         "gpu": {
             "power_avg_w": gpu.get("gpu_power_avg_w"),
             "power_peak_w": gpu.get("gpu_power_peak_w"),
