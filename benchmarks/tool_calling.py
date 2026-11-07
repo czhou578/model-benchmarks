@@ -56,6 +56,21 @@ def _build_completion_url(client: ModelClient) -> str:
     return f"{base}/v1/chat/completions"
 
 
+def _response_metadata(response: dict[str, Any]) -> tuple[str | None, int | None]:
+    """Return ``(finish_reason, completion_tokens)`` from a chat response.
+
+    ``finish_reason == "length"`` means the output hit ``max_tokens``. For a
+    thinking model this usually means the model never left ``<think>``, so
+    the harness saw no tool call. Without this field a truncated run looks
+    like a refusal.
+    """
+    choices = response.get("choices") or [{}]
+    finish_reason = choices[0].get("finish_reason")
+    usage = response.get("usage") or {}
+    completion_tokens = usage.get("completion_tokens")
+    return finish_reason, completion_tokens
+
+
 # --------------------------------------------------------------------------- #
 # Data structures
 # --------------------------------------------------------------------------- #
@@ -83,6 +98,9 @@ class TaskResult:
     no_hallucinated_params: bool = True
     ambig_strategy: str = "assumption"
     ambig_details: str = ""
+    # Generation metadata, used to tell truncation from refusal.
+    finish_reason: str | None = None
+    completion_tokens: int | None = None
 
 
 @dataclass
@@ -124,6 +142,7 @@ class MultiTurnTaskResult(TaskResult):
     parallel_detected: bool = False        # called two tools in one turn
     multi_score: float = 0.0              # orchestration * data_flow * turns
     details: str = ""
+    turn_finish_reasons: list[str | None] = field(default_factory=list)
 
 
 # --------------------------------------------------------------------------- #
@@ -659,6 +678,8 @@ def _apply_overlay_scoring(
             expected_display = expected_tool or "no tool"
             actual_display = actual_tool or "no tool"
             details = f"Expected tool={expected_display}, got {actual_display}"
+            if result.finish_reason == "length":
+                details += " (output hit max_tokens before a tool call)"
         elif result.params_complete < scoring.get("param_completeness", 1.0):
             missing = [p for p in required_params if p not in (actual_params or {})]
             details = f"Missing params: {missing}"
@@ -701,7 +722,8 @@ def _run_task(
     client: ModelClient,
     task: dict,
     tools_def: list[dict],
-    max_tokens: int = 256,
+    max_tokens: int = 4096,
+    chat_template_kwargs: dict[str, Any] | None = None,
 ) -> TaskResult:
     """Send one task to the model and score the response."""
 
@@ -722,6 +744,8 @@ def _run_task(
 
     cache_salt = uuid.uuid4().hex
     payload["cache_salt"] = cache_salt
+    if chat_template_kwargs:
+        payload["chat_template_kwargs"] = dict(chat_template_kwargs)
 
     try:
         resp = requests.post(
@@ -749,6 +773,7 @@ def _run_task(
         _attach_overlay_defaults(result, task, f"request failed: {exc}")
         return result
 
+    finish_reason, completion_tokens = _response_metadata(response)
     actual_tool, actual_params = _parse_tool_calls(response)
     call_id = None
     response_content = None  # captured for ambiguous-task scoring
@@ -793,6 +818,8 @@ def _run_task(
         composite_score=round(composite, 4),
         details="",
         raw_response=response,
+        finish_reason=finish_reason,
+        completion_tokens=completion_tokens,
     )
     _apply_overlay_scoring(result, task, tools_def, actual_tool, actual_params, response_content)
 
@@ -819,7 +846,8 @@ def _run_multi_turn_task(
     client: ModelClient,
     task: dict,
     tools_def: list[dict],
-    max_tokens: int = 256,
+    max_tokens: int = 4096,
+    chat_template_kwargs: dict[str, Any] | None = None,
 ) -> MultiTurnTaskResult:
     """Execute a multi-tool chain task.
 
@@ -854,6 +882,8 @@ def _run_multi_turn_task(
     # Track intermediate values that flow between turns.
     # e.g. {"step_1_result": 150, "step_2_input_from_step_1": 150}
     intermediate_results: dict[str, Any] = {}
+    turn_finish_reasons: list[str | None] = []
+    completion_tokens_total: int | None = None
 
     for turn_idx in range(1, max_turns + 1):
         cache_salt = uuid.uuid4().hex
@@ -867,6 +897,8 @@ def _run_multi_turn_task(
             "stream": False,
         }
         payload["cache_salt"] = cache_salt
+        if chat_template_kwargs:
+            payload["chat_template_kwargs"] = dict(chat_template_kwargs)
 
         try:
             resp = requests.post(
@@ -874,6 +906,10 @@ def _run_multi_turn_task(
             )
             resp.raise_for_status()
             response = resp.json()
+            finish_reason, completion_tokens = _response_metadata(response)
+            turn_finish_reasons.append(finish_reason)
+            if completion_tokens is not None:
+                completion_tokens_total = (completion_tokens_total or 0) + completion_tokens
         except Exception:
             trace.append(ToolCallTrace(
                 step=turn_idx,
@@ -896,8 +932,15 @@ def _run_multi_turn_task(
             ))
             break
 
-        # For each tool call in this turn, execute and record.
-        for call_name, call_params in tool_calls:
+        # Execute each call, then append the history in OpenAI order: the
+        # assistant tool_calls message first, then one tool message per call
+        # with a matching id. The chat template renders messages in list
+        # order, so a tool message before its call shows the model the
+        # result before the request.
+        tool_call_entries: list[dict[str, Any]] = []
+        tool_messages: list[dict[str, Any]] = []
+        for i, (call_name, call_params) in enumerate(tool_calls):
+            tool_call_id = f"call_{turn_idx}_{i + 1}"
             mock_resp = _mock_tool_response(call_name, call_params or {})
             step_key = f"step_{turn_idx}_result"
             intermediate_results[step_key] = mock_resp
@@ -913,30 +956,25 @@ def _run_multi_turn_task(
                 "tool": call_name,
                 "params": call_params,
             })
-
-            # Feed the tool response back to the model for the next turn.
-            tool_call_id = f"call_{turn_idx}_{len(actual_sequence)}"
-            messages.append({
+            tool_call_entries.append({
+                "id": tool_call_id,
+                "type": "function",
+                "function": {
+                    "name": call_name,
+                    "arguments": json.dumps(call_params or {}),
+                },
+            })
+            tool_messages.append({
                 "role": "tool",
                 "tool_call_id": tool_call_id,
                 "content": json.dumps(mock_resp),
             })
 
-        # Add the assistant's tool-call message (OpenAI format).
-        tool_call_entries = []
-        for i, (name, params) in enumerate(tool_calls):
-            tool_call_entries.append({
-                "id": f"call_{turn_idx}_{i + 1}",
-                "type": "function",
-                "function": {
-                    "name": name,
-                    "arguments": json.dumps(params or {}),
-                },
-            })
         messages.append({
             "role": "assistant",
             "tool_calls": tool_call_entries,
         })
+        messages.extend(tool_messages)
 
     # --- Scoring ---
     orchestration_correct = True
@@ -1054,7 +1092,10 @@ def _run_multi_turn_task(
         composite_score=round(composite, 4),
         details=details,
         raw_response=response,
+        finish_reason=turn_finish_reasons[-1] if turn_finish_reasons else None,
+        completion_tokens=completion_tokens_total,
         trace=trace,
+        turn_finish_reasons=turn_finish_reasons,
         orchestration_correct=orchestration_correct,
         data_flow_correct=data_flow_correct,
         turns_correct=turns_correct,
@@ -1067,6 +1108,12 @@ def _run_multi_turn_task(
 # --------------------------------------------------------------------------- #
 # Weighted composite score
 # --------------------------------------------------------------------------- #
+
+# Categories with their own scoring. Every other category is a single-tool
+# category and rolls up into ``category_scores["single_tool"]``.
+_NON_SINGLE_TOOL_CATEGORIES = frozenset({
+    "multi_tool", "error_recovery", "schema_compliance", "ambiguous", "refusal",
+})
 
 # Default weights per the plan.  Each key maps to the ``category_scores``
 # field name that provides the component value.
@@ -1279,6 +1326,35 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
 
         category_scores[cat] = cat_score
 
+    # Roll every single-tool category (search_basic, weather_enum, ...) into
+    # one ``single_tool`` entry. The composite reads tool_accuracy and the
+    # parameter averages from it; without the entry those three components
+    # were always 0.
+    single_results = [
+        r for r in results if r.category not in _NON_SINGLE_TOOL_CATEGORIES
+    ]
+    if single_results:
+        n_single = len(single_results)
+        single_pass = sum(1 for r in single_results if r.correct)
+        category_scores["single_tool"] = {
+            "pass_count": single_pass,
+            "total": n_single,
+            "pass_rate": round(single_pass / n_single, 4),
+            "tool_accuracy": round(
+                sum(1 for r in single_results if r.tool_correct) / n_single, 4
+            ),
+            "param_completeness_avg": round(
+                statistics.mean(r.params_complete for r in single_results), 4
+            ),
+            "param_correctness_avg": round(
+                sum(1 for r in single_results if r.params_valid) / n_single, 4
+            ),
+            "composite_avg": round(
+                statistics.mean(r.composite_score for r in single_results), 4
+            ),
+            "source_categories": sorted({r.category for r in single_results}),
+        }
+
     total_correct = sum(1 for r in results if r.correct)
     # Compute the weighted composite score from category scores.
     composite, _weighted_components = (
@@ -1288,6 +1364,8 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
     # Failure modes
     failure_modes: dict[str, int] = {
         "wrong_tool_selected": 0,
+        "no_tool_call": 0,
+        "truncated_output": 0,
         "missing_required_param": 0,
         "invalid_enum_value": 0,
         "wrong_param_type": 0,
@@ -1304,14 +1382,18 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
     }
     for r in results:
         if not r.correct:
-            if r.expected_tool is None and r.actual_tool is not None:
+            if r.finish_reason == "length":
+                failure_modes["truncated_output"] += 1
+            if "failed:" in r.details:
+                failure_modes["request_failed"] += 1
+            elif r.expected_tool is None and r.actual_tool is not None:
                 failure_modes["unnecessary_tool_call"] += 1
             elif r.expected_tool is not None and r.actual_tool is not None and r.actual_tool != r.expected_tool:
                 failure_modes["wrong_tool_selected"] += 1
             elif r.expected_tool is not None and r.actual_tool is None:
+                failure_modes["no_tool_call"] += 1
+            elif r.tool_correct and r.params_complete < 1.0:
                 failure_modes["missing_required_param"] += 1
-            elif "failed:" in r.details:
-                failure_modes["request_failed"] += 1
 
             # Multi-tool specific failure modes
             if isinstance(r, MultiTurnTaskResult):
@@ -1386,6 +1468,8 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
             "params_valid": r.params_valid,
             "composite_score": r.composite_score,
             "details": r.details,
+            "finish_reason": r.finish_reason,
+            "completion_tokens": r.completion_tokens,
         }
 
         # Multi-turn extras.
@@ -1398,6 +1482,7 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
                 "multi_score": r.multi_score,
                 "chain_length": len(r.trace),
                 "tool_sequence": [t.tool_name for t in r.trace if t.tool_name],
+                "turn_finish_reasons": r.turn_finish_reasons,
             })
 
         # Overlay-specific extras.
@@ -1430,8 +1515,9 @@ def run_tool_calling_benchmark(
     client: ModelClient,
     tasks_path: str | Path = "datasets/tool_calling_tasks.yaml",
     task_set: str = "full",
-    max_tokens: int = 256,
+    max_tokens: int = 4096,
     temperature: float = 0.0,
+    chat_template_kwargs: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run tool-calling benchmark suite.
 
@@ -1439,8 +1525,12 @@ def run_tool_calling_benchmark(
         client: ModelClient connected to a running vLLM endpoint.
         tasks_path: Path to the YAML task definition file.
         task_set: ``"lite"`` (subset) or ``"full"`` (all).
-        max_tokens: Maximum output tokens per request.
+        max_tokens: Maximum output tokens per request. A thinking model
+            spends hundreds of tokens before its first tool call, so keep
+            this high unless thinking is off.
         temperature: Sampling temperature (default 0 for deterministic eval).
+        chat_template_kwargs: Optional ``chat_template_kwargs`` for every
+            request, for example ``{"enable_thinking": False}``.
 
     Returns:
         Dict with ``config``, ``total_tasks``, ``composite_score``,
@@ -1469,6 +1559,7 @@ def run_tool_calling_benchmark(
         "task_set": task_set,
         "max_tokens": max_tokens,
         "temperature": temperature,
+        "chat_template_kwargs": chat_template_kwargs,
         "start_time": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -1504,9 +1595,13 @@ def run_tool_calling_benchmark(
             if is_multi:
                 r = _run_multi_turn_task(
                     client, task, tools_definition, max_tokens=max_tokens,
+                    chat_template_kwargs=chat_template_kwargs,
                 )
             else:
-                r = _run_task(client, task, tools_definition, max_tokens=max_tokens)
+                r = _run_task(
+                    client, task, tools_definition, max_tokens=max_tokens,
+                    chat_template_kwargs=chat_template_kwargs,
+                )
         except Exception as exc:
             exc_details = f"exception: {exc}"
             r = TaskResult(
@@ -1574,8 +1669,12 @@ def main() -> None:
         help="Task subset to run",
     )
     parser.add_argument(
-        "--max-tokens", type=int, default=256,
-        help="Maximum output tokens per request",
+        "--max-tokens", type=int, default=4096,
+        help="Maximum output tokens per request (thinking models need room)",
+    )
+    parser.add_argument(
+        "--disable-thinking", action="store_true",
+        help="Send chat_template_kwargs={'enable_thinking': false} with every request",
     )
     parser.add_argument(
         "--output", type=str, default=None,
@@ -1594,6 +1693,7 @@ def main() -> None:
         tasks_path=args.tasks,
         task_set=args.task_set,
         max_tokens=args.max_tokens,
+        chat_template_kwargs={"enable_thinking": False} if args.disable_thinking else None,
     )
 
     output_path = args.output or "tool_calling.json"

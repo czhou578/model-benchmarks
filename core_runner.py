@@ -1306,13 +1306,18 @@ def main():
 
             tc_tasks = cfg.get("tool_calling_tasks", "datasets/tool_calling_tasks.yaml")
             tc_task_set = cfg.get("tool_calling_task_set", "full")
-            tc_max_tokens = cfg.get("tool_calling_max_tokens", 256)
+            # A thinking model spends hundreds of tokens before its first
+            # tool call, and vLLM parses tool calls only after </think>.
+            # 256 tokens truncated most ticket tasks in the July 2026 runs.
+            tc_max_tokens = cfg.get("tool_calling_max_tokens", 4096)
+            tc_template_kwargs = cfg.get("tool_calling_chat_template_kwargs")
             print(f"[core_runner] running tool-calling benchmark (task_set={tc_task_set})")
             tc_result = run_tool_calling_benchmark(
                 client,
                 tasks_path=tc_tasks,
                 task_set=tc_task_set,
                 max_tokens=tc_max_tokens,
+                chat_template_kwargs=tc_template_kwargs,
             )
             save_json(run_dir / "tool_calling.json", tc_result)
             summary["tool_calling"] = {
@@ -1321,6 +1326,7 @@ def main():
                 "total_tasks": tc_result.get("total_tasks"),
                 "total_correct": tc_result.get("total_correct"),
                 "categories": list(tc_result.get("category_scores", {}).keys()),
+                "failure_modes": tc_result.get("failure_modes"),
             }
             components = tc_result.get("composite_components", {})
             print(

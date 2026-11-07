@@ -68,8 +68,8 @@ The most comprehensive benchmark. Tests tool selection, parameter validation, mu
 | **Phase 3** | Schema compliance & Error recovery | Strict JSON Schema constraints + model self-correction after errors |
 
 **Scoring** produces three levels of output:
-- **Per-task**: `correct`, `tool_correct`, `params_complete`, `params_valid`, `details`
-- **Per-category**: pass rate, tool accuracy, param completeness/validity averages
+- **Per-task**: `correct`, `tool_correct`, `params_complete`, `params_valid`, `details`, `finish_reason` (`length` means the output hit `max_tokens`)
+- **Per-category**: pass rate, tool accuracy, param completeness/validity averages, plus a `single_tool` roll-up of every single-tool category
 - **Aggregate**: weighted **composite score** across 6 dimensions (tool accuracy, param completeness, param correctness, multi-tool, schema compliance, refusal) + **failure mode counts**
 
 [See the blog post](BLOG_POST.md) for a full breakdown of results.
@@ -127,6 +127,8 @@ endpoint:
 # prompt_lengths: [32, 128, 512, 2048, 8192, 16384]
 # decode_lengths: [512, 1024, 2048]
 # concurrency_levels: [1, 2, 4, 8, 16]
+# tool_calling_max_tokens: 4096        # a thinking model needs room before its first tool call
+# tool_calling_chat_template_kwargs: {enable_thinking: false}   # optional tool-only pass
 ```
 
 ```bash
