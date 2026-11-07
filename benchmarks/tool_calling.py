@@ -721,7 +721,7 @@ def _run_task(
     }
 
     cache_salt = uuid.uuid4().hex
-    payload["extra_body"] = {"cache_salt": cache_salt}
+    payload["cache_salt"] = cache_salt
 
     try:
         resp = requests.post(
@@ -866,7 +866,7 @@ def _run_multi_turn_task(
             "temperature": 0.0,
             "stream": False,
         }
-        payload["extra_body"] = {"cache_salt": cache_salt}
+        payload["cache_salt"] = cache_salt
 
         try:
             resp = requests.post(

@@ -44,6 +44,7 @@ import subprocess
 import sys
 import threading
 import time
+import uuid
 import requests
 import yaml
 from dataclasses import dataclass, field
@@ -382,11 +383,54 @@ class GenerationResult:
     per_token_times: list[float] = field(default_factory=list)
     prompt_tokens_exact: bool = False
     output_tokens_exact: bool = False
-    # vLLM server-side metrics (available when the response includes them)
+    # vLLM server-side metrics. The server adds a ``metrics`` object to the
+    # final usage chunk when it runs with ``--enable-per-request-metrics``.
+    # vLLM reports milliseconds; this client stores seconds.
     cached_tokens: int = 0
     queue_time_s: float | None = None
     time_to_first_token_s: float | None = None
+    # vLLM does not report prefill time. The field stays None unless a
+    # server adds one. ``post_queue_time_s`` is server TTFT minus queue
+    # time; it covers prefill plus the first decode step.
     prefill_time_s: float | None = None
+    post_queue_time_s: float | None = None
+    generation_time_s: float | None = None
+    server_metrics: dict[str, Any] | None = None
+
+
+def _parse_server_metrics(metrics: dict[str, Any] | None) -> dict[str, Any]:
+    """Convert a vLLM ``metrics`` object to seconds.
+
+    vLLM reports ``time_to_first_token_ms``, ``queue_time_ms`` and
+    ``generation_time_ms``. It does not report prefill time. The returned
+    ``post_queue_time_s`` is TTFT minus queue time. Second-based keys are
+    accepted as a fallback for servers that already report seconds.
+    """
+    out: dict[str, Any] = {
+        "time_to_first_token_s": None,
+        "queue_time_s": None,
+        "prefill_time_s": None,
+        "post_queue_time_s": None,
+        "generation_time_s": None,
+    }
+    if not metrics:
+        return out
+
+    def _seconds(key_ms: str, key_s: str) -> float | None:
+        value = metrics.get(key_ms)
+        if value is not None:
+            return float(value) / 1000.0
+        value = metrics.get(key_s)
+        return float(value) if value is not None else None
+
+    out["time_to_first_token_s"] = _seconds("time_to_first_token_ms", "time_to_first_token_s")
+    out["queue_time_s"] = _seconds("queue_time_ms", "queue_time_s")
+    out["prefill_time_s"] = _seconds("prefill_time_ms", "prompt_time_s")
+    out["generation_time_s"] = _seconds("generation_time_ms", "generation_time_s")
+    ttft, queue = out["time_to_first_token_s"], out["queue_time_s"]
+    if ttft is not None and queue is not None:
+        out["post_queue_time_s"] = max(0.0, ttft - queue)
+    return out
 
 
 class ModelClient:
@@ -475,8 +519,8 @@ class ModelClient:
     ) -> GenerationResult:
         """Send a generation request, optionally isolating it from prefix cache.
 
-        If *cache_salt* is given the request carries it via ``extra_body`` so
-        vLLM's prefix cache is prevented from reusing KV blocks.  On a 400
+        If *cache_salt* is given the request carries it as a top-level
+        ``cache_salt`` field so vLLM's prefix cache cannot reuse KV blocks.  On a 400
         response from the server the request is retried with a text-based salt
         appended to the prompt (ensures the content itself is unique).
         """
@@ -495,11 +539,13 @@ class ModelClient:
             url = f"{self.base_url}/v1/completions"
             base_payload["prompt"] = prompt
 
-        # Try 1: cache_salt via extra_body (preferred — content unchanged)
+        # Try 1: cache_salt as a top-level request field (content unchanged).
+        # vLLM ignores unknown fields such as ``extra_body``, so the salt
+        # must sit at the top level of the JSON body.
         if cache_salt is not None:
             result = self._execute_request(url, {
                 **base_payload,
-                "extra_body": {"cache_salt": cache_salt},
+                "cache_salt": cache_salt,
             })
             if result is not None:
                 return result
@@ -516,9 +562,9 @@ class ModelClient:
         raise RuntimeError("generation request failed (cache_salt fallback)")
 
     def preflight_cache_salt(self) -> bool | None:
-        """Test whether the server supports the cache_salt header.
+        """Test whether the server supports the ``cache_salt`` field.
 
-        Sends one minimal request with ``extra_body={"cache_salt": "preflight"}``.
+        Sends one minimal request with a top-level ``cache_salt`` field.
         Returns ``True`` if the server accepts it, ``False`` on 400, ``None`` on
         connection failure.
         """
@@ -530,7 +576,7 @@ class ModelClient:
                 "max_tokens": 1,
                 "temperature": 0.0,
                 "stream": False,
-                "extra_body": {"cache_salt": "preflight"},
+                "cache_salt": "preflight",
             }
             if self.chat:
                 payload["messages"] = [{"role": "user", "content": "hi"}]
@@ -556,9 +602,7 @@ class ModelClient:
         per_token_gaps: list[float] = []
         chunks: list[str] = []
         usage: Optional[dict] = None
-        server_ttft: float | None = None
-        queue_time: float | None = None
-        prefill_time: float | None = None
+        server_metrics: dict[str, Any] | None = None
         cached_tokens: int = 0
 
         reasoning_chunks: list[str] = []
@@ -586,27 +630,14 @@ class ModelClient:
                     if obj.get("usage"):
                         usage = obj["usage"]
 
-                    # vLLM server-side timing metrics (on the first chunk that carries them)
-                    if first_token_time is None:
-                        metrics = obj.get("request_metrics")
-                        if metrics:
-                            ttf = metrics.get("time_to_first_token_s")
-                            if ttf is not None:
-                                server_ttft = float(ttf)
-                            qt = metrics.get("queue_time_s")
-                            if qt is not None:
-                                queue_time = float(qt)
-                            pt = metrics.get("prompt_time_s")
-                            if pt is not None:
-                                prefill_time = float(pt)
-                    # vLLM cached tokens (prefill cache hits)
-                    details = obj.get("completion_tokens_details")
-                    if details:
-                        ct = details.get("cached_tokens")
-                        if ct is not None:
-                            cached_tokens = int(ct)
-
                     choice = (obj.get("choices") or [{}])[0]
+
+                    # vLLM per-request timing metrics. The server puts a
+                    # ``metrics`` object on the final usage chunk (or on the
+                    # choice) when it runs with --enable-per-request-metrics.
+                    metrics = obj.get("metrics") or choice.get("metrics")
+                    if metrics:
+                        server_metrics = dict(metrics)
                     delta = choice.get("delta") or {}
 
                     if self.chat:
@@ -639,6 +670,11 @@ class ModelClient:
 
         end = time.time()
         output_text = "".join(chunks)
+        parsed_metrics = _parse_server_metrics(server_metrics)
+        # vLLM reports prefix-cache hits under usage.prompt_tokens_details.
+        prompt_details = (usage or {}).get("prompt_tokens_details") or {}
+        if prompt_details.get("cached_tokens") is not None:
+            cached_tokens = int(prompt_details["cached_tokens"])
 
         exact_prompt = usage.get("prompt_tokens") if usage else None
         exact_output = usage.get("completion_tokens") if usage else None
@@ -655,9 +691,12 @@ class ModelClient:
             prompt_tokens_exact=exact_prompt is not None,
             output_tokens_exact=exact_output is not None,
             cached_tokens=cached_tokens,
-            queue_time_s=queue_time,
-            time_to_first_token_s=server_ttft,
-            prefill_time_s=prefill_time,
+            queue_time_s=parsed_metrics["queue_time_s"],
+            time_to_first_token_s=parsed_metrics["time_to_first_token_s"],
+            prefill_time_s=parsed_metrics["prefill_time_s"],
+            post_queue_time_s=parsed_metrics["post_queue_time_s"],
+            generation_time_s=parsed_metrics["generation_time_s"],
+            server_metrics=server_metrics,
         )
 
 
@@ -671,7 +710,8 @@ def run_deep_context(client: ModelClient, context_lengths: list[int],
 
     For each context length, builds a prompt of that length and generates
     a small decode (``output_tokens``). Captures TTFT and prefill TPS.
-    On OOM: records ``status: "oom"`` and continues to next length.
+    Each request carries a fresh cache salt, so repeats never hit the
+    prefix cache. On OOM: records ``status: "oom"`` and continues.
     """
     results = {}
     for ctx_len in context_lengths:
@@ -683,7 +723,10 @@ def run_deep_context(client: ModelClient, context_lengths: list[int],
         oom_detected = False
         for i in range(repeats):
             try:
-                gen = client.generate(prompt, max_tokens=output_tokens, temperature=0.0)
+                gen = client.generate(
+                    prompt, max_tokens=output_tokens, temperature=0.0,
+                    cache_salt=uuid.uuid4().hex,
+                )
                 exact = gen.prompt_tokens_exact
                 if gen.ttft_s == gen.ttft_s and gen.ttft_s > 0:
                     ttfts.append(gen.ttft_s)
@@ -722,7 +765,12 @@ def run_latency_sweep(client: ModelClient, prompt_lengths: list[int],
         prefill_tps = []
         exact = None
         for _ in range(repeats):
-            gen = client.generate(prompt, max_tokens=decode_tokens_for_ttft, temperature=0.0)
+            # A fresh salt per request keeps the prefix cache from serving
+            # repeats 2..N, which would collapse TTFT to the cache-hit time.
+            gen = client.generate(
+                prompt, max_tokens=decode_tokens_for_ttft, temperature=0.0,
+                cache_salt=uuid.uuid4().hex,
+            )
             exact = gen.prompt_tokens_exact
             if gen.ttft_s == gen.ttft_s:
                 ttfts.append(gen.ttft_s)

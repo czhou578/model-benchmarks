@@ -1,16 +1,15 @@
 """TTFT Breakdown benchmark — Phase 1.3 of the upgrade roadmap.
 
 Splits client-side TTFT (wall-clock time to first token) into:
-  1. Scheduler / queue delay        (server-side queue_time_s)
-  2. Prefill time                   (server-side prompt_time_s)
-  3. First decode + scheduling      (TTFT − queue − prefill)
+  1. Scheduler / queue delay        (server-side queue_time_ms)
+  2. Post-queue time                (server TTFT − queue time)
 
-The gap in (3) is the time from the last prefill token to the first output
-token — it includes the first decode kernel launch + scheduler overhead.
-
-vLLM already emits request_metrics with these fields per stream chunk, but
-they live only inside ModelClient._execute_request() and the GenerationResult
-dataclass. This module exposes them as a structured benchmark.
+vLLM reports ``time_to_first_token_ms`` and ``queue_time_ms`` in a
+``metrics`` object on the final usage chunk. The server must run with
+``--enable-per-request-metrics``. vLLM does not report prefill time, so the
+post-queue component covers prefill plus the first decode step. The
+``prefill_ms`` and ``first_decode_ms`` fields stay None until a server
+reports a prefill time.
 
 Output file: ttft_breakdown.json
 """
@@ -42,12 +41,13 @@ class TtftRequestResult:
     # Client-side wall-clock (ms) — None when request failed
     ttft_ms: float | None
     total_time_ms: float | None
-    # Server-side metrics (s) — may be None on older vLLM versions
+    # Server-side metrics (s) — None when the server does not report them
     queue_time_s: float | None = None
     prefill_time_s: float | None = None
     server_ttft_s: float | None = None
     # Derived breakdown components (ms)
     scheduler_delay_ms: float | None = None
+    post_queue_ms: float | None = None
     prefill_ms: float | None = None
     first_decode_ms: float | None = None
     # Error
@@ -91,8 +91,8 @@ def run_ttft_breakdown(
     """Measure TTFT breakdown across a range of prompt lengths.
 
     For each length, sends ``repetitions`` cold (no-cache) requests and
-    records the server-side timing metrics that vLLM emits in
-    ``request_metrics`` per streamed chunk.
+    records the server-side timing metrics that vLLM emits in the
+    ``metrics`` object of the final usage chunk.
 
     Args:
         client: ModelClient connected to a running vLLM endpoint.
@@ -123,7 +123,8 @@ def run_ttft_breakdown(
     result: dict[str, Any] = {
         "config": {
             "benchmark_version": "1.0",
-            "definition": "TTFT decomposition into scheduler delay, prefill time, and first decode overhead",
+            "definition": "TTFT decomposition into scheduler delay and post-queue time (prefill plus first decode)",
+            "server_requirement": "vllm serve ... --enable-per-request-metrics",
             "prompt_lengths": prompt_lengths,
             "repetitions": repetitions,
             "cache_isolation_method": "cache_salt" if is_header else "text_salt",
@@ -168,16 +169,18 @@ def run_ttft_breakdown(
                 ))
                 continue
 
-            # Extract server-side metrics (may be None)
+            # Server-side metrics (None when the server does not report them).
+            # vLLM reports queue time and TTFT only, so prefill and first
+            # decode stay None unless a server adds a prefill metric.
             queue_s = gen.queue_time_s
             prefill_s = gen.prefill_time_s
             server_ttft = gen.time_to_first_token_s
+            post_queue_s = gen.post_queue_time_s
 
-            # first_decode = TTFT − queue − prefill
             first_dec_s = (
                 max(0.0, server_ttft - queue_s - prefill_s)
                 if queue_s is not None and prefill_s is not None and server_ttft is not None
-                else server_ttft
+                else None
             )
 
             length_results.append(TtftRequestResult(
@@ -191,6 +194,7 @@ def run_ttft_breakdown(
                 prefill_time_s=prefill_s,
                 server_ttft_s=server_ttft,
                 scheduler_delay_ms=_ms(queue_s),
+                post_queue_ms=_ms(post_queue_s),
                 prefill_ms=_ms(prefill_s),
                 first_decode_ms=_ms(first_dec_s),
                 error="",
@@ -214,6 +218,7 @@ def run_ttft_breakdown(
         sched_delays = [
             r.scheduler_delay_ms for r in successes if r.scheduler_delay_ms is not None
         ]
+        post_queues = [r.post_queue_ms for r in successes if r.post_queue_ms is not None]
         prefills = [r.prefill_ms for r in successes if r.prefill_ms is not None]
         first_decs = [
             r.first_decode_ms for r in successes if r.first_decode_ms is not None
@@ -236,6 +241,7 @@ def run_ttft_breakdown(
             "aggregated": {
                 "ttft": _stat_summary(ttfts, suffix="ms"),
                 "scheduler_delay": _stat_summary(sched_delays, suffix="ms"),
+                "post_queue": _stat_summary(post_queues, suffix="ms"),
                 "prefill_time": _stat_summary(prefills, suffix="ms"),
                 "first_decode": _stat_summary(first_decs, suffix="ms"),
                 "gpu": gpu_summary or {},
