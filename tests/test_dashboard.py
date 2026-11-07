@@ -101,3 +101,12 @@ def test_render_full_page_joins_the_modules() -> None:
     for marker in (dashboard.CSS_MARKER, dashboard.JS_MARKER, dashboard.DATA_MARKER):
         assert marker not in html
     assert html.rstrip().endswith("start();\n})();\n</script>\n\n</body>\n</html>".rstrip())
+
+
+def test_collect_memory_samples(tmp_path: Path) -> None:
+    old, new = _two_runs(tmp_path)
+
+    assert old["memory"] is None
+    assert new["memory"]["min_available_gib"] == 97.0
+    assert new["memory"]["floor_gib"] == 8.0
+    assert new["memory"]["points"][-1] == [0.25, 97.0]
