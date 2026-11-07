@@ -1,0 +1,50 @@
+{
+  "512": {
+    "requested_output_tokens": 512,
+    "actual_output_tokens": 512,
+    "output_tokens_exact": true,
+    "output_truncated": false,
+    "ttft_s": 1.7642,
+    "decode_time_s": 24.549,
+    "tok_per_sec_avg": 20.86,
+    "tok_per_sec_peak": 9.28,
+    "tok_per_sec_min": 8.64,
+    "tok_per_sec_median": 9.12,
+    "output_text_preview": "We need respond to user: creative writer, write detailed multi-paragraph story about discovery of ancient underwater civilization. They ask: \"Now add more details... Continue with more details... Describe their underground cities, their trade routes through the ocean trenches, and how they communicated across vast distances using bioluminescent signals and whale songs. Describe the eventual fall of\" The prompt cuts off at \"fall of\". Need likely complete story including fall of civilization. Need produce fin\n  [truncated, total length: 2430 chars]",
+    "reasoning_tokens": 513,
+    "answer_tokens": 0,
+    "reasoning_ratio": null
+  },
+  "1024": {
+    "requested_output_tokens": 1024,
+    "actual_output_tokens": 1024,
+    "output_tokens_exact": true,
+    "output_truncated": false,
+    "ttft_s": 0.2636,
+    "decode_time_s": 52.189,
+    "tok_per_sec_avg": 19.62,
+    "tok_per_sec_peak": 9.28,
+    "tok_per_sec_min": 8.59,
+    "tok_per_sec_median": 9.13,
+    "output_text_preview": "We need respond to user: creative writer, write detailed multi-paragraph story about discovery of ancient underwater civilization. They ask: \"Now add more details... Continue with more details... Describe their underground cities, their trade routes through the ocean trenches, and how they communicated across vast distances using bioluminescent signals and whale songs. Describe the eventual fall of\" The prompt cuts off at \"fall of\". Need likely complete story including fall of civilization. Need produce fin\n  [truncated, total length: 4640 chars]",
+    "reasoning_tokens": 1019,
+    "answer_tokens": 0,
+    "reasoning_ratio": null
+  },
+  "2048": {
+    "requested_output_tokens": 2048,
+    "actual_output_tokens": 2048,
+    "output_tokens_exact": true,
+    "output_truncated": false,
+    "ttft_s": 0.2649,
+    "decode_time_s": 98.136,
+    "tok_per_sec_avg": 20.87,
+    "tok_per_sec_peak": 9.29,
+    "tok_per_sec_min": 8.32,
+    "tok_per_sec_median": 9.13,
+    "output_text_preview": "We need respond to user: creative writer, write detailed multi-paragraph story about discovery of ancient underwater civilization. They ask: \"Now add more details... Continue with more details... Describe their underground cities, their trade routes through the ocean trenches, and how they communicated across vast distances using bioluminescent signals and whale songs. Describe the eventual fall of\" The prompt cuts off at \"fall of\". Need likely complete story including fall of civilization. Need produce fin\n  [truncated, total length: 8538 chars]",
+    "reasoning_tokens": 2015,
+    "answer_tokens": 0,
+    "reasoning_ratio": null
+  }
+}
