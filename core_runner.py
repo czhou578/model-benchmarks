@@ -22,14 +22,13 @@ Not implemented here (plug in later via register_benchmark()):
   code correctness (HumanEval/MBPP), Deep-SWE, HLE.
 
 Usage:
-    python core_runner.py --model models/qwen3_35b.yaml
+    python core_runner.py --model models/qwen3.6_35b_unsloth_nvfp4.yml
 
 Every run gets its own timestamped directory under results/<model>/<ts>/.
+The results/ directory sits next to this script. --results-dir changes it.
 
 Dependencies:
-    pip install requests pyyaml
-Optional (more accurate token counting):
-    pip install tiktoken
+    pip install -r requirements.txt    # requests, PyYAML, tiktoken
 """
 
 from __future__ import annotations
@@ -48,12 +47,25 @@ import uuid
 import requests
 import yaml
 from dataclasses import dataclass, field
-from typing import Any
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
 from vllm_server import VllmServer
+
+ROOT = Path(__file__).resolve().parent
+
+
+def repo_relative(path: Path) -> str:
+    """Return the path relative to the repo root when the path is inside it.
+
+    The results JSON then holds no absolute home directory paths.
+    """
+    try:
+        return str(path.resolve().relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
 
 try:
     import tiktoken
@@ -344,7 +356,7 @@ class GpuMonitor:
         util = [s["gpu_util_pct"] for s in self.samples if s.get("gpu_util_pct") is not None]
         mem_util = [s["gpu_mem_util_pct"] for s in self.samples if s.get("gpu_mem_util_pct") is not None]
         summary: dict[str, Any] = {
-            "samples_csv": str(csv_path) if self.samples else None,
+            "samples_csv": repo_relative(csv_path) if self.samples else None,
             "num_samples": len(self.samples),
             "gpu_util_avg_pct": round(statistics.mean(util), 2) if util else None,
             "gpu_util_peak_pct": round(max(util), 2) if util else None,
@@ -1090,9 +1102,9 @@ def load_model_config(path: Path) -> dict:
     return config
 
 
-def make_run_dir(model_name: str) -> Path:
+def make_run_dir(model_name: str, results_dir: Path = ROOT / "results") -> Path:
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_dir = Path("results") / model_name / ts
+    run_dir = results_dir / model_name / ts
     run_dir.mkdir(parents=True, exist_ok=False)
     return run_dir
 
@@ -1150,7 +1162,6 @@ def main():
     parser.add_argument("--skip-reasoning", action="store_true")
     parser.add_argument("--skip-concurrency", action="store_true")
     parser.add_argument("--skip-prefill", action="store_true")
-    parser.add_argument("--skip-roofline", action="store_true")
     parser.add_argument("--skip-ttft", action="store_true")
     parser.add_argument("--compare-spec", action="store_true",
                         help="Run decode benchmark with spec-dec enabled and disabled, then compare")
@@ -1160,12 +1171,18 @@ def main():
         default=None,
         help="Override the server mode from the model config",
     )
+    parser.add_argument(
+        "--results-dir",
+        type=Path,
+        default=ROOT / "results",
+        help="Directory that holds the run directories (default: results/ next to this script)",
+    )
     args = parser.parse_args()
 
     model_config_path = Path(args.model)
     cfg = load_model_config(model_config_path)
     model_name = cfg["name"]
-    run_dir = make_run_dir(model_name)
+    run_dir = make_run_dir(model_name, args.results_dir)
     print(f"[core_runner] writing results to {run_dir}")
     shutil.copy2(model_config_path, run_dir / "model_config.yml")
 
@@ -1190,7 +1207,7 @@ def main():
     monitor: GpuMonitor | None = None
     summary: dict[str, Any] = {
         "model": model_name,
-        "run_dir": str(run_dir),
+        "run_dir": repo_relative(run_dir),
         "server_mode": server_mode,
         "status": "running",
     }
