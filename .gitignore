@@ -8,6 +8,7 @@ build/
 
 # Benchmark output
 tool_calling.json
+reports/dashboard.html
 
 # Backups / temp files
 *.bak

@@ -1,0 +1,41 @@
+/* Header */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.eyebrow {
+  margin: 0 0 6px;
+  font: 500 12px/1.4 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-stretch: 125%;
+  font-weight: 800;
+  font-size: clamp(28px, 5vw, 44px);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.lede { margin: 8px 0 0; color: var(--ink-2); max-width: 65ch; }
+.theme-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer;
+  color: var(--ink-2);
+}
+.theme-btn:hover { color: var(--ink); }
+.spectrum { display: flex; gap: 2px; height: 8px; }
+.spectrum span { flex: 1; border-radius: 999px; min-width: 0; }
+
+footer { color: var(--muted); font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px 16px; }
+footer code { font-family: var(--font-mono); color: var(--ink-2); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .chip, .tbl-btn, .theme-btn { transition: background-color 0.15s, color 0.15s, border-color 0.15s; }
+}
+@media (forced-colors: active) {
+  .chip .dot, .swatch, .legend i, td.run-cell i { forced-color-adjust: none; }
+}

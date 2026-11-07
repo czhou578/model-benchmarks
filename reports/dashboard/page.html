@@ -1,0 +1,39 @@
+<title>Spark Inference Benchmarks</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/*__BENCH_CSS__*/
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow" id="host-line">DGX Spark</p>
+      <h1>Inference Benchmarks</h1>
+      <p class="lede" id="lede"></p>
+    </div>
+    <button class="theme-btn" id="theme-btn" type="button">Theme: system</button>
+  </header>
+  <div class="spectrum" id="spectrum" aria-hidden="true"></div>
+  <div class="filters" id="filters" role="group" aria-label="Runs shown"></div>
+  <div class="callout" id="callout" hidden>
+    <span class="icon warning" aria-hidden="true">!</span>
+    <p id="callout-text"></p>
+  </div>
+  <section class="runs" id="runs" aria-label="Run summaries"></section>
+  <section class="grid" id="charts" aria-label="Charts"></section>
+  <footer>
+    <span id="generated"></span>
+    <span>Rebuild after a run with <code>python3 dashboard.py</code></span>
+  </footer>
+</div>
+<div class="tip" id="tip" role="status" hidden></div>
+
+<script>
+window.BENCH = /*__BENCH_DATA__*/null;
+</script>
+<script>
+/*__BENCH_JS__*/
+</script>

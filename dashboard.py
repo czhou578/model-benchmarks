@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-"""Collect the benchmark runs under results/ for the dashboard.
+"""Build a self-contained HTML dashboard from the runs under results/.
 
 Usage:
-    python3 dashboard.py                      # print the collected data as JSON
-    python3 dashboard.py --json data.json     # write it to a file
+    python3 dashboard.py                      # writes reports/dashboard.html
+    python3 dashboard.py --out /tmp/d.html    # writes another path
+    python3 dashboard.py --fragment           # page body only, for embedding
+    python3 dashboard.py --json data.json     # also write the collected data
 
 The script reads results/<model>/<YYYYMMDD_HHMMSS>/ and needs only the
-standard library.
+standard library. It joins the CSS and JS modules in reports/dashboard/
+into reports/dashboard/page.html and embeds the data, so the page opens
+offline from the file system.
 """
 
 from __future__ import annotations
@@ -18,6 +22,19 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent
+PAGE_DIR = ROOT / "reports" / "dashboard"
+DATA_MARKER = "/*__BENCH_DATA__*/null"
+CSS_MARKER = "/*__BENCH_CSS__*/"
+JS_MARKER = "/*__BENCH_JS__*/"
+# Joined in this order. The JS modules share one function scope; core.js
+# defines start(), which runs after the last module.
+CSS_MODULES = [
+    "tokens.css",
+    "layout.css",
+]
+JS_MODULES = [
+    "core.js",
+]
 
 # PR #42 and PR #44 (merged 2026-11-07) fixed the cache-salt placement and
 # the tool-calling scorer. Latency, deep-context, and tool-calling numbers
@@ -218,19 +235,45 @@ def build_payload(results_dir: Path) -> dict[str, Any]:
     }
 
 
+def read_modules(names: list[str]) -> str:
+    return "\n".join((PAGE_DIR / name).read_text(encoding="utf-8") for name in names)
+
+
+def render(payload: dict[str, Any], fragment: bool) -> str:
+    page = (PAGE_DIR / "page.html").read_text(encoding="utf-8")
+    for marker in (CSS_MARKER, JS_MARKER, DATA_MARKER):
+        if marker not in page:
+            raise SystemExit(f"page.html has no {marker} marker")
+    script = '(function () {\n  "use strict";\n' + read_modules(JS_MODULES) + "\n  start();\n})();"
+    # "</" inside a <script> block would end it early.
+    data = json.dumps(payload, separators=(",", ":")).replace("</", "<\\/")
+    body = page.replace(CSS_MARKER, read_modules(CSS_MODULES)).replace(JS_MARKER, script)
+    body = body.replace(DATA_MARKER, data)
+    if fragment:
+        return body
+    return (
+        "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, "
+        "viewport-fit=cover\">\n</head>\n<body>\n" + body + "\n</body>\n</html>\n"
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--results", default=str(ROOT / "results"))
-    parser.add_argument("--json", default="-", help="Write the data to this path ('-' prints it)")
+    parser.add_argument("--out", default=str(ROOT / "reports" / "dashboard.html"))
+    parser.add_argument("--fragment", action="store_true",
+                        help="Write the page body without the html/head/body skeleton")
+    parser.add_argument("--json", help="Also write the collected data to this path")
     args = parser.parse_args()
 
     payload = build_payload(Path(args.results))
-    text = json.dumps(payload, indent=2) + "\n"
-    if args.json == "-":
-        print(text, end="")
-    else:
-        Path(args.json).write_text(text, encoding="utf-8")
-        print(f"dashboard data: {len(payload['runs'])} runs -> {args.json}")
+    if args.json:
+        Path(args.json).write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(render(payload, args.fragment), encoding="utf-8")
+    print(f"dashboard: {len(payload['runs'])} runs -> {out}")
 
 
 if __name__ == "__main__":
