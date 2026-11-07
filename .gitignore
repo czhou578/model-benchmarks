@@ -5,10 +5,17 @@ __pycache__/
 dist/
 build/
 .venv/
+.pytest_cache/
 
 # Benchmark output
-tool_calling.json
+/tool_calling.json
 reports/dashboard.html
+/summary.json
+/SUMMARY.md
+results/**/gpu_samples.csv
+
+# Logs
+*.log
 
 # Backups / temp files
 *.bak
@@ -16,3 +23,8 @@ reports/dashboard.html
 
 # Claude
 .claude/plans/
+.claude/
+
+# Editor: share launch.json, keep personal settings local
+.vscode/*
+!.vscode/launch.json
