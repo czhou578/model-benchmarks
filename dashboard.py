@@ -1,0 +1,237 @@
+#!/usr/bin/env python3
+"""Collect the benchmark runs under results/ for the dashboard.
+
+Usage:
+    python3 dashboard.py                      # print the collected data as JSON
+    python3 dashboard.py --json data.json     # write it to a file
+
+The script reads results/<model>/<YYYYMMDD_HHMMSS>/ and needs only the
+standard library.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+ROOT = Path(__file__).resolve().parent
+
+# PR #42 and PR #44 (merged 2026-11-07) fixed the cache-salt placement and
+# the tool-calling scorer. Latency, deep-context, and tool-calling numbers
+# from earlier runs are not comparable with later runs.
+SCORING_FIX_DATE = datetime(2026, 11, 7)
+
+
+def load_json(path: Path) -> Any:
+    try:
+        with open(path) as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return None
+
+
+def option_value(command: list[str], flag: str) -> str | None:
+    if flag in command:
+        index = command.index(flag)
+        if index + 1 < len(command):
+            return command[index + 1]
+    return None
+
+
+def by_int_key(mapping: dict[str, Any] | None) -> list[tuple[int, dict[str, Any]]]:
+    rows = []
+    for key, value in (mapping or {}).items():
+        try:
+            rows.append((int(key), value if isinstance(value, dict) else {}))
+        except (TypeError, ValueError):
+            continue
+    return sorted(rows)
+
+
+def ms(seconds: float | None) -> float | None:
+    return None if seconds is None else round(seconds * 1000, 1)
+
+
+def server_info(run_dir: Path) -> dict[str, Any]:
+    server = load_json(run_dir / "resolved_server.json") or {}
+    command = [str(arg) for arg in server.get("command") or []]
+    served = command[2] if len(command) > 2 and command[1] == "serve" else None
+    spec = option_value(command, "--speculative-config")
+    return {
+        "served_model": served,
+        "speculative": spec is not None,
+        "speculative_config": spec,
+        "prefix_caching": "--enable-prefix-caching" in command,
+        "gpu_memory_utilization": option_value(command, "--gpu-memory-utilization"),
+        "kv_cache_dtype": option_value(command, "--kv-cache-dtype"),
+        "max_model_len": option_value(command, "--max-model-len"),
+        "tool_call_parser": option_value(command, "--tool-call-parser"),
+        "command": " ".join(command) if command else None,
+    }
+
+
+def latency_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        {
+            "x": length,
+            "ttft_median_ms": ms(v.get("ttft_median_s")),
+            "ttft_p95_ms": ms(v.get("ttft_p95_s")),
+            "ttft_avg_ms": ms(v.get("ttft_avg_s")),
+            "prefill_tps": v.get("prefill_tps_avg"),
+            "n": v.get("n"),
+        }
+        for length, v in by_int_key(summary.get("latency"))
+    ]
+
+
+def deep_context_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        {
+            "x": length,
+            "ttft_median_ms": ms(v.get("ttft_median_s")),
+            "ttft_p95_ms": ms(v.get("ttft_p95_s")),
+            "prefill_tps": v.get("prefill_tps_avg"),
+            "status": v.get("status"),
+        }
+        for length, v in by_int_key(summary.get("deep_context"))
+    ]
+
+
+def decode_rows(decode: dict[str, Any] | None) -> list[dict[str, Any]]:
+    return [
+        {
+            "x": length,
+            "avg": v.get("tok_per_sec_avg"),
+            "peak": v.get("tok_per_sec_peak"),
+            "min": v.get("tok_per_sec_min"),
+            "median": v.get("tok_per_sec_median"),
+            "ttft_ms": ms(v.get("ttft_s")),
+            "output_tokens": v.get("actual_output_tokens"),
+        }
+        for length, v in by_int_key(decode)
+    ]
+
+
+def concurrency_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
+    levels = (summary.get("concurrency") or {}).get("per_concurrency_level")
+    return [
+        {
+            "x": level,
+            "throughput": v.get("aggregate_throughput_tok_s"),
+            "ttft_median_ms": ms((v.get("ttft") or {}).get("median_s")),
+            "latency_median_s": (v.get("total_time_s") or {}).get("median_s"),
+            "success_rate": v.get("success_rate"),
+        }
+        for level, v in by_int_key(levels)
+    ]
+
+
+def reasoning_info(summary: dict[str, Any]) -> dict[str, Any] | None:
+    r = summary.get("reasoning")
+    if not isinstance(r, dict):
+        return None
+    return {
+        "thinking_avg": r.get("thinking_tokens_avg"),
+        "thinking_median": r.get("thinking_tokens_median"),
+        "thinking_max": r.get("thinking_tokens_max"),
+        "answer_avg": r.get("answer_tokens_avg"),
+        "answer_median": r.get("answer_tokens_median"),
+        "prompts": len(r.get("per_prompt") or []),
+    }
+
+
+def collect_run(run_dir: Path) -> dict[str, Any] | None:
+    summary = load_json(run_dir / "summary.json")
+    if not isinstance(summary, dict):
+        return None
+    try:
+        started = datetime.strptime(run_dir.name, "%Y%m%d_%H%M%S")
+    except ValueError:
+        return None
+    env = load_json(run_dir / "environment.json") or {}
+    gpu = summary.get("gpu") or {}
+    return {
+        "id": f"{run_dir.parent.name}/{run_dir.name}",
+        "model": summary.get("model") or run_dir.parent.name,
+        "run_dir": str(run_dir.relative_to(ROOT)) if run_dir.is_relative_to(ROOT) else str(run_dir),
+        "started": started.isoformat(timespec="minutes"),
+        "status": summary.get("status"),
+        "error": summary.get("error"),
+        "pre_fix": started < SCORING_FIX_DATE,
+        "env": {
+            "gpu": env.get("gpu_name"),
+            "vllm": env.get("vllm_version"),
+            "torch": env.get("torch_version"),
+            "driver": env.get("driver_version"),
+        },
+        "server": server_info(run_dir),
+        "latency": latency_rows(summary),
+        "deep_context": deep_context_rows(summary),
+        "decode": decode_rows(summary.get("decode")),
+        "concurrency": concurrency_rows(summary),
+        "reasoning": reasoning_info(summary),
+        "gpu": {
+            "power_avg_w": gpu.get("gpu_power_avg_w"),
+            "power_peak_w": gpu.get("gpu_power_peak_w"),
+            "util_avg_pct": gpu.get("gpu_util_avg_pct"),
+            "energy_wh": gpu.get("energy_wh"),
+            "energy_per_token_wh": summary.get("energy_per_token_wh"),
+        },
+    }
+
+
+def collect_runs(results_dir: Path) -> list[dict[str, Any]]:
+    runs = []
+    for summary_path in sorted(results_dir.glob("*/*/summary.json")):
+        run = collect_run(summary_path.parent)
+        if run is not None:
+            runs.append(run)
+    # Oldest first, so a new run takes the next color and old runs keep theirs.
+    runs.sort(key=lambda r: (r["started"], r["model"]))
+    return runs
+
+
+def host_memory_gib() -> float | None:
+    try:
+        for line in Path("/proc/meminfo").read_text().splitlines():
+            if line.startswith("MemTotal:"):
+                return round(int(line.split()[1]) / 1024**2, 1)
+    except OSError:
+        pass
+    return None
+
+
+def build_payload(results_dir: Path) -> dict[str, Any]:
+    runs = collect_runs(results_dir)
+    gpu_names = [r["env"]["gpu"] for r in runs if r["env"].get("gpu")]
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "scoring_fix_date": SCORING_FIX_DATE.date().isoformat(),
+        "host": {
+            "gpu": gpu_names[-1] if gpu_names else None,
+            "memory_gib": host_memory_gib(),
+        },
+        "runs": runs,
+    }
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser.add_argument("--results", default=str(ROOT / "results"))
+    parser.add_argument("--json", default="-", help="Write the data to this path ('-' prints it)")
+    args = parser.parse_args()
+
+    payload = build_payload(Path(args.results))
+    text = json.dumps(payload, indent=2) + "\n"
+    if args.json == "-":
+        print(text, end="")
+    else:
+        Path(args.json).write_text(text, encoding="utf-8")
+        print(f"dashboard data: {len(payload['runs'])} runs -> {args.json}")
+
+
+if __name__ == "__main__":
+    main()
