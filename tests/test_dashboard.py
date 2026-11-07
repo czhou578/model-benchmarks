@@ -1,4 +1,4 @@
-"""Tests for the dashboard data collector."""
+"""Tests for the dashboard data collector and the page build."""
 
 from __future__ import annotations
 
@@ -79,8 +79,25 @@ def test_cli_writes_the_collected_data(tmp_path: Path) -> None:
     out = tmp_path / "data.json"
     proc = subprocess.run(
         [sys.executable, str(Path(dashboard.__file__)), "--results", str(tmp_path / "results"),
-         "--json", str(out)],
+         "--out", str(tmp_path / "page.html"), "--json", str(out)],
         capture_output=True, text=True, timeout=60,
     )
     assert proc.returncode == 0, proc.stderr
     assert [r["model"] for r in json.loads(out.read_text())["runs"]] == ["old-model", "new-model"]
+
+
+def test_render_escapes_script_end_tags() -> None:
+    payload = {"runs": [{"error": "bad </script><script>alert(1)</script>"}]}
+    html = dashboard.render(payload, fragment=True)
+    data_block = html.split("window.BENCH = ", 1)[1].split(";\n", 1)[0]
+    assert "</script>" not in data_block
+    assert json.loads(data_block.replace("<\\/", "</")) == payload
+
+
+def test_render_full_page_joins_the_modules() -> None:
+    html = dashboard.render({"runs": []}, fragment=False)
+    assert html.startswith("<!doctype html>")
+    assert "<title>Spark Inference Benchmarks</title>" in html
+    for marker in (dashboard.CSS_MARKER, dashboard.JS_MARKER, dashboard.DATA_MARKER):
+        assert marker not in html
+    assert html.rstrip().endswith("start();\n})();\n</script>\n\n</body>\n</html>".rstrip())
