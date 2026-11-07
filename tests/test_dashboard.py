@@ -110,3 +110,14 @@ def test_collect_memory_samples(tmp_path: Path) -> None:
     assert new["memory"]["min_available_gib"] == 97.0
     assert new["memory"]["floor_gib"] == 8.0
     assert new["memory"]["points"][-1] == [0.25, 97.0]
+
+
+def test_collect_tool_calling_spec_and_ttft_split(tmp_path: Path) -> None:
+    _, new = _two_runs(tmp_path)
+
+    assert new["tool_calling"]["correct"] == 50
+    assert new["tool_calling"]["categories"]["weather_basic"]["pass_rate"] == 0.5
+    assert new["spec"] == [{"x": 512, "spec": 40.0, "baseline": 20.0}]
+    assert new["ttft_breakdown"] == [{
+        "x": 2048, "ttft_median_ms": 250.0, "queue_median_ms": 0.02, "post_queue_median_ms": 250.0,
+    }]

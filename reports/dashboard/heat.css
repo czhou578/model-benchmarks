@@ -1,0 +1,6 @@
+/* Heatmap */
+table.heat td.cell { text-align: center; font-weight: 600; border: 2px solid var(--surface); border-radius: 6px; min-width: 64px; cursor: default; }
+table.heat td.cell.na { background: var(--grid); color: var(--muted); font-weight: 400; }
+table.heat th { text-align: center; white-space: normal; vertical-align: bottom; min-width: 64px; }
+table.heat th:first-child { text-align: left; }
+table.heat td.cell:hover, table.heat td.cell:focus-visible { filter: brightness(1.08); }
