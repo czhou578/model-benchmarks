@@ -365,9 +365,10 @@ def run_prefill_scaling(
                     calibrated.text, max_tokens=1, cache_salt=req_salt
                 )
                 tps = (gen.prompt_tokens / gen.ttft_s) if gen.ttft_s > 0 else None
-                # vLLM reports no prefill time. Server TTFT minus queue time
-                # is the closest engine-side measure. It includes the first
-                # decode step, which is small next to a long prefill.
+                # vLLM reports no prefill time. The server TTFT is the
+                # closest engine-side measure. It starts after the queue. It
+                # includes the first decode step, which is small next to a
+                # long prefill.
                 engine_time_s = gen.prefill_time_s
                 if engine_time_s is None:
                     engine_time_s = gen.post_queue_time_s

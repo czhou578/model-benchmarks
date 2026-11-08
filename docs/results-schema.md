@@ -125,9 +125,9 @@ Each file maps the requested length, as a string, to one entry.
 | `actual_tokens` | tokens | `prompt_tokens` of the first successful request. |
 | `n_requests`, `n_success`, `n_failed` | count | Request counts. |
 | `per_request[].ttft_ms`, `per_request[].total_time_ms` | ms | Client TTFT and total request time. |
-| `per_request[].server_ttft_s`, `per_request[].queue_time_s` | s | vLLM `time_to_first_token_ms` and `queue_time_ms`, in seconds. |
+| `per_request[].server_ttft_s`, `per_request[].queue_time_s` | s | vLLM `time_to_first_token_ms` and `queue_time_ms`, in seconds. The server TTFT starts when the scheduler first schedules the request. It does not include the queue time. |
 | `per_request[].scheduler_delay_ms` | ms | Server queue time. |
-| `per_request[].post_queue_ms` | ms | Server TTFT − queue time. It covers prefill and the first decode step. |
+| `per_request[].post_queue_ms` | ms | Time from scheduling to the first token. It is equal to the server TTFT. It covers prefill and the first decode step. |
 | `per_request[].prefill_time_s`, `prefill_ms`, `first_decode_ms` | s, ms | `null`. vLLM does not report a prefill time. |
 | `per_request[]` other fields | | `index`, `success`, `prompt_tokens`, `output_tokens`, `error`. |
 | `aggregated.<part>` | ms | `avg_ms`, `median_ms`, `p95_ms`, `min_ms`, `max_ms` for `ttft`, `scheduler_delay`, `post_queue`, `prefill_time`, `first_decode`. |
@@ -197,7 +197,7 @@ Each request uses `max_tokens` 1024. All counts come from `count_tokens`, not fr
 | `n_requests`, `n_success` | count | Measured requests. The warm-up request is not counted. |
 | `per_request[].client_ttft_s`, `total_time_s` | s | Client TTFT and total request time. |
 | `per_request[].effective_prefill_tps` | tokens/s | `prompt_tokens / client_ttft_s`. |
-| `per_request[].engine_prefill_tps` | tokens/s | `prompt_tokens` / server prefill time. vLLM reports none, so the code uses server TTFT − queue time. |
+| `per_request[].engine_prefill_tps` | tokens/s | `prompt_tokens` / server prefill time. vLLM reports none, so the code uses the server TTFT. The server TTFT does not include the queue time. |
 | `per_request[].server_ttft_s`, `queue_time_s`, `prefill_time_s` | s | Server timings. `prefill_time_s` is `null` with vLLM. |
 | `per_request[].cached_tokens` | tokens | `usage.prompt_tokens_details.cached_tokens`. 0 means that the request missed the prefix cache. |
 | `per_request[].start_time`, `end_time` | s | Monotonic clock values, not Unix time. |
@@ -253,3 +253,11 @@ Fixes merged on 2026-11-07 changed several files. Run dirs from before that date
 - The run dir has no `tool_calling.json`. The `tool_calling` entry in `summary.json` has no `failure_modes`.
 
 The dashboard marks these runs "Pre-fix scoring" (`SCORING_FIX_DATE` in dashboard.py).
+
+## Runs with the old TTFT split
+
+Before the TTFT split fix, the client set `post_queue_ms` to server TTFT − queue time. The vLLM server TTFT does not include the queue time, so this value subtracts the queue time two times. The error is equal to the queue time. It is small at concurrency 1 and larger with queueing.
+
+- `ttft_breakdown.json` in these runs holds `post_queue_ms` and `aggregated.post_queue` values that are too low.
+- `prefill_scaling.json` in these runs holds `engine_prefill_tps` values that are too high.
+- The dashboard does not read `post_queue_ms`. It computes the post-queue median from `per_request[].server_ttft_s`, so it shows the correct value for old and new runs.
