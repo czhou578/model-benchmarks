@@ -38,7 +38,7 @@
       var best = bestConcurrency(r);
       stat(dl, best ? "Peak throughput ×" + best.x : "Peak throughput", best ? fmt(best.throughput) : "–", "tok/s");
       var tc = r.tool_calling;
-      stat(dl, "Tool tasks passed", tc && isNum(tc.correct) ? String(tc.correct) : "–", tc ? "of " + tc.total : "");
+      stat(dl, "Tool tasks passed", tc && isNum(tc.correct) ? String(tc.correct) : "–", tc ? "of " + tc.total + (tc.task_set === "lite" ? ", lite set" : "") : "");
       if (r.memory) stat(dl, "Lowest free memory", fmt(r.memory.min_available_gib, 1), "GiB");
       if (r.gpu && isNum(r.gpu.power_avg_w)) stat(dl, "GPU power, mean", fmt(r.gpu.power_avg_w, 1), "W");
       if (r.error) h("p", { class: "served" }, card, r.error);

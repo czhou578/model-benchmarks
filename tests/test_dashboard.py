@@ -117,7 +117,25 @@ def test_collect_tool_calling_spec_and_ttft_split(tmp_path: Path) -> None:
 
     assert new["tool_calling"]["correct"] == 50
     assert new["tool_calling"]["categories"]["weather_basic"]["pass_rate"] == 0.5
+    assert new["tool_calling"]["task_set"] == "full"
     assert new["spec"] == [{"x": 512, "spec": 40.0, "baseline": 20.0}]
     assert new["ttft_breakdown"] == [{
         "x": 2048, "ttft_median_ms": 250.0, "queue_median_ms": 0.02, "post_queue_median_ms": 250.0,
     }]
+
+
+def test_tool_calling_task_set_comes_from_the_detail_file(tmp_path: Path) -> None:
+    lite_dir = _write_run(tmp_path, "lite-model", "20261107_120000", spec=False, memory=False)
+    (lite_dir / "tool_calling.json").write_text(json.dumps({
+        "config": {"task_set": "lite"},
+        "category_scores": {"weather_basic": {"pass_rate": 1.0, "total": 1}},
+    }))
+    bare_dir = _write_run(tmp_path, "bare-model", "20261107_130000", spec=False, memory=False)
+    (bare_dir / "tool_calling.json").unlink()
+
+    runs = {r["model"]: r for r in dashboard.collect_runs(tmp_path)}
+
+    assert runs["lite-model"]["tool_calling"]["task_set"] == "lite"
+    assert runs["lite-model"]["tool_calling"]["categories"]["weather_basic"]["total"] == 1
+    assert runs["bare-model"]["tool_calling"]["task_set"] == "full"
+    assert runs["bare-model"]["tool_calling"]["categories"] is None

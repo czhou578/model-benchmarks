@@ -208,9 +208,17 @@ def tool_calling_info(summary: dict[str, Any], run_dir: Path) -> dict[str, Any] 
         "correct": tc.get("total_correct"),
         "failure_modes": tc.get("failure_modes"),
         "categories": None,
+        # "lite" runs at most 8 single-tool tasks; its composite is not
+        # comparable with "full". Runs without tool_calling.json are full.
+        "task_set": "full",
     }
     detail = load_json(run_dir / "tool_calling.json")
-    if isinstance(detail, dict) and isinstance(detail.get("category_scores"), dict):
+    if not isinstance(detail, dict):
+        return info
+    config = detail.get("config")
+    if isinstance(config, dict) and config.get("task_set"):
+        info["task_set"] = config["task_set"]
+    if isinstance(detail.get("category_scores"), dict):
         info["categories"] = {
             name: {"pass_rate": score.get("pass_rate"), "total": score.get("total")}
             for name, score in detail["category_scores"].items()
