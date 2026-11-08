@@ -315,7 +315,11 @@ def collect_run(run_dir: Path) -> dict[str, Any] | None:
             "power_peak_w": gpu.get("gpu_power_peak_w"),
             "util_avg_pct": gpu.get("gpu_util_avg_pct"),
             "energy_wh": gpu.get("energy_wh"),
-            "energy_per_token_wh": summary.get("energy_per_token_wh"),
+            # Old runs store `energy_per_token_wh`: whole-run energy over decode
+            # tokens only. That value is many times too high, so skip it.
+            "decode_energy_per_token_wh": (summary.get("decode_energy") or {}).get(
+                "energy_per_output_token_wh"
+            ),
         },
         "memory": memory_info(run_dir),
     }

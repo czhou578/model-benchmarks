@@ -73,7 +73,8 @@ All requests use temperature 0, except the concurrency requests, which use `conc
 - Effective prefill rate is `prompt_tokens / client TTFT`.
 - Engine prefill rate uses the server prefill time when the server reports one. vLLM does not, so the rate is `prompt_tokens / (server TTFT − queue time)`. It includes the first decode step.
 - After an out-of-memory error or a lost connection, the benchmark skips all later lengths in the list.
-- Before this benchmark, the runner records an idle GPU baseline of `int(5 / monitor_interval_s)` samples.
+- Before this benchmark, the runner records an idle GPU baseline of `int(5 / monitor_interval_s)` samples. Only the prefill windows use it.
+- `window_energy_per_input_token_wh` divides the window energy by the input tokens of the warm-up request and of all successful repetitions.
 
 ## Concurrency
 
@@ -102,8 +103,13 @@ The comparison needs managed mode and `speculative_config`. It runs after all ot
 - `GpuMonitor` starts after the endpoint is ready, and stops at the end of the run. It does not cover the model load.
 - A background thread calls `nvidia-smi --query-gpu=utilization.gpu,utilization.memory,memory.used,memory.total,power.draw`. It reads only the first GPU line. Then it waits `monitor_interval_s`.
 - The real sample period is longer than `monitor_interval_s`, because the `nvidia-smi` call also takes time.
-- Energy is mean power × number of samples × `monitor_interval_s`. The code assumes that each sample covers one interval.
-- The TTFT breakdown and prefill benchmarks open a named window for each length. A window collects the samples taken while it is open. A short window can have no sample.
+- `gpu_energy_wh` integrates the power over the real sample timestamps with the trapezoid rule. It does not use `monitor_interval_s`.
+- For a time window, `gpu_energy_wh` interpolates the power at the window start and at the window stop. Outside the sampled span, it holds the nearest power value.
+- The whole-run `energy_wh` depends on the benchmarks that the run includes. Do not compare it between runs with different benchmark sets.
+- The runner records the start and the end of the decode benchmark. `decode_energy.energy_per_output_token_wh` is the GPU energy in that window divided by the decode output tokens.
+- The TTFT breakdown and prefill benchmarks open a named window for each length. A window collects the samples taken while it is open. A short window can have no sample, and then it has no summary.
+- The window energy uses the window start and stop times, not the window samples only.
+- Old runs have no `duration_s` in the `gpu` block of `summary.json`. They used mean power × number of samples × `monitor_interval_s`. Their energy values are about 6% too low. [results-schema.md](results-schema.md#units-and-known-ambiguities) lists the other old errors.
 - On the DGX Spark, `nvidia-smi` reports `[N/A]` for `memory.used` and `memory.total`. `memory_guard.py` records host memory from `/proc/meminfo` instead. See [dgx-spark.md](dgx-spark.md).
 
 ## FLOP analysis

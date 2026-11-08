@@ -74,6 +74,19 @@ def test_collect_runs_normalizes_and_orders(tmp_path: Path) -> None:
     assert new["gpu"]["energy_wh"] == 5.0
 
 
+def test_only_the_decode_window_energy_per_token_is_shown(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, "m", "20261107_100000", spec=False, memory=False)
+    summary = json.loads((run_dir / "summary.json").read_text())
+    # An old run stores whole-run energy over decode tokens. Do not show it.
+    summary["energy_per_token_wh"] = 0.0158
+    (run_dir / "summary.json").write_text(json.dumps(summary))
+    assert dashboard.collect_run(run_dir)["gpu"]["decode_energy_per_token_wh"] is None
+
+    summary["decode_energy"] = {"energy_per_output_token_wh": 0.0009}
+    (run_dir / "summary.json").write_text(json.dumps(summary))
+    assert dashboard.collect_run(run_dir)["gpu"]["decode_energy_per_token_wh"] == 0.0009
+
+
 def test_cli_writes_the_collected_data(tmp_path: Path) -> None:
     _two_runs(tmp_path / "results")
     out = tmp_path / "data.json"

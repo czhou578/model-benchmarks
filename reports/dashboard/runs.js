@@ -41,6 +41,7 @@
       stat(dl, "Tool tasks passed", tc && isNum(tc.correct) ? String(tc.correct) : "–", tc ? "of " + tc.total + (tc.task_set === "lite" ? ", lite set" : "") : "");
       if (r.memory) stat(dl, "Lowest free memory", fmt(r.memory.min_available_gib, 1), "GiB");
       if (r.gpu && isNum(r.gpu.power_avg_w)) stat(dl, "GPU power, mean", fmt(r.gpu.power_avg_w, 1), "W");
+      if (r.gpu && isNum(r.gpu.decode_energy_per_token_wh)) stat(dl, "Decode energy", fmt(r.gpu.decode_energy_per_token_wh * 1000, 2), "mWh/token");
       if (r.error) h("p", { class: "served" }, card, r.error);
       if (r.server.served_model) h("p", { class: "served" }, card, r.server.served_model);
     });
