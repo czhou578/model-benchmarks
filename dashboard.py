@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -66,6 +67,16 @@ def option_value(command: list[str], flag: str) -> str | None:
         if index + 1 < len(command):
             return command[index + 1]
     return None
+
+
+def version_key(version: Any) -> list[int] | None:
+    """Return the leading release numbers of a version, for example
+    ``"0.33.0rc1+cu130"`` -> ``[0, 33, 0]``. The page compares runs with it.
+    """
+    if not isinstance(version, str):
+        return None
+    match = re.match(r"\d+(?:\.\d+)*", version.strip())
+    return [int(part) for part in match.group().split(".")] if match else None
 
 
 def by_int_key(mapping: dict[str, Any] | None) -> list[tuple[int, dict[str, Any]]]:
@@ -315,6 +326,7 @@ def collect_run(run_dir: Path) -> dict[str, Any] | None:
         "env": {
             "gpu": env.get("gpu_name"),
             "vllm": env.get("vllm_version"),
+            "vllm_key": version_key(env.get("vllm_version")),
             "torch": env.get("torch_version"),
             "driver": env.get("driver_version"),
         },

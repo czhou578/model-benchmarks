@@ -45,7 +45,8 @@ VS Code forwards the port and opens the page in your browser. Reload the page af
 
 ## What the page shows
 
-- One card per run. Each card shows the status, the spec-decoding state, and the badges below.
+- One card per run. Each card shows the start time, the vLLM version, the status, the spec-decoding state, and the badges below.
+- The chart legends add the vLLM version to each run label when the shown runs use more than one version. The page reads the version from `environment.json`.
 - The card numbers: decode speed, TTFT at 2K tokens, peak throughput, tool tasks passed, lowest free memory, and mean GPU power.
 - Charts for decode speed, TTFT, throughput under load, long-context TTFT, thinking tokens, and the MTP speed-up.
 - Charts for tool-calling scores, the tool-calling pass rate by category, and memory headroom.
@@ -63,6 +64,7 @@ A card can show these badges:
 |---|---|
 | Completed, Failed | The `status` in `summary.json`. |
 | MTP spec on, No spec decode | The vLLM command in `resolved_server.json` has a `--speculative-config` flag, or not. |
+| Older vLLM | The run used an older vLLM version than the newest shown run. Compare runs on different versions with care. |
 | Pre-fix scoring | The run dir timestamp is before 2026-11-07. See the next section. |
 | Shared concurrency prompt | The run sent one prompt to every concurrency request. Its concurrency numbers are not comparable with newer runs. See `prompt_mode` in [results-schema.md](results-schema.md). |
 | Stopped for memory | `memory_guard.py` stopped the run because free memory was too low. |

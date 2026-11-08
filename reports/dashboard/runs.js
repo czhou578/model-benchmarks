@@ -15,6 +15,7 @@
     host.replaceChildren();
     var runs = shown();
     if (!runs.length) { h("p", { class: "empty" }, host, "No runs shown. Pick a run above."); return; }
+    var newest = newestVllm(runs);
     runs.forEach(function (r) {
       var card = h("article", { class: "run", "aria-label": r.label }, host);
       card.style.setProperty("--run", r.color);
@@ -28,6 +29,7 @@
       else if (r.status === "failed") badge(badges, "critical", "Failed");
       else badge(badges, "warning", r.status || "Unknown");
       badge(badges, null, r.server.speculative ? "MTP spec on" : "No spec decode");
+      if (olderVllm(r, newest)) badge(badges, "warning", "Older vLLM");
       if (r.pre_fix) badge(badges, "warning", "Pre-fix scoring");
       if (r.concurrency_prompt_mode === "shared") badge(badges, "warning", "Shared concurrency prompt");
       if (r.memory && r.memory.stopped_for_memory) badge(badges, "critical", "Stopped for memory");

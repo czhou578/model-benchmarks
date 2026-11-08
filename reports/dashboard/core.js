@@ -71,6 +71,29 @@
   store("bench.seen", RUNS.map(function (r) { return r.id; }));
   function shown() { return RUNS.filter(function (r) { return visible.has(r.id); }); }
 
+  // ---------- vLLM version ----------
+  // env.vllm_key holds the release numbers of the version, from dashboard.py.
+  function cmpKey(a, b) {
+    for (var i = 0; i < Math.max(a.length, b.length); i++) {
+      var d = (a[i] || 0) - (b[i] || 0);
+      if (d) return d;
+    }
+    return 0;
+  }
+  function newestVllm(runs) {
+    var best = null;
+    runs.forEach(function (r) { var k = r.env.vllm_key; if (k && (!best || cmpKey(k, best) > 0)) best = k; });
+    return best;
+  }
+  function olderVllm(r, newest) { return !!(newest && r.env.vllm_key && cmpKey(r.env.vllm_key, newest) < 0); }
+  function mixedVllm(runs) {
+    var seen = {};
+    runs.forEach(function (r) { seen[r.env.vllm || "?"] = 1; });
+    return Object.keys(seen).length > 1;
+  }
+  // A legend names the vLLM version only when the runs use more than one.
+  function legendLabel(r, runs) { return mixedVllm(runs) ? r.label + " · vLLM " + (r.env.vllm || "?") : r.label; }
+
   // ---------- header ----------
   function drawHeader() {
     var mem = B.host && B.host.memory_gib;

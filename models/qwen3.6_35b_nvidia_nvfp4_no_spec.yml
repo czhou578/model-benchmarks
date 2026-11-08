@@ -24,6 +24,7 @@ server:
     - --attention-backend
     - flashinfer
     - --enable-chunked-prefill
+    - --no-enable-prefix-caching
     - --async-scheduling
     - --reasoning-parser
     - qwen3
