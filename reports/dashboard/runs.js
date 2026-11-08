@@ -29,6 +29,7 @@
       else badge(badges, "warning", r.status || "Unknown");
       badge(badges, null, r.server.speculative ? "MTP spec on" : "No spec decode");
       if (r.pre_fix) badge(badges, "warning", "Pre-fix scoring");
+      if (r.concurrency_prompt_mode === "shared") badge(badges, "warning", "Shared concurrency prompt");
       if (r.memory && r.memory.stopped_for_memory) badge(badges, "critical", "Stopped for memory");
       var dl = h("dl", { class: "stats" }, card);
       var dm = decodeMean(r);

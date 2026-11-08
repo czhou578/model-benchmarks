@@ -34,7 +34,7 @@ These values have no model config key.
 | TTFT breakdown | `"hello world "` × `n // 2` | 1 | `ttft_repetitions` | new UUID per request | 0.5 s pause between requests |
 | Decode | `build_prompt_of_length(128)` | each `decode_lengths` value | 1 | none | none |
 | Reasoning | `reasoning_prompts` | 1024 | 1 | none | none |
-| Concurrency | `build_prompt_of_length(256)`, the same for all requests | `concurrency_max_tokens` | `concurrency_requests_per_level` | none | none |
+| Concurrency | `build_distinct_prompts`: a distinct prompt per request, calibrated to 256 tokens | `concurrency_max_tokens` | `concurrency_requests_per_level` | new UUID per request, when the server accepts `cache_salt` | none |
 | Prefill scaling | document text, calibrated to the exact length | 1 | `prefill_repetitions` | new UUID per request | one warm-up request per length, then 0.5 s pauses |
 | Tool calling | the task prompts | `tool_calling_max_tokens` | 1 | new UUID per request | 0.5 s pause between tasks |
 
@@ -55,7 +55,8 @@ All requests use temperature 0, except the concurrency requests, which use `conc
 - When the server returns HTTP 400, the client sends the request again with ` salt=<value>` added to the prompt text. This fallback changes the prompt and its token count a little.
 - The TTFT breakdown and prefill benchmarks call `preflight_cache_salt()` once. It sends one short request with a `cache_salt`. The result goes to `cache_isolation_method`: `cache_salt` when the server accepts the field, else `text_salt`.
 - The prefill benchmark records `cached_tokens` for each request. A value of 0 shows that the request missed the prefix cache.
-- The decode, reasoning, and concurrency benchmarks send no salt. With prefix caching on, a repeated prompt can hit the cache.
+- The decode and reasoning benchmarks send no salt. With prefix caching on, a repeated prompt can hit the cache.
+- The concurrency benchmark sends a salt only when `preflight_cache_salt()` returns `True`. Then `cache_isolation_method` is `cache_salt`. Else the benchmark sends no salt, and the distinct prompt text isolates the requests. `cache_isolation_method` then is `distinct_text`.
 
 ## TTFT breakdown
 
@@ -77,7 +78,17 @@ All requests use temperature 0, except the concurrency requests, which use `conc
 
 ## Concurrency
 
-The benchmark holds these values constant at each level: the prompt, `max_tokens`, the temperature, and the total number of requests (`concurrency_requests_per_level`). Only the number of worker threads changes. It is equal to the level.
+The benchmark holds these values constant at each level: the prompt length, `max_tokens`, the temperature, and the total number of requests (`concurrency_requests_per_level`). Only the number of worker threads changes. It is equal to the level.
+
+Each request sends its own prompt (`prompt_mode: "distinct"`):
+
+- `build_source_text(k)` starts prompt `k` with a subject, a setting, and a style. The subject changes with each `k`. So the text differs from the first words, and the prefix cache cannot share blocks of the prompt text. Only the chat template prefix stays the same.
+- A shuffle with the fixed seed `concurrency-prompt-<k>` orders the body sentences. So the prompts are the same in each run.
+- Prompt `k` goes to request `k % concurrency_requests_per_level` of the level at position `k // concurrency_requests_per_level`. No level repeats a prompt of an earlier level. So speculative methods such as suffix decoding cannot learn from earlier outputs of the same prompt.
+- The benchmark builds all prompts before the first level. The build time is not part of the wall time.
+- When the server `/tokenize` endpoint works, `calibrate_prompt` cuts each prompt to exactly 256 server tokens, chat template included. `prompt_length_method` then is `server_tokenize`.
+- When `/tokenize` fails, the client count (`count_tokens`) sets the length. `prompt_length_method` then is `client_estimate`. The server counts can then differ between requests. A check with the Qwen3.8-27B tokenizer gave server counts from 307 to 310 tokens for 80 prompts of 256 cl100k tokens. Read `individual_requests[].prompt_tokens` for the server counts.
+- Runs before this change sent one prompt, `build_prompt_of_length(256)`, to every request. Their results have no `prompt_mode`. With prefix caching on, their throughput can be too high and their TTFT can be too low. Do not compare them with distinct-prompt runs.
 
 - Wall time runs from the first submit to the last completion. Aggregate throughput is the output tokens of all successful requests divided by the wall time.
 - A request can stop at the end-of-sequence token before `max_tokens`. So output lengths can differ.

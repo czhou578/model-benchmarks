@@ -72,6 +72,17 @@ def test_collect_runs_normalizes_and_orders(tmp_path: Path) -> None:
         "latency_median_s": None, "success_rate": None,
     }
     assert new["gpu"]["energy_wh"] == 5.0
+    # The test runs have no concurrency config, as in runs before distinct prompts.
+    assert new["concurrency_prompt_mode"] == "shared"
+
+
+def test_concurrency_prompt_mode_reads_old_and_new_runs() -> None:
+    levels = {"1": {"aggregate_throughput_tok_s": 20.0}}
+    new = {"concurrency": {"config": {"prompt_mode": "distinct"}, "per_concurrency_level": levels}}
+
+    assert dashboard.concurrency_prompt_mode(new) == "distinct"
+    assert dashboard.concurrency_prompt_mode({"concurrency": {"per_concurrency_level": levels}}) == "shared"
+    assert dashboard.concurrency_prompt_mode({}) is None
 
 
 def test_cli_writes_the_collected_data(tmp_path: Path) -> None:
