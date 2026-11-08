@@ -26,7 +26,10 @@ def _write_run(root: Path, model: str, stamp: str, *, spec: bool, memory: bool) 
         }},
         "ttft_breakdown": {"per_length": {"2048": {
             "aggregated": {"ttft": {"median_ms": 250.0}, "scheduler_delay": {"median_ms": 0.02}},
-            "per_request": [{"success": True, "post_queue_ms": v} for v in (240.0, 250.0, 260.0)],
+            # post_queue_ms holds old, wrong TTFT - queue values. The
+            # dashboard must use server_ttft_s.
+            "per_request": [{"success": True, "server_ttft_s": v / 1000.0, "post_queue_ms": v - 100.0}
+                            for v in (240.0, 250.0, 260.0)],
         }}},
         "tool_calling": {"composite_score": 3.5, "total_tasks": 85, "total_correct": 50,
                          "composite_components": {"tool_accuracy": 0.9}},

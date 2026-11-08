@@ -60,8 +60,9 @@ All requests use temperature 0, except the concurrency requests, which use `conc
 ## TTFT breakdown
 
 - The server must run with `--enable-per-request-metrics`. vLLM then adds a `metrics` object to the last stream chunk.
-- Scheduler delay is the server queue time (`queue_time_ms`).
-- Post-queue time is the server TTFT minus the queue time. It covers the prefill and the first decode step.
+- Scheduler delay is the server queue time (`queue_time_ms`). vLLM measures it from the time the request enters the queue to the time the scheduler first schedules it.
+- Post-queue time is the server TTFT (`time_to_first_token_ms`). vLLM measures it from the time the scheduler first schedules the request to the first token. It does not include the queue time, so the benchmark does not subtract the queue time from it. It covers the prefill and the first decode step.
+- vLLM 0.25.1 and 0.33.0 use the same definitions for both fields.
 - vLLM does not report a prefill time, so `prefill_ms` and `first_decode_ms` stay `null`.
 - The prompt is `"hello world "` repeated, so the token count is approximate. `actual_tokens` holds the server count.
 - After an error whose text contains `memory` or `oom`, the benchmark skips all later lengths in the list.
@@ -71,7 +72,7 @@ All requests use temperature 0, except the concurrency requests, which use `conc
 - `prepare_exact_prompt` builds fixed document text. It counts tokens with the server `/tokenize` endpoint and the chat template. A binary search finds a text prefix with exactly the target token count.
 - When no exact prefix exists, it uses the nearest prefix below the target. `prompt_length_tolerance` then is above 0.
 - Effective prefill rate is `prompt_tokens / client TTFT`.
-- Engine prefill rate uses the server prefill time when the server reports one. vLLM does not, so the rate is `prompt_tokens / (server TTFT − queue time)`. It includes the first decode step.
+- Engine prefill rate uses the server prefill time when the server reports one. vLLM does not, so the rate is `prompt_tokens / server TTFT`. The vLLM server TTFT does not include the queue time. It includes the first decode step.
 - After an out-of-memory error or a lost connection, the benchmark skips all later lengths in the list.
 - Before this benchmark, the runner records an idle GPU baseline of `int(5 / monitor_interval_s)` samples.
 

@@ -2,12 +2,14 @@
 
 Splits client-side TTFT (wall-clock time to first token) into:
   1. Scheduler / queue delay        (server-side queue_time_ms)
-  2. Post-queue time                (server TTFT − queue time)
+  2. Post-queue time                (server-side time_to_first_token_ms)
 
 vLLM reports ``time_to_first_token_ms`` and ``queue_time_ms`` in a
 ``metrics`` object on the final usage chunk. The server must run with
-``--enable-per-request-metrics``. vLLM does not report prefill time, so the
-post-queue component covers prefill plus the first decode step. The
+``--enable-per-request-metrics``. vLLM measures TTFT from scheduling to the
+first token, so the server TTFT does not include the queue time. The
+post-queue time is equal to the server TTFT. vLLM does not report prefill
+time, so the post-queue time covers prefill plus the first decode step. The
 ``prefill_ms`` and ``first_decode_ms`` fields stay None until a server
 reports a prefill time.
 
@@ -172,14 +174,16 @@ def run_ttft_breakdown(
             # Server-side metrics (None when the server does not report them).
             # vLLM reports queue time and TTFT only, so prefill and first
             # decode stay None unless a server adds a prefill metric.
+            # The server TTFT starts after the queue, so first decode is
+            # server TTFT minus prefill. Do not subtract the queue time.
             queue_s = gen.queue_time_s
             prefill_s = gen.prefill_time_s
             server_ttft = gen.time_to_first_token_s
             post_queue_s = gen.post_queue_time_s
 
             first_dec_s = (
-                max(0.0, server_ttft - queue_s - prefill_s)
-                if queue_s is not None and prefill_s is not None and server_ttft is not None
+                max(0.0, server_ttft - prefill_s)
+                if prefill_s is not None and server_ttft is not None
                 else None
             )
 

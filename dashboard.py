@@ -166,14 +166,20 @@ def median(values: list[float]) -> float | None:
 
 def ttft_breakdown_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
     # vLLM reports TTFT and queue time per request, but no prefill time.
-    # The client records post_queue_ms (TTFT minus queue) per request only,
-    # so the median comes from the per-request rows.
+    # The vLLM TTFT starts after the queue, so the post-queue time is the
+    # server TTFT. Runs before the fix store post_queue_ms as TTFT minus
+    # queue, which subtracts the queue two times. The dashboard thus reads
+    # server_ttft_s from the per-request rows and ignores post_queue_ms.
     per_length = (summary.get("ttft_breakdown") or {}).get("per_length")
     rows = []
     for length, v in by_int_key(per_length):
         agg = v.get("aggregated") or {}
         requests = [r for r in v.get("per_request") or [] if r.get("success")]
-        post_queue = median([r.get("post_queue_ms") for r in requests])
+        server_ttft_ms = [
+            r["server_ttft_s"] * 1000.0 for r in requests
+            if isinstance(r.get("server_ttft_s"), (int, float))
+        ]
+        post_queue = median(server_ttft_ms)
         rows.append({
             "x": length,
             "ttft_median_ms": (agg.get("ttft") or {}).get("median_ms"),

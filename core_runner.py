@@ -401,9 +401,11 @@ class GenerationResult:
     cached_tokens: int = 0
     queue_time_s: float | None = None
     time_to_first_token_s: float | None = None
+    # vLLM measures TTFT from scheduling to the first token, so the server
+    # TTFT does not include the queue time. ``post_queue_time_s`` is the
+    # time after the queue. It covers prefill plus the first decode step.
     # vLLM does not report prefill time. The field stays None unless a
-    # server adds one. ``post_queue_time_s`` is server TTFT minus queue
-    # time; it covers prefill plus the first decode step.
+    # server adds one.
     prefill_time_s: float | None = None
     post_queue_time_s: float | None = None
     generation_time_s: float | None = None
@@ -414,9 +416,16 @@ def _parse_server_metrics(metrics: dict[str, Any] | None) -> dict[str, Any]:
     """Convert a vLLM ``metrics`` object to seconds.
 
     vLLM reports ``time_to_first_token_ms``, ``queue_time_ms`` and
-    ``generation_time_ms``. It does not report prefill time. The returned
-    ``post_queue_time_s`` is TTFT minus queue time. Second-based keys are
-    accepted as a fallback for servers that already report seconds.
+    ``generation_time_ms``. It does not report prefill time. vLLM 0.25.1
+    and 0.33.0 compute the two timings from engine timestamps:
+
+    - ``queue_time_ms`` is ``scheduled_ts - queued_ts``.
+    - ``time_to_first_token_ms`` is ``first_token_ts - scheduled_ts``.
+
+    The server TTFT thus starts after the queue. The returned
+    ``post_queue_time_s`` is equal to the server TTFT. Do not subtract the
+    queue time from it. Second-based keys are accepted as a fallback for
+    servers that already report seconds.
     """
     out: dict[str, Any] = {
         "time_to_first_token_s": None,
@@ -439,9 +448,7 @@ def _parse_server_metrics(metrics: dict[str, Any] | None) -> dict[str, Any]:
     out["queue_time_s"] = _seconds("queue_time_ms", "queue_time_s")
     out["prefill_time_s"] = _seconds("prefill_time_ms", "prompt_time_s")
     out["generation_time_s"] = _seconds("generation_time_ms", "generation_time_s")
-    ttft, queue = out["time_to_first_token_s"], out["queue_time_s"]
-    if ttft is not None and queue is not None:
-        out["post_queue_time_s"] = max(0.0, ttft - queue)
+    out["post_queue_time_s"] = out["time_to_first_token_s"]
     return out
 
 

@@ -120,7 +120,7 @@
   CHARTS.push({
     order: 95,
     id: "split", title: "Server-side TTFT split", wide: true, tableOnly: true,
-    sub: "vLLM per-request metrics, median of 10 requests: time in the queue, then time after the queue (prefill and the first token). vLLM reports no separate prefill time.",
+    sub: "vLLM per-request metrics, median of 10 requests: queue time, then time from scheduling to the first token (the vLLM server TTFT, with prefill and the first decode step). vLLM reports no separate prefill time.",
     when: function (runs) { return runs.some(function (r) { return (r.ttft_breakdown || []).some(function (p) { return isNum(p.queue_median_ms); }); }); },
     draw: function (plot, runs) {
       var rs = runs.filter(function (r) { return (r.ttft_breakdown || []).some(function (p) { return isNum(p.queue_median_ms); }); });
