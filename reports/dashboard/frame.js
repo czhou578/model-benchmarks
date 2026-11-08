@@ -160,7 +160,7 @@
     } else {
       el.plot.hidden = false; el.table.hidden = true;
     }
-    var items = res.legendItems || res.runs.map(function (r) { return { color: r.color, label: r.label, kind: res.legendKind || "line" }; });
+    var items = res.legendItems || res.runs.map(function (r) { return { color: r.color, label: legendLabel(r, res.runs), kind: res.legendKind || "line" }; });
     el.legend.hidden = res.legendKind === "none" || c.tableOnly || items.length < 2;
     if (!el.legend.hidden) legend(el.legend, items);
     if (el.note) el.note.hidden = !runs.some(function (r) { return r.pre_fix; });

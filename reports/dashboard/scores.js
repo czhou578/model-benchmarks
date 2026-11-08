@@ -60,7 +60,7 @@
           return { label: fmtTokens(x) + " out", bars: bars };
         }),
       });
-      var items = [{ color: "var(--baseline)", label: "MTP off", kind: "rect" }].concat(rs.map(function (r) { return { color: r.color, label: r.label + " · MTP on", kind: "rect" }; }));
+      var items = [{ color: "var(--baseline)", label: "MTP off", kind: "rect" }].concat(rs.map(function (r) { return { color: r.color, label: legendLabel(r, rs) + " · MTP on", kind: "rect" }; }));
       return {
         ok: ok, legendItems: items, runs: rs,
         cols: ["Run"].concat(xs.map(function (x) { return fmtTokens(x) + " off"; }), xs.map(function (x) { return fmtTokens(x) + " on"; }), ["Mean speedup"]),

@@ -12,11 +12,29 @@ The vLLM server, the harness, and the operating system use the same memory pool.
 
 ## vLLM environment
 
-Install vLLM in its own virtual environment. The published runs use vLLM 0.25.1 in a venv at `~/venvs/vllm025`. This path is only an example. Use your own path in the commands below.
+Install vLLM in its own virtual environment. The model configs target vLLM 0.33.0 in a venv at `~/venvs/vllm033`. This path is only an example. Use your own path in the commands below.
 
-1. Install the harness into the same venv: `~/venvs/vllm025/bin/pip install -e .`
-2. Put the venv `bin` folder first on `PATH`. Then the `vllm` command in the model config starts the vLLM from that venv.
-3. Start the harness with the Python of that venv.
+1. Make the venv and install vLLM:
+
+   ```bash
+   uv venv --python 3.12 ~/venvs/vllm033
+   uv pip install -p ~/venvs/vllm033/bin/python "vllm==0.33.0" --torch-backend=cu130
+   ~/venvs/vllm033/bin/vllm download-kernels
+   ```
+
+2. Install the harness into the same venv: `uv pip install -p ~/venvs/vllm033/bin/python -e .`
+3. Put the venv `bin` folder first on `PATH`. Then the `vllm` command in the model config starts the vLLM from that venv.
+4. Start the harness with the Python of that venv.
+
+The vLLM 0.33.0 wheel for aarch64 uses CUDA 13.0 and torch 2.14.0. Its CUDA arch list includes the `12.0f` family target, which runs on the sm_121 GPU of the GB10. The first server start compiles kernels and can take several minutes.
+
+The published runs use vLLM 0.25.1 in `~/venvs/vllm025`. A gate run of the Qwen3.8-27B suite on 2026-11-07 compared the two versions. vLLM 0.33.0 was equal or faster in decode, MTP decode, TTFT, concurrency throughput, and prefill. Tool calling stayed within the run-to-run noise. The dashboard marks the vLLM version of each run. See [dashboard.md](dashboard.md).
+
+## Prefix caching
+
+vLLM 0.33.0 turns on prefix caching by default, also for hybrid models. In the vLLM 0.25.1 runs, the Qwen3.8-27B server had prefix caching off. A model config without a prefix caching flag can thus change its behaviour on 0.33.0.
+
+Add `--no-enable-prefix-caching` to `server.command` to keep prefix caching off. The Qwen3.8-27B config and the two `no_spec` Qwen3.6 configs have this flag. The other Qwen3.6 configs set `--enable-prefix-caching`.
 
 ## Environment variables
 
@@ -28,7 +46,9 @@ On the test system, `~/.bashrc` exports `VLLM_USE_FASTOKENS=1`. The vLLM venv ha
 
 On the GB10, vLLM 0.25.1 estimates the CUDA graph memory as a negative number (-18 GiB). With `--gpu-memory-utilization` alone, the Qwen3.8-27B run got a 47.5 GiB KV pool. Only 35 GiB of memory stayed free.
 
-Set the KV pool size with `--kv-cache-memory-bytes`. The Qwen3.8-27B model config uses `16G`. This pool holds about 460K tokens, which is more than the 262K maximum model length.
+Set the KV pool size with `--kv-cache-memory-bytes`. The Qwen3.8-27B model config uses `16G`. This pool holds 512,023 tokens without speculative decoding and 458,752 tokens with MTP K=3. Both are more than the 262K maximum model length.
+
+With this flag, vLLM 0.33.0 skips its memory profile. The vLLM 0.33.0 gate run kept the 16G pin, so it does not show whether 0.33.0 still estimates the CUDA graph memory wrongly. Keep the pin. It also keeps the KV capacity equal to the vLLM 0.25.1 runs.
 
 ## Memory guard
 
@@ -47,9 +67,9 @@ CAUTION: A run that fills the unified memory can make the host unresponsive. Sta
 Example, with the venv path from above:
 
 ```bash
-PATH=~/venvs/vllm025/bin:$PATH ~/venvs/vllm025/bin/python memory_guard.py \
+PATH=~/venvs/vllm033/bin:$PATH ~/venvs/vllm033/bin/python memory_guard.py \
     --floor-gib 8 --warn-gib 16 --min-start-gib 60 -- \
-    ~/venvs/vllm025/bin/python -u core_runner.py \
+    ~/venvs/vllm033/bin/python -u core_runner.py \
     --model models/qwen3.8_27b_nvidia_nvfp4.yml --compare-spec
 ```
 

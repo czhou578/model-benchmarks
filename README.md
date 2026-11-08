@@ -24,7 +24,7 @@ Deep context runs only when the model config sets `context_lengths`. Spec compar
 ## Requirements
 
 - An NVIDIA GPU with a driver and `nvidia-smi`.
-- vLLM. The published results use vLLM 0.25.1. This harness drives vLLM; it does not install it.
+- vLLM. The model configs target vLLM 0.33.0. The published results use vLLM 0.25.1. This harness drives vLLM; it does not install it.
 - Python 3.10 or later.
 - Hugging Face access to the model weights, and disk space for them.
 - On a DGX Spark: the setup notes in [docs/dgx-spark.md](docs/dgx-spark.md).
@@ -109,7 +109,7 @@ Keep `--jobs 1` on a single GPU. Parallel runs share the GPU memory and the serv
 
 The write-ups in [docs/results/](docs/results/) describe past runs. Each write-up names its date and the harness state. Runs before 2026-11-07 use the earlier tool-calling scorer and cache-salt placement. Do not compare their TTFT or tool-calling numbers with newer runs. [docs/dashboard.md](docs/dashboard.md) explains why.
 
-Test system, from `environment.json` in the run dirs:
+Test system of the published runs, from `environment.json` in the run dirs:
 
 | Component | Value |
 |---|---|

@@ -88,6 +88,24 @@ def test_concurrency_prompt_mode_reads_old_and_new_runs() -> None:
     assert dashboard.concurrency_prompt_mode({}) is None
 
 
+def test_version_key_orders_release_numbers() -> None:
+    assert dashboard.version_key("0.33.0") == [0, 33, 0]
+    assert dashboard.version_key(" 0.25.1.dev12+gabc123 ") == [0, 25, 1]
+    assert dashboard.version_key("0.33.0rc1+cu130") == [0, 33, 0]
+    assert dashboard.version_key("0.9.2") < dashboard.version_key("0.25.1")
+    assert dashboard.version_key("unknown") is None
+    assert dashboard.version_key(None) is None
+
+
+def test_run_env_has_the_vllm_version_key(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, "m", "20261107_100000", spec=False, memory=False)
+    assert dashboard.collect_run(run_dir)["env"]["vllm_key"] is None
+
+    (run_dir / "environment.json").write_text(json.dumps({"vllm_version": "0.33.0"}))
+    env = dashboard.collect_run(run_dir)["env"]
+    assert env["vllm"] == "0.33.0" and env["vllm_key"] == [0, 33, 0]
+
+
 def test_only_the_decode_window_energy_per_token_is_shown(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path, "m", "20261107_100000", spec=False, memory=False)
     summary = json.loads((run_dir / "summary.json").read_text())
