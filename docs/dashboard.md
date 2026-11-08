@@ -64,6 +64,7 @@ A card can show these badges:
 | Completed, Failed | The `status` in `summary.json`. |
 | MTP spec on, No spec decode | The vLLM command in `resolved_server.json` has a `--speculative-config` flag, or not. |
 | Pre-fix scoring | The run dir timestamp is before 2026-11-07. See the next section. |
+| Shared concurrency prompt | The run sent one prompt to every concurrency request. Its concurrency numbers are not comparable with newer runs. See `prompt_mode` in [results-schema.md](results-schema.md). |
 | Stopped for memory | `memory_guard.py` stopped the run because free memory was too low. |
 
 ## Pre-fix scoring

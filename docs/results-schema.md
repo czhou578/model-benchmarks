@@ -186,7 +186,18 @@ Each request uses `max_tokens` 1024. All counts come from `count_tokens`, not fr
 
 ## concurrency.json
 
-`config`: `concurrency_levels`, `requests_per_level`, `max_tokens`, `temperature`, and `prompt_tokens`. `prompt_tokens` is the client estimate. Each request records the server count.
+`config`:
+
+| Field | Unit | Meaning |
+|---|---|---|
+| `concurrency_levels`, `requests_per_level`, `max_tokens`, `temperature` | | The run settings. |
+| `prompt_mode` | | `distinct`: each request sends its own prompt. Runs before this field sent one prompt to every request. Read a missing field as `shared`. |
+| `n_distinct_prompts` | count | Number of prompts, one for each request of the run. |
+| `prompt_tokens` | tokens | Target length of each prompt. In old runs, the client estimate of the one prompt. |
+| `prompt_length_method` | | `server_tokenize` (server `/tokenize` count, chat template included) or `client_estimate` (`count_tokens`). |
+| `prompt_tokens_exact` | | `true` when all prompts have exactly `prompt_tokens` tokens by `prompt_length_method`. |
+| `prompt_tokens_min`, `prompt_tokens_max` | tokens | Range of the prompt lengths by `prompt_length_method`. |
+| `cache_isolation_method` | | `cache_salt` (new salt per request) or `distinct_text` (no salt). |
 
 `per_concurrency_level.<level>`:
 
@@ -198,7 +209,7 @@ Each request uses `max_tokens` 1024. All counts come from `count_tokens`, not fr
 | `n_requests`, `n_success`, `n_failed` | count | Request counts. |
 | `success_rate` | fraction | `n_success / n_requests`. |
 | `ttft`, `total_time_s` | s | `avg_s`, `median_s`, `p95_s`, `min_s`, `max_s` of client TTFT and of request time. |
-| `individual_requests[]` | | `index`, `success`, `prompt_tokens`, `output_tokens`, `ttft_s`, `total_time_s`, `error`. |
+| `individual_requests[]` | | `index`, `prompt_index`, `success`, `prompt_tokens` (server count), `output_tokens`, `ttft_s`, `total_time_s`, `error`. A failed request has `null` counts and times. |
 
 ## prefill_scaling.json
 

@@ -156,6 +156,17 @@ def concurrency_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+def concurrency_prompt_mode(summary: dict[str, Any]) -> str | None:
+    """Return ``distinct`` or ``shared``, or None for a run without concurrency data.
+
+    Old runs have no ``prompt_mode``. They sent one prompt to every request.
+    """
+    conc = summary.get("concurrency") or {}
+    if not conc.get("per_concurrency_level"):
+        return None
+    return (conc.get("config") or {}).get("prompt_mode", "shared")
+
+
 def median(values: list[float]) -> float | None:
     values = sorted(v for v in values if isinstance(v, (int, float)))
     if not values:
@@ -313,6 +324,7 @@ def collect_run(run_dir: Path) -> dict[str, Any] | None:
         "ttft_breakdown": ttft_breakdown_rows(summary),
         "decode": decode_rows(summary.get("decode")),
         "concurrency": concurrency_rows(summary),
+        "concurrency_prompt_mode": concurrency_prompt_mode(summary),
         "reasoning": reasoning_info(summary),
         "tool_calling": tool_calling_info(summary, run_dir),
         "spec": spec_info(summary),
