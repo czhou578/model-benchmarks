@@ -344,8 +344,11 @@ def run_prefill_scaling(
 
         # Warmup
         warmup_salt = f"warmup_{length}"
+        # Input tokens of all requests in the GPU window, warm-up included.
+        window_input_tokens = 0
         try:
-            client.generate(calibrated.text, max_tokens=1, cache_salt=warmup_salt)
+            warmup = client.generate(calibrated.text, max_tokens=1, cache_salt=warmup_salt)
+            window_input_tokens += warmup.prompt_tokens
         except Exception:
             pass  # warmup errors are excluded from results
 
@@ -364,6 +367,7 @@ def run_prefill_scaling(
                 gen = client.generate(
                     calibrated.text, max_tokens=1, cache_salt=req_salt
                 )
+                window_input_tokens += gen.prompt_tokens
                 tps = (gen.prompt_tokens / gen.ttft_s) if gen.ttft_s > 0 else None
                 # vLLM reports no prefill time. The server TTFT is the
                 # closest engine-side measure. It starts after the queue. It
@@ -431,10 +435,12 @@ def run_prefill_scaling(
         if gpu_monitor is not None:
             gpu_summary = gpu_monitor.stop_window(f"length_{length_key}")
 
-        # Compute energy-per-token (available if GPU telemetry is active)
-        if gpu_summary and gpu_summary.get("energy_wh") is not None:
-            gpu_summary["energy_per_input_token_wh"] = round(
-                gpu_summary["energy_wh"] / calibrated.actual_tokens, 8
+        # The window energy covers the warm-up and all repetitions, so divide
+        # it by the input tokens of all these requests.
+        if gpu_summary and gpu_summary.get("energy_wh") is not None and window_input_tokens:
+            gpu_summary["window_input_tokens"] = window_input_tokens
+            gpu_summary["window_energy_per_input_token_wh"] = round(
+                gpu_summary["energy_wh"] / window_input_tokens, 8
             )
 
         # Aggregate

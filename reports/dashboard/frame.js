@@ -87,7 +87,7 @@
     draw: function (plot, runs) {
       return {
         ok: true, runs: runs,
-        cols: ["Run", "Started", "Status", "vLLM", "Spec", "Prefix cache", "GPU mem", "Decode", "TTFT 2K", "Peak tok/s", "Tool score", "Power avg", "Energy", "Min free mem"],
+        cols: ["Run", "Started", "Status", "vLLM", "Spec", "Prefix cache", "GPU mem", "Decode", "TTFT 2K", "Peak tok/s", "Tool score", "Power avg", "Run energy", "Min free mem"],
         rows: runs.map(function (r) {
           var best = bestConcurrency(r);
           var tc = r.tool_calling;

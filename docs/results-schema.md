@@ -38,8 +38,11 @@ Read these points before you compare numbers.
 - `prefill_scaling.json` is a curve of prefill time and prefill rate against prompt length. It is not a GPU power curve. Its `gpu` block holds the GPU data of each length window.
 - In `decode.json`, `tok_per_sec_peak`, `tok_per_sec_min`, and `tok_per_sec_median` are `1 / gap` between two stream events with text (`instant_rates` in `run_decode_speed`). One event can carry more than one token, for example with speculative decoding. These three fields then count events per second. Use `tok_per_sec_avg` for the token rate.
 - `output_truncated` in `decode.json` is `true` when `actual_output_tokens` differs from `requested_output_tokens`. A `true` value means that the model stopped before `max_tokens`. It does not mean that `max_tokens` cut the output.
-- `energy_per_token_wh` in `summary.json` is the GPU energy of the whole run divided by the decode output tokens only.
-- In a GPU window block, `idle_base_power_w` comes from the window samples, not from the idle samples (`idle_powers` in `_window_summary`). It equals `gpu_power_avg_w`, and `energy_above_idle_wh` is near 0. Do not use these two fields.
+- Old runs have wrong energy values. An old run has no `duration_s` in its `gpu` block. Do not compare old runs with newer runs. The dashboard does not show the old per-token value.
+  - `energy_per_token_wh` in `summary.json` is the GPU energy of the whole run divided by the decode output tokens only. In the 2026-11-07 Qwen3.8-27B run, it is 0.0158 Wh/token. An estimate of the decode window from the power trace gives 0.0009 Wh/token. So the old value is about 17 times too high. Newer runs write `decode_energy` instead.
+  - Every `energy_wh` is mean power × number of samples × `monitor_interval_s`. The real sample period is about 1.07 s, so the value is about 6% too low.
+  - In a GPU window block, `idle_base_power_w` comes from the window samples, not from the idle samples. It equals `gpu_power_avg_w`, and `energy_above_idle_wh` is near 0.
+  - In a prefill window, `energy_per_input_token_wh` is the window energy divided by the tokens of one prompt. The window holds the warm-up request and all repetitions. Newer runs write `window_energy_per_input_token_wh` instead.
 - Token counts come from the server `usage` block. Without it, the client estimates them with tiktoken `cl100k_base`, or with 0.75 tokens per word (`count_tokens`). An `*_exact` flag tells which source applies.
 
 ## summary.json
@@ -56,7 +59,18 @@ Read these points before you compare numbers.
 | `flops_analysis` | | `status` (from `estimate_status`) and `model` (from `architecture.model`). |
 | `tool_calling` | | `composite_score`, `composite_components`, `total_tasks`, `total_correct`, `categories` (names only), `failure_modes`. |
 | `gpu` | | GPU data of the whole run. See the next table. |
-| `energy_per_token_wh` | Wh/token | `gpu.energy_wh` / sum of `actual_output_tokens` in `decode`. |
+| `decode_energy` | | GPU energy of the decode benchmark. See the next table. Present when the decode benchmark and the GPU monitor ran. |
+| `energy_per_token_wh` | Wh/token | Old runs only. Whole-run energy / decode output tokens. Do not use it. |
+
+`decode_energy` (`decode_energy_summary`):
+
+| Field | Unit | Meaning |
+|---|---|---|
+| `window_start_unix`, `window_end_unix` | s, Unix time | Start of the first decode request and end of the last one. |
+| `duration_s` | s | Length of the decode window. |
+| `energy_wh` | Wh | GPU energy in the decode window. |
+| `output_tokens` | tokens | Sum of `actual_output_tokens` in `decode`. |
+| `energy_per_output_token_wh` | Wh/token | `energy_wh` / `output_tokens`. It includes the short prefill of each 128-token decode prompt. |
 
 GPU data (`GpuMonitor.stop` for the whole run, `_window_summary` for one window):
 
@@ -64,14 +78,17 @@ GPU data (`GpuMonitor.stop` for the whole run, `_window_summary` for one window)
 |---|---|---|
 | `samples_csv` | | Path of `gpu_samples.csv`. Whole run only. |
 | `num_samples` | count | Number of samples. |
-| `duration_s` | s | `num_samples` × interval. Window only. |
+| `duration_s` | s | Whole run: first sample to last sample. Window: window start to window stop. |
 | `gpu_util_avg_pct`, `gpu_util_peak_pct` | % | nvidia-smi `utilization.gpu`. |
 | `gpu_mem_util_avg_pct`, `gpu_mem_util_peak_pct` | % | nvidia-smi `utilization.memory`. |
 | `gpu_mem_used_avg_mib`, `gpu_mem_used_peak_mib` | MiB | nvidia-smi `memory.used`. `null` on the GB10, which reports `[N/A]`. |
 | `gpu_power_avg_w`, `gpu_power_peak_w` | W | nvidia-smi `power.draw`. |
-| `energy_wh` | Wh | Mean power × `num_samples` × interval. |
-| `idle_base_power_w`, `energy_above_idle_wh` | W, Wh | Window only, after an idle baseline. See the ambiguities above. |
-| `energy_per_input_token_wh` | Wh/token | Prefill windows only. Window energy / `actual_tokens` of one prompt. The window also covers calibration, the warm-up request, all repetitions, and the pauses. |
+| `energy_wh` | Wh | Power integrated over the sample timestamps (`gpu_energy_wh`). See [methodology.md](methodology.md#gpu-samples). |
+| `idle_base_power_w` | W | Window only, after an idle baseline. Mean power of the idle samples. |
+| `energy_above_idle_wh` | Wh | Window only. `energy_wh` − `idle_base_power_w` × `duration_s`. It can be negative. |
+| `window_input_tokens` | tokens | Prefill windows only. Input tokens of the warm-up request and of all successful repetitions. |
+| `window_energy_per_input_token_wh` | Wh/token | Prefill windows only. `energy_wh` / `window_input_tokens`. The energy also includes the pauses between the requests. |
+| `energy_per_input_token_wh` | Wh/token | Old runs only. See the ambiguities above. |
 
 ## environment.json
 

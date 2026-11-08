@@ -14,7 +14,8 @@ Captures:
   - deep context (32K/64K): TTFT and prefill throughput at extended contexts
   - first-token latency + prefill throughput, swept across prompt lengths
   - decode speed (avg/peak/min/median tok/sec) at several output lengths
-  - GPU memory + power sampled at 1 Hz -> avg/peak + energy (Wh) + energy/token
+  - GPU memory + power sampled at 1 Hz -> avg/peak + energy (Wh) + decode
+    energy per output token
   - reasoning token count (<think>...</think> vs answer) for Qwen3-style
     reasoning-parser output
 
@@ -34,6 +35,7 @@ Dependencies:
 from __future__ import annotations
 
 import argparse
+import bisect
 import csv
 import json
 import signal
@@ -196,21 +198,94 @@ def collect_environment() -> dict[str, Any]:
 # --------------------------------------------------------------------------- #
 
 
+def _power_at(points: list[tuple[float, float]], t: float) -> float:
+    """Return the power at time ``t`` by linear interpolation.
+
+    ``points`` is a sorted list of ``(t, power)`` pairs. Before the first
+    point and after the last point, the function holds the nearest value.
+    """
+    if t <= points[0][0]:
+        return points[0][1]
+    if t >= points[-1][0]:
+        return points[-1][1]
+    i = bisect.bisect_right([p[0] for p in points], t)
+    (t0, p0), (t1, p1) = points[i - 1], points[i]
+    return p0 + (p1 - p0) * (t - t0) / (t1 - t0)
+
+
+def gpu_energy_wh(
+    samples: list[dict[str, Any]],
+    t_start: float | None = None,
+    t_end: float | None = None,
+) -> float | None:
+    """Integrate GPU power over time with the trapezoid rule.
+
+    The function uses the real timestamp ``t`` of each sample, not the
+    nominal interval. Without a window, it integrates from the first sample
+    to the last sample. With ``t_start`` and ``t_end``, it integrates over
+    that window only, and it interpolates the power at each edge.
+    It returns ``None`` when no sample has a power value or the span is 0.
+    """
+    points = sorted(
+        (s["t"], s["gpu_power_w"]) for s in samples
+        if s.get("t") is not None and s.get("gpu_power_w") is not None
+    )
+    if not points:
+        return None
+    lo = points[0][0] if t_start is None else t_start
+    hi = points[-1][0] if t_end is None else t_end
+    if hi <= lo:
+        return None
+    knots = [(lo, _power_at(points, lo))]
+    knots += [(t, p) for t, p in points if lo < t < hi]
+    knots.append((hi, _power_at(points, hi)))
+    joules = sum((t1 - t0) * (p0 + p1) / 2 for (t0, p0), (t1, p1) in zip(knots, knots[1:]))
+    return joules / 3600.0
+
+
+def decode_energy_summary(
+    samples: list[dict[str, Any]],
+    decode: dict[str, Any],
+    t_start: float,
+    t_end: float,
+) -> dict[str, Any]:
+    """Return the GPU energy per output token of the decode benchmark.
+
+    The energy covers only the decode window, from the start of the first
+    decode request to the end of the last one. The token count is the sum
+    of ``actual_output_tokens`` in ``decode``.
+    """
+    tokens = sum(v.get("actual_output_tokens") or 0 for v in decode.values())
+    energy = gpu_energy_wh(samples, t_start, t_end)
+    per_token = round(energy / tokens, 8) if energy is not None and tokens else None
+    return {
+        "window_start_unix": round(t_start, 3),
+        "window_end_unix": round(t_end, 3),
+        "duration_s": round(t_end - t_start, 2),
+        "energy_wh": round(energy, 4) if energy is not None else None,
+        "output_tokens": tokens,
+        "energy_per_output_token_wh": per_token,
+    }
+
+
 def _window_summary(
     samples: list[dict[str, Any]],
-    interval_s: float,
     idle_samples: list[dict[str, Any]],
+    all_samples: list[dict[str, Any]],
+    t_start: float,
+    t_end: float,
 ) -> dict[str, Any]:
     """Compute per-window GPU telemetry.
 
     Args:
-        samples: list of samples collected during the window.
-        interval_s: seconds between samples.
+        samples: samples that the monitor took while the window was open.
         idle_samples: baseline samples recorded before the benchmark started.
+        all_samples: all samples of the run. The energy integral uses them
+            to interpolate the power at the window edges.
+        t_start, t_end: Unix times of the window start and the window stop.
 
-    Returns a dict with avg/peak/min/max power, utilization, memory,
-    energy (Wh), energy-per-token (Wh/token), and incremental energy
-    above idle.
+    Returns a dict with avg/peak power, utilization, memory, energy (Wh),
+    and incremental energy above idle.
     """
     if not samples:
         return {}
@@ -223,20 +298,20 @@ def _window_summary(
     mem_utils = _vals("gpu_mem_util_pct")
     mems = _vals("gpu_mem_used_mib")
 
-    idle_powers = _vals("gpu_power_w") if idle_samples else []
+    idle_powers = [s["gpu_power_w"] for s in idle_samples if s.get("gpu_power_w") is not None]
     idle_base = round(statistics.mean(idle_powers), 2) if idle_powers else None
 
-    duration_h = (len(samples) * interval_s) / 3600.0
-    energy_wh = round(statistics.mean(powers) * duration_h, 6) if powers else None
+    duration_s = t_end - t_start
+    energy_wh = gpu_energy_wh(all_samples, t_start, t_end)
+    if energy_wh is not None:
+        energy_wh = round(energy_wh, 6)
     energy_above_wh = None
-    if idle_base is not None and idle_base < max(powers):
-        energy_above_wh = round(
-            (statistics.mean(powers) - idle_base) * duration_h, 6
-        )
+    if idle_base is not None and energy_wh is not None:
+        energy_above_wh = round(energy_wh - idle_base * duration_s / 3600.0, 6)
 
     result: dict[str, Any] = {
         "num_samples": len(samples),
-        "duration_s": round(len(samples) * interval_s, 2),
+        "duration_s": round(duration_s, 2),
         "gpu_util_avg_pct": round(statistics.mean(utils), 2) if utils else None,
         "gpu_util_peak_pct": round(max(utils), 2) if utils else None,
         "gpu_power_avg_w": round(statistics.mean(powers), 2) if powers else None,
@@ -273,6 +348,7 @@ class GpuMonitor:
         self.has_nvidia_smi = shutil.which("nvidia-smi") is not None
         # Per-length window tracking
         self._windows: dict[str, list[dict[str, Any]]] = {}
+        self._window_starts: dict[str, float] = {}
         self._idle_samples: list[dict[str, Any]] = []
 
     def _parse_row(self, out: str) -> dict[str, Any]:
@@ -304,7 +380,7 @@ class GpuMonitor:
             sample = self._sample_once()
             self.samples.append(sample)
             # Also record in every active window
-            for window in self._windows.values():
+            for window in list(self._windows.values()):
                 window.append(sample)
             self._stop.wait(self.interval_s)
 
@@ -327,16 +403,19 @@ class GpuMonitor:
 
     def start_window(self, name: str) -> None:
         """Start a new telemetry window by name."""
+        self._window_starts[name] = time.time()
         self._windows[name] = []
 
     def stop_window(self, name: str) -> dict[str, Any] | None:
         """Stop the named window and return a summary.  Returns ``None`` if the
         window is empty (e.g. the benchmark loop was short and no sample was
         taken)."""
+        t_end = time.time()
+        t_start = self._window_starts.pop(name, None)
         window = self._windows.pop(name, None)
-        if not window:
+        if not window or t_start is None:
             return None
-        return _window_summary(window, self.interval_s, self._idle_samples)
+        return _window_summary(window, self._idle_samples, list(self.samples), t_start, t_end)
 
     def stop(self) -> dict[str, Any]:
         self._stop.set()
@@ -367,9 +446,10 @@ class GpuMonitor:
             "gpu_mem_util_avg_pct": round(statistics.mean(mem_util), 2) if mem_util else None,
             "gpu_mem_util_peak_pct": round(max(mem_util), 2) if mem_util else None,
         }
-        if powers:
-            duration_h = (len(powers) * self.interval_s) / 3600.0
-            summary["energy_wh"] = round(statistics.mean(powers) * duration_h, 4)
+        energy_wh = gpu_energy_wh(self.samples)
+        if energy_wh is not None:
+            summary["duration_s"] = round(self.samples[-1]["t"] - self.samples[0]["t"], 2)
+            summary["energy_wh"] = round(energy_wh, 4)
         return summary
 
 
@@ -1212,6 +1292,7 @@ def main():
 
     server: VllmServer | None = None
     monitor: GpuMonitor | None = None
+    decode_window: tuple[float, float] | None = None
     summary: dict[str, Any] = {
         "model": model_name,
         "run_dir": repo_relative(run_dir),
@@ -1278,7 +1359,9 @@ def main():
         if not args.skip_decode:
             output_lengths = cfg.get("decode_lengths", [512, 1024, 2048])
             print(f"[core_runner] decode speed benchmark over {output_lengths}")
+            decode_start = time.time()
             decode_results = run_decode_speed(client, output_lengths)
+            decode_window = (decode_start, time.time())
             save_json(run_dir / "decode.json", decode_results)
             summary["decode"] = decode_results
 
@@ -1449,16 +1532,9 @@ def main():
             print("[core_runner] stopping GPU monitor")
             gpu_summary = monitor.stop()
             summary["gpu"] = gpu_summary
-
-            total_output_tokens = 0
-            if "decode" in summary:
-                total_output_tokens += sum(
-                    v["actual_output_tokens"] for v in summary["decode"].values()
-                    if v.get("actual_output_tokens")
-                )
-            if total_output_tokens and gpu_summary.get("energy_wh") is not None:
-                summary["energy_per_token_wh"] = round(
-                    gpu_summary["energy_wh"] / total_output_tokens, 6
+            if decode_window is not None and "decode" in summary:
+                summary["decode_energy"] = decode_energy_summary(
+                    monitor.samples, summary["decode"], *decode_window
                 )
 
         if server is not None:

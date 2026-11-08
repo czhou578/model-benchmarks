@@ -75,7 +75,7 @@ The docstring of core_runner.py mentions `register_benchmark()`. The code does n
 
 | Source | What `dashboard.py` reads |
 |---|---|
-| `summary.json` | `model`, `status`, `error`, `latency`, `deep_context`, `ttft_breakdown`, `decode`, `concurrency`, `reasoning`, `tool_calling`, `spec_comparison`, `gpu`, `energy_per_token_wh` |
+| `summary.json` | `model`, `status`, `error`, `latency`, `deep_context`, `ttft_breakdown`, `decode`, `concurrency`, `reasoning`, `tool_calling`, `spec_comparison`, `gpu`, `decode_energy` |
 | `environment.json` | `gpu_name`, `vllm_version`, `torch_version`, `driver_version` |
 | `resolved_server.json` | `command` |
 | `tool_calling.json` | `category_scores`, `failure_modes` |
