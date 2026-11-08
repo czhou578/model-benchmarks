@@ -55,6 +55,8 @@ VS Code forwards the port and opens the page in your browser. Reload the page af
 
 The memory headroom chart needs `memory_samples.csv` from `memory_guard.py`. See [dgx-spark.md](dgx-spark.md).
 
+The two tool-calling charts leave out runs with the `lite` task set. A lite composite is at most 3 of 6, so it is not comparable with a full run. See [tool-calling.md](tool-calling.md). The card and the "All runs" table mark a lite run. The page reads the task set from `config.task_set` in `tool_calling.json`. Without that file, the page treats the run as full.
+
 A card can show these badges:
 
 | Badge | Meaning |

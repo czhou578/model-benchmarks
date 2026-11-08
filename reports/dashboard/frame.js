@@ -98,7 +98,7 @@
             isNum(decodeMean(r)) ? fmt(decodeMean(r), 1) + " tok/s" : "–",
             fmtMs(at(r.latency, 2048, "ttft_median_ms")),
             best ? fmt(best.throughput, 1) + " @" + best.x : "–",
-            tc ? fmt(tc.composite, 2) : "–",
+            tc ? fmt(tc.composite, 2) + (tc.task_set === "lite" ? " (lite)" : "") : "–",
             isNum(r.gpu.power_avg_w) ? fmt(r.gpu.power_avg_w, 1) + " W" : "–",
             isNum(r.gpu.energy_wh) ? fmt(r.gpu.energy_wh, 1) + " Wh" : "–",
             r.memory ? fmt(r.memory.min_available_gib, 1) + " GiB" : "–",

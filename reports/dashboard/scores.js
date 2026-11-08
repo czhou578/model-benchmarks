@@ -1,4 +1,6 @@
   // Score heatmaps, the MTP comparison, and the server-side TTFT split.
+  // A "lite" tool-calling run scores a subset of tasks, so the heatmaps leave it out.
+  function fullTools(r) { return r.tool_calling && r.tool_calling.task_set !== "lite"; }
   // Score grid: rows are runs, cells are 0..1 on the sequential ramp.
   function heat(plot, cfg) {
     if (!cfg.rows.length) return false;
@@ -73,10 +75,10 @@
   CHARTS.push({
     order: 70,
     id: "tools", title: "Tool-calling scores", wide: true,
-    sub: "Composite components from 85 tasks. Each cell is a 0–100% score; darker means higher.",
+    sub: "Composite components from the 85-task full set. Runs with the lite task set are left out. Each cell is a 0–100% score; darker means higher.",
     note: "Runs before the scoring fix used the old scorer, which scored single-tool tasks as 0%.",
     draw: function (plot, runs) {
-      var rs = runs.filter(function (r) { return r.tool_calling; });
+      var rs = runs.filter(fullTools);
       var extra = [
         { label: "Composite (of 6)", get: function (r) { return fmt(r.tool_calling.composite, 2); } },
         { label: "Correct", get: function (r) { var t = r.tool_calling; return isNum(t.correct) ? t.correct + " / " + t.total : "–"; } },
@@ -92,10 +94,10 @@
   CHARTS.push({
     order: 80,
     id: "categories", title: "Tool-calling pass rate by category", wide: true,
-    sub: "Share of tasks passed in each task category. Needs tool_calling.json in the run folder.",
-    when: function (runs) { return runs.some(function (r) { return r.tool_calling && r.tool_calling.categories; }); },
+    sub: "Share of tasks passed in each task category. Needs tool_calling.json in the run folder. Runs with the lite task set are left out.",
+    when: function (runs) { return runs.some(function (r) { return fullTools(r) && r.tool_calling.categories; }); },
     draw: function (plot, runs) {
-      var rs = runs.filter(function (r) { return r.tool_calling && r.tool_calling.categories; });
+      var rs = runs.filter(function (r) { return fullTools(r) && r.tool_calling.categories; });
       var names = [];
       rs.forEach(function (r) { Object.keys(r.tool_calling.categories).forEach(function (n) { if (names.indexOf(n) < 0) names.push(n); }); });
       names.sort(function (a, b) { return (a === "single_tool") - (b === "single_tool") || a.localeCompare(b); });
