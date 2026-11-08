@@ -1,0 +1,58 @@
+{
+  "per_prompt": [
+    {
+      "thinking_tokens": 61,
+      "answer_tokens": 96,
+      "reasoning_text_preview": "We need answer simple math. Need provide reasoning. Compute speed mph = distance/time hours. 45 min = 0.75 h. 60 / 0.75 = 80 mph",
+      "answer_text_preview": "\n\nThe train\u2019s speed is **80 mph**.\n\nReasoning:\n\n- Speed = distance \u00f7 time\n- The time is 45 minutes, which is \\(45/60 = 0.75\\) ho",
+      "ratio_thinking_to_answer": 0.635,
+      "prompt_preview": "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show"
+    },
+    {
+      "thinking_tokens": 69,
+      "answer_tokens": 91,
+      "reasoning_text_preview": "We need answer simple riddle. Need final. Need explain step by step. \"all but 9 die\" means 9 remain alive. So 9 left. Need maybe",
+      "answer_text_preview": "\n\nThe farmer has **9 sheep left**.\n\nStep-by-step reasoning:\n\n1. The farmer starts with **17 sheep**.\n2. The phrase **\u201call but 9 ",
+      "ratio_thinking_to_answer": 0.758,
+      "prompt_preview": "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning "
+    },
+    {
+      "thinking_tokens": 60,
+      "answer_tokens": 52,
+      "reasoning_text_preview": "We need answer simple math. Need final. Compute speed mph: 60 miles in 45 minutes = 0.75 hours. 60 / 0.75 = 80 mph. Could also 6",
+      "answer_text_preview": "\n\nThe train\u2019s speed is:\n\n\\[\n60 \\text{ miles} \\div 45 \\text{ minutes} \\times 60 \\text{ minutes/hour} = 80 \\text{ mph}\n\\]\n\n**Answe",
+      "ratio_thinking_to_answer": 1.154,
+      "prompt_preview": "<antThinking>\nI'll work through this problem step by step.\n</antThinking>\nSolve:"
+    },
+    {
+      "thinking_tokens": 51,
+      "answer_tokens": 6,
+      "reasoning_text_preview": "We need answer simple riddle. User: \"A farmer has 17 sheep, all but 9 die. How many are left?\" Need answer likely 9. Need maybe ",
+      "answer_text_preview": "\n\n9 sheep are left.",
+      "ratio_thinking_to_answer": 8.5,
+      "prompt_preview": "<antThinking>\nLet me think through this carefully.\n</antThinking>\nA farmer has 1"
+    },
+    {
+      "thinking_tokens": 84,
+      "answer_tokens": 261,
+      "reasoning_text_preview": "We need answer user's probability question. Need produce final with steps. Simple: 3 red, 5 blue total 8. Draw two without repla",
+      "answer_text_preview": "\n\nThere are **8 marbles total**: 3 red and 5 blue.\n\nWe want the probability that **both marbles drawn are blue**, without replac",
+      "ratio_thinking_to_answer": 0.322,
+      "prompt_preview": "<antThinking>\nLet me break this down systematically.\n</antThinking>\nA bag contai"
+    },
+    {
+      "thinking_tokens": 993,
+      "answer_tokens": 0,
+      "reasoning_text_preview": "We need answer user: \"Write a Python function that finds the longest palindromic substring in a given string. Explain your algor",
+      "answer_text_preview": "",
+      "ratio_thinking_to_answer": null,
+      "prompt_preview": "<antThinking>\nI need to analyze this problem step by step.\n</antThinking>\nWrite "
+    }
+  ],
+  "thinking_tokens_avg": 219.7,
+  "thinking_tokens_max": 993,
+  "thinking_tokens_median": 65.0,
+  "answer_tokens_avg": 84.3,
+  "answer_tokens_max": 261,
+  "answer_tokens_median": 71.5
+}

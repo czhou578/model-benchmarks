@@ -1,0 +1,9 @@
+{
+  "floor_gib": 8.0,
+  "warn_gib": 16.0,
+  "interval_s": 5.0,
+  "start_available_gib": 115.4,
+  "min_available_gib": 45.25,
+  "stopped_for_memory": false,
+  "return_code": 0
+}

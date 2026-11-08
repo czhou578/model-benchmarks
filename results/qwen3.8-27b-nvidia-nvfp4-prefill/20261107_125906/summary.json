@@ -1,0 +1,79 @@
+{
+  "model": "qwen3.8-27b-nvidia-nvfp4-prefill",
+  "run_dir": "results/qwen3.8-27b-nvidia-nvfp4-prefill/20261107_125906",
+  "server_mode": "managed",
+  "status": "completed",
+  "prefill_scaling": {
+    "512": {
+      "status": "success",
+      "n_success": 5
+    },
+    "2048": {
+      "status": "success",
+      "n_success": 5
+    },
+    "8192": {
+      "status": "success",
+      "n_success": 5
+    }
+  },
+  "flops_analysis": {
+    "status": "unsupported",
+    "model": "unknown"
+  },
+  "tool_calling": {
+    "composite_score": 2.625,
+    "composite_components": {
+      "tool_accuracy": 0.875,
+      "param_completeness": 0.875,
+      "param_correctness": 0.875,
+      "multi_tool": 0.0,
+      "schema_compliance": 0.0,
+      "refusal": 0.0
+    },
+    "total_tasks": 8,
+    "total_correct": 7,
+    "categories": [
+      "calculate_basic",
+      "currency_basic",
+      "search_basic",
+      "search_params",
+      "stock_basic",
+      "ticket_basic",
+      "weather_basic",
+      "weather_enum",
+      "single_tool"
+    ],
+    "failure_modes": {
+      "wrong_tool_selected": 0,
+      "no_tool_call": 1,
+      "truncated_output": 0,
+      "missing_required_param": 0,
+      "invalid_enum_value": 0,
+      "wrong_param_type": 0,
+      "incorrect_refusal": 0,
+      "unnecessary_tool_call": 0,
+      "request_failed": 0,
+      "wrong_tool_sequence": 0,
+      "data_flow_error": 0,
+      "wrong_turn_count": 0,
+      "hallucinated_param_value": 0,
+      "schema_constraint_violation": 0,
+      "error_no_retry": 0,
+      "error_retry_invalid": 0
+    }
+  },
+  "gpu": {
+    "samples_csv": "results/qwen3.8-27b-nvidia-nvfp4-prefill/20261107_125906/gpu_samples.csv",
+    "num_samples": 104,
+    "gpu_util_avg_pct": 77.47,
+    "gpu_util_peak_pct": 96.0,
+    "gpu_power_avg_w": 43.17,
+    "gpu_power_peak_w": 76.41,
+    "gpu_mem_used_avg_mib": null,
+    "gpu_mem_used_peak_mib": null,
+    "gpu_mem_util_avg_pct": 0.0,
+    "gpu_mem_util_peak_pct": 0.0,
+    "energy_wh": 1.2471
+  }
+}

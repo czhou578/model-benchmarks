@@ -1,0 +1,296 @@
+{
+  "config": {
+    "benchmark_version": "1.0",
+    "task_file": "datasets/tool_calling_tasks.yaml",
+    "task_set": "lite",
+    "max_tokens": 4096,
+    "temperature": 0.0,
+    "chat_template_kwargs": null,
+    "start_time": "2026-11-07T21:01:34.950216+00:00",
+    "tool_definitions_count": 6,
+    "end_time": "2026-11-07T21:02:42.475557+00:00"
+  },
+  "total_tasks": 8,
+  "total_correct": 7,
+  "composite_score": 2.625,
+  "composite_components": {
+    "tool_accuracy": 0.875,
+    "param_completeness": 0.875,
+    "param_correctness": 0.875,
+    "multi_tool": 0.0,
+    "schema_compliance": 0.0,
+    "refusal": 0.0
+  },
+  "category_scores": {
+    "calculate_basic": {
+      "pass_count": 0,
+      "total": 1,
+      "pass_rate": 0.0,
+      "tool_accuracy": 0.0,
+      "param_completeness_avg": 0.0,
+      "param_correctness_avg": 0.0,
+      "composite_avg": 0.0
+    },
+    "currency_basic": {
+      "pass_count": 1,
+      "total": 1,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "search_basic": {
+      "pass_count": 1,
+      "total": 1,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "search_params": {
+      "pass_count": 1,
+      "total": 1,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "stock_basic": {
+      "pass_count": 1,
+      "total": 1,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "ticket_basic": {
+      "pass_count": 1,
+      "total": 1,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "weather_basic": {
+      "pass_count": 1,
+      "total": 1,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "weather_enum": {
+      "pass_count": 1,
+      "total": 1,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "single_tool": {
+      "pass_count": 7,
+      "total": 8,
+      "pass_rate": 0.875,
+      "tool_accuracy": 0.875,
+      "param_completeness_avg": 0.875,
+      "param_correctness_avg": 0.875,
+      "composite_avg": 0.875,
+      "source_categories": [
+        "calculate_basic",
+        "currency_basic",
+        "search_basic",
+        "search_params",
+        "stock_basic",
+        "ticket_basic",
+        "weather_basic",
+        "weather_enum"
+      ]
+    }
+  },
+  "per_task": [
+    {
+      "task_id": "search_tech_news",
+      "category": "search_basic",
+      "prompt": "Find me the latest news about AI chip startups",
+      "expected_tool": "search",
+      "actual_tool": "search",
+      "tool_call_id": "chatcmpl-tool-93ea8ba309f8aa0e",
+      "actual_params": {
+        "query": "latest news AI chip startups 2025",
+        "max_results": 8
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 70
+    },
+    {
+      "task_id": "search_specific_params",
+      "category": "search_params",
+      "prompt": "Search for 'quantum computing breakthrough' with only 3 results",
+      "expected_tool": "search",
+      "actual_tool": "search",
+      "tool_call_id": "chatcmpl-tool-80a02b2550a01e41",
+      "actual_params": {
+        "query": "quantum computing breakthrough",
+        "max_results": 3
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 68
+    },
+    {
+      "task_id": "weather_default_unit",
+      "category": "weather_basic",
+      "prompt": "Tell me the weather in Sydney",
+      "expected_tool": "get_weather",
+      "actual_tool": "get_weather",
+      "tool_call_id": "chatcmpl-tool-8db291546f2cd487",
+      "actual_params": {
+        "location": "Sydney"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 48
+    },
+    {
+      "task_id": "weather_tokyo_celsius",
+      "category": "weather_enum",
+      "prompt": "How hot is Tokyo right now?",
+      "expected_tool": "get_weather",
+      "actual_tool": "get_weather",
+      "tool_call_id": "chatcmpl-tool-a85fb821695de64b",
+      "actual_params": {
+        "location": "Tokyo",
+        "unit": "celsius"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 62
+    },
+    {
+      "task_id": "currency_usd_jpy",
+      "category": "currency_basic",
+      "prompt": "Convert 1000 USD to Japanese Yen",
+      "expected_tool": "convert_currency",
+      "actual_tool": "convert_currency",
+      "tool_call_id": "chatcmpl-tool-9d63148ee20d58a6",
+      "actual_params": {
+        "amount": 1000,
+        "from_currency": "USD",
+        "to_currency": "JPY"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 83
+    },
+    {
+      "task_id": "stock_nvda",
+      "category": "stock_basic",
+      "prompt": "What's the current price of NVIDIA stock?",
+      "expected_tool": "get_stock_price",
+      "actual_tool": "get_stock_price",
+      "tool_call_id": "chatcmpl-tool-8df1c51ebd1f6db9",
+      "actual_params": {
+        "symbol": "NVDA"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 57
+    },
+    {
+      "task_id": "calc_simple",
+      "category": "calculate_basic",
+      "prompt": "What is 150 multiplied by 1.2?",
+      "expected_tool": "calculate",
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 0.0,
+      "params_valid": false,
+      "composite_score": 0.0,
+      "details": "Expected tool=calculate, got no tool",
+      "finish_reason": "stop",
+      "completion_tokens": 147
+    },
+    {
+      "task_id": "ticket_simple",
+      "category": "ticket_basic",
+      "prompt": "Create a P2 bug ticket titled 'Login page broken on mobile'",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-8c30bb564eb185b7",
+      "actual_params": {
+        "title": "Login page broken on mobile",
+        "priority": "p2",
+        "labels": [
+          "bug"
+        ]
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 202
+    }
+  ],
+  "failure_modes": {
+    "wrong_tool_selected": 0,
+    "no_tool_call": 1,
+    "truncated_output": 0,
+    "missing_required_param": 0,
+    "invalid_enum_value": 0,
+    "wrong_param_type": 0,
+    "incorrect_refusal": 0,
+    "unnecessary_tool_call": 0,
+    "request_failed": 0,
+    "wrong_tool_sequence": 0,
+    "data_flow_error": 0,
+    "wrong_turn_count": 0,
+    "hallucinated_param_value": 0,
+    "schema_constraint_violation": 0,
+    "error_no_retry": 0,
+    "error_retry_invalid": 0
+  }
+}

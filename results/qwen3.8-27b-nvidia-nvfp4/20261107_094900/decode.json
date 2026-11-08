@@ -1,0 +1,50 @@
+{
+  "512": {
+    "requested_output_tokens": 512,
+    "actual_output_tokens": 512,
+    "output_tokens_exact": true,
+    "output_truncated": false,
+    "ttft_s": 0.1393,
+    "decode_time_s": 42.036,
+    "tok_per_sec_avg": 12.18,
+    "tok_per_sec_peak": 12.6,
+    "tok_per_sec_min": 11.31,
+    "tok_per_sec_median": 12.21,
+    "output_text_preview": "We need to respond to user: \"You are a creative writer. Write a detailed, multi-paragraph story about the discovery of an ancient underwater civilization. Describe the ocean environment, the architecture of their cities, their technology, their beliefs and customs, and what happened to them. Now add more details about this civilization. Describe how they interacted with marine life, their conflicts with surface dwellers, and their relationship with deep sea creatures. Be creative and specific. Continue with\n  [truncated, total length: 2518 chars]",
+    "reasoning_tokens": 507,
+    "answer_tokens": 0,
+    "reasoning_ratio": null
+  },
+  "1024": {
+    "requested_output_tokens": 1024,
+    "actual_output_tokens": 1024,
+    "output_tokens_exact": true,
+    "output_truncated": false,
+    "ttft_s": 0.1616,
+    "decode_time_s": 84.095,
+    "tok_per_sec_avg": 12.18,
+    "tok_per_sec_peak": 12.52,
+    "tok_per_sec_min": 11.35,
+    "tok_per_sec_median": 12.22,
+    "output_text_preview": "We need to respond to user: \"You are a creative writer. Write a detailed, multi-paragraph story about the discovery of an ancient underwater civilization. Describe the ocean environment, the architecture of their cities, their technology, their beliefs and customs, and what happened to them. Now add more details about this civilization. Describe how they interacted with marine life, their conflicts with surface dwellers, and their relationship with deep sea creatures. Be creative and specific. Continue with\n  [truncated, total length: 4622 chars]",
+    "reasoning_tokens": 1006,
+    "answer_tokens": 0,
+    "reasoning_ratio": null
+  },
+  "2048": {
+    "requested_output_tokens": 2048,
+    "actual_output_tokens": 2048,
+    "output_tokens_exact": true,
+    "output_truncated": false,
+    "ttft_s": 0.1369,
+    "decode_time_s": 168.586,
+    "tok_per_sec_avg": 12.15,
+    "tok_per_sec_peak": 12.56,
+    "tok_per_sec_min": 11.16,
+    "tok_per_sec_median": 12.19,
+    "output_text_preview": "We need to respond to user: \"You are a creative writer. Write a detailed, multi-paragraph story about the discovery of an ancient underwater civilization. Describe the ocean environment, the architecture of their cities, their technology, their beliefs and customs, and what happened to them. Now add more details about this civilization. Describe how they interacted with marine life, their conflicts with surface dwellers, and their relationship with deep sea creatures. Be creative and specific. Continue with\n  [truncated, total length: 8589 chars]",
+    "reasoning_tokens": 1985,
+    "answer_tokens": 0,
+    "reasoning_ratio": null
+  }
+}
