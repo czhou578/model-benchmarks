@@ -83,8 +83,8 @@ The next table gives the default parameters in the code. A model config can chan
 CAUTION: The spec comparison runs last. Without managed mode or `speculative_config`, it raises `ValueError` after all other benchmarks, and the run status becomes `failed`.
 
 1. `step_spec_comparison` stops the main server and writes `resolved_server.json` again.
-2. It starts vLLM with `server.command` plus `--speculative-config <speculative_config>`. It waits for readiness, runs `run_decode_speed()` over `decode_lengths`, and stops the server. Output: `vllm_spec_enabled.log`, `resolved_server_spec_enabled.json`, `spec_enabled.json`.
-3. It does the same with `server.command` only. Output: `vllm_spec_disabled.log`, `resolved_server_spec_disabled.json`, `spec_disabled.json`.
+2. It removes the speculative decoding flags from `server.command`. It starts vLLM with that command plus `--speculative-config <speculative_config>`. It waits for readiness, runs `run_decode_speed()` over `decode_lengths`, and stops the server. Output: `vllm_spec_enabled.log`, `resolved_server_spec_enabled.json`, `spec_enabled.json`.
+3. It does the same with the command without speculative decoding flags. Output: `vllm_spec_disabled.log`, `resolved_server_spec_disabled.json`, `spec_disabled.json`.
 4. `compare_spec_decode_results()` compares `tok_per_sec_avg` and `ttft_s` for each length. Output: `spec_comparison.json`.
 
 The GPU monitor runs during both variants. Their samples include the two model loads.

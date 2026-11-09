@@ -284,6 +284,7 @@ Top-level fields: `config`, `total_tasks`, `total_correct`, `composite_score` (0
 | Field | Unit | Meaning |
 |---|---|---|
 | `config.output_lengths` | tokens | `decode_lengths` of the model config. |
+| `config.removed_server_flags` | | Speculative decoding arguments that the runner removed from `server.command`. `[]` when there were none. Old runs have no field. |
 | `spec_enabled`, `spec_disabled` | | Copies of `spec_enabled.json` and `spec_disabled.json`. |
 | `delta.<length>.tok_s_improvement_pct` | % | (enabled − disabled) / disabled × 100 of `tok_per_sec_avg`. |
 | `delta.<length>.ttft_change_pct` | % | The same formula for `ttft_s`. |

@@ -113,15 +113,15 @@ The runner does not validate keys. It ignores an unknown key, so a misspelled ke
 | `tool_calling_chat_template_kwargs` | map | none | no | Sent as `chat_template_kwargs` in each request. | tool calling |
 | `tool_calling_request_timeout_s` | float | 600 | no | Read timeout of each request, in seconds. 4096 tokens at 12.3 tok/s take about 330 s, so 120 s was too short. | tool calling |
 | `tool_calling_repeats` | int | 1 | no | Number of passes over the task set. With more than 1, `tool_calling.json` adds the mean and the spread of the composite and the pass count. | tool calling |
-| `speculative_config` | JSON string | none | for `--compare-spec` | Value of `--speculative-config` for the spec-enabled server. | `--compare-spec` |
+| `speculative_config` | JSON string or map | none | for `--compare-spec` | Value of `--speculative-config` for the spec-enabled server. | `--compare-spec` |
 
 Notes:
 
 - `resolved_server.json` replaces the value of each secret-like `server.environment` variable with `<redacted>` (`is_secret_name` in `vllm_server.py`). A name is secret-like when it contains `SECRET` or `PASSWORD`. It is also secret-like when it is, or ends in `_` plus, one of `TOKEN`, `KEY`, `APIKEY`, `KEY_ID`, `PASS`, `PASSWD`, `CREDENTIAL`, `CREDENTIALS`. Thus `HF_TOKEN` and `OPENAI_API_KEY` show `<redacted>`, and `VLLM_USE_FASTOKENS` shows its value.
 - WARNING: The rule does not find every secret. Do not put a secret in a variable with another name, because `resolved_server.json` then shows it.
 - The tool-calling benchmark always uses `/v1/chat/completions`. It ignores `endpoint.chat`.
-- Write `speculative_config` as a JSON string in single quotes. The runner passes `str(value)` to vLLM (`step_spec_comparison` in core_runner.py). A YAML mapping becomes a Python repr, which is not JSON.
-- Keep `--speculative-config` out of `server.command` when you use `--compare-spec`. The runner adds the flag for the enabled variant. It does not remove the flag for the disabled variant.
+- Write `speculative_config` as a JSON string in single quotes, or as a YAML map. The runner sends a map as JSON (`json.dumps`) and a string as it is (`speculative_config_arg` in core_runner.py).
+- With `--compare-spec`, the runner removes the speculative decoding flags of `server.command` from both variants (`strip_spec_flags`). These flags are `--speculative-config`, `-sc`, `--speculative-config.<key>`, `--spec-method`, `--spec-model`, and `--spec-tokens`, each with its value. The enabled variant then adds `--speculative-config` with `speculative_config`. The runner prints a warning, and `spec_comparison.json` lists the removed arguments in `config.removed_server_flags`.
 - The FLOP analysis looks for a model reference in this order: `local_model_path`, `model_path`, `model_id`, `endpoint.model_name`, then the argument after `serve` in `server.command` (`_model_reference`).
 - Some benchmark values have no key, for example the `max_tokens` of the latency requests. [methodology.md](methodology.md) lists them.
 
