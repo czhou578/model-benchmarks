@@ -8,7 +8,8 @@ from typing import Any
 import pytest
 
 import core_runner
-from core_runner import GenerationResult, ModelClient, _parse_server_metrics
+from core_runner import ModelClient
+from harness.client import GenerationResult, _parse_server_metrics
 
 
 class _FakeResponse:

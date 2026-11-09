@@ -9,7 +9,8 @@ import pytest
 import requests
 
 import core_runner
-from core_runner import GenerationResult, ModelClient, ServerHTTPError
+from core_runner import ModelClient
+from harness.client import MAX_ERROR_BODY_CHARS, GenerationResult, ServerHTTPError
 
 
 class _Resp:
@@ -69,7 +70,7 @@ def test_error_body_is_truncated(monkeypatch):
     with pytest.raises(ServerHTTPError) as info:
         client.generate("hi")
 
-    assert len(info.value.body) == core_runner.MAX_ERROR_BODY_CHARS
+    assert len(info.value.body) == MAX_ERROR_BODY_CHARS
 
 
 def test_cache_salt_fallback_when_server_rejects_field(monkeypatch):
