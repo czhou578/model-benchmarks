@@ -1,4 +1,4 @@
-"""TTFT Breakdown benchmark — Phase 1.3 of the upgrade roadmap.
+"""TTFT Breakdown benchmark (Phase 1, item 3 of docs/design/benchmark-upgrade-plan.md).
 
 Splits client-side TTFT (wall-clock time to first token) into:
   1. Scheduler / queue delay        (server-side queue_time_ms)
@@ -42,7 +42,7 @@ class TtftRequestResult:
     # Token counts
     prompt_tokens: int
     output_tokens: int
-    # Client-side wall-clock (ms) — None when request failed
+    # Client-side wall-clock (ms) — 0.0 when the request failed
     ttft_ms: float | None
     total_time_ms: float | None
     # Server-side metrics (s) — None when the server does not report them

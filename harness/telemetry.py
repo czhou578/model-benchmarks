@@ -1,4 +1,4 @@
-"""GPU telemetry: the 1 Hz nvidia-smi sampler, energy, and per-window summaries."""
+"""GPU telemetry: the nvidia-smi sampler, energy, and per-window summaries."""
 
 from __future__ import annotations
 
@@ -146,7 +146,10 @@ def _window_summary(
 
 
 class GpuMonitor:
-    """Background thread sampling GPU memory + power draw once per second."""
+    """Background thread that samples GPU utilization, memory, and power.
+
+    It waits *interval_s* seconds (default 1) after each nvidia-smi call.
+    """
 
     FIELDS = "utilization.gpu,utilization.memory,memory.used,memory.total,power.draw"
     # Keys that map to the CSV fields above
@@ -210,7 +213,7 @@ class GpuMonitor:
         self._idle_samples = []
 
     def record_idle(self) -> None:
-        """Capture one sample into the idle baseline (caller must hold lock or schedule)."""
+        """Take one nvidia-smi sample now and add it to the idle baseline."""
         sample = self._sample_once()
         self._idle_samples.append(sample)
 

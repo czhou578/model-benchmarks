@@ -75,6 +75,10 @@ prompt_lengths: [32, 128, 512, 2048, 8192, 16384]
 latency_repeats: 10
 decode_lengths: [512, 1024, 2048]
 # Same prompts as the Qwen3.6 configs, so the reasoning numbers stay comparable.
+# Prompts 3 to 6 start with an <antThinking> block. Known limit: Qwen3 does not
+# use this tag, so the block is plain prompt text. It does not turn reasoning
+# on or off. Qwen3 thinks by default, and the qwen3 reasoning parser splits
+# its <think> output.
 reasoning_prompts:
   - "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show your reasoning."
   - "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning step by step."

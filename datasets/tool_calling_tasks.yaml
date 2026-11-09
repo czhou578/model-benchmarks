@@ -1,5 +1,14 @@
-# Tool Calling Benchmark — Phase 1: Single-Tool Invocation
-# ~20 tasks covering the 8 tool types with basic + edge prompts.
+# Tool-calling benchmark tasks: 85 tasks in 16 categories, with 8 tools
+# (search, get_weather, convert_currency, get_stock_price, calculate,
+# create_ticket, send_email, schedule_meeting).
+#
+# The file has four sections:
+#   - Phase 1, single-tool invocation: 32 tasks. 21 single-tool tasks in 11
+#     categories, plus 9 ambiguous and 2 refusal tasks.
+#   - Phase 2, multi-tool chaining: 16 tasks (multi_tool).
+#   - Phase 3, schema compliance: 20 tasks (schema_compliance).
+#   - Phase 3, error recovery: 17 tasks (error_recovery).
+# docs/tool-calling.md describes the scoring.
 version: "1.0"
 
 tasks:
