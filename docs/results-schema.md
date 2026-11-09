@@ -19,12 +19,14 @@ One run writes one run dir: `<results-dir>/<name>/<YYYYMMDD_HHMMSS>/`. [model-co
 | `prefill_scaling.json` | `run_prefill_scaling` | without `--skip-prefill` |
 | `flops_analysis.json` | `run_flops_analysis` | always |
 | `tool_calling.json` | `run_tool_calling_benchmark` | when the benchmark ends without an error |
-| `spec_enabled.json`, `spec_disabled.json`, `spec_comparison.json` | `main`, `compare_spec_decode_results` | with `--compare-spec` |
+| `spec_enabled.json`, `spec_disabled.json`, `spec_comparison.json` | `step_spec_comparison`, `compare_spec_decode_results` | with `--compare-spec` |
 | `resolved_server_spec_enabled.json`, `resolved_server_spec_disabled.json` | `VllmServer.save_metadata` | with `--compare-spec` |
 | `vllm_spec_enabled.log`, `vllm_spec_disabled.log` | `VllmServer.start` | with `--compare-spec` |
 | `gpu_samples.csv` | `GpuMonitor.stop` | when the monitor took at least one sample |
 | `summary.json` | `main`, in its `finally` block | always, also after a failure |
 | `memory_samples.csv`, `memory_guard.json` | `memory_guard.py` | only when `memory_guard.py` wraps the run |
+
+The published run dirs in `results/` do not include `gpu_samples.csv`, `vllm.log`, or `vllm_spec_*.log`. `.gitignore` keeps these files out of the repo.
 
 ## Units and known ambiguities
 
@@ -44,6 +46,7 @@ Read these points before you compare numbers.
   - In a GPU window block, `idle_base_power_w` comes from the window samples, not from the idle samples. It equals `gpu_power_avg_w`, and `energy_above_idle_wh` is near 0.
   - In a prefill window, `energy_per_input_token_wh` is the window energy divided by the tokens of one prompt. The window holds the warm-up request and all repetitions. Newer runs write `window_energy_per_input_token_wh` instead.
 - Token counts come from the server `usage` block. Without it, the client estimates them with tiktoken `cl100k_base`, or with 0.75 tokens per word (`count_tokens`). An `*_exact` flag tells which source applies.
+  - In chat mode, the request body has no `prompt` field. So without `usage`, the prompt token estimate is 0, or 1 without tiktoken.
 
 ## summary.json
 
@@ -87,7 +90,7 @@ GPU data (`GpuMonitor.stop` for the whole run, `_window_summary` for one window)
 | `idle_base_power_w` | W | Window only, after an idle baseline. Mean power of the idle samples. |
 | `energy_above_idle_wh` | Wh | Window only. `energy_wh` − `idle_base_power_w` × `duration_s`. It can be negative. |
 | `window_input_tokens` | tokens | Prefill windows only. Input tokens of the warm-up request and of all successful repetitions. |
-| `window_energy_per_input_token_wh` | Wh/token | Prefill windows only. `energy_wh` / `window_input_tokens`. The energy also includes the pauses between the requests. |
+| `window_energy_per_input_token_wh` | Wh/token | Prefill windows only. `energy_wh` / `window_input_tokens`. The energy also includes the pauses between the requests and the prompt calibration (`/tokenize` requests) before them. |
 | `energy_per_input_token_wh` | Wh/token | Old runs only. See the ambiguities above. |
 
 ## environment.json
@@ -214,7 +217,7 @@ Each request uses `max_tokens` 1024. All counts come from `count_tokens`, not fr
 
 ## prefill_scaling.json
 
-`config`: `benchmark_version`, `definition`, `target_lengths`, `cache_isolation_method`, `cache_preflight_supported`, `repetitions`, `max_tokens` (1), `max_output_tokens` (1), `temperature`, `prompt_workload`, `server_cache_settings`, `start_time`, `end_time`. The code writes `server_cache_settings.prefix_caching` as the constant `true`. It does not read the server flag.
+`config`: `benchmark_version`, `definition`, `target_lengths`, `cache_isolation_method`, `cache_preflight_supported`, `repetitions`, `max_tokens` (1), `max_output_tokens` (1), `temperature`, `prompt_workload`, `server_cache_settings`, `start_time`, `end_time`. The code writes `server_cache_settings.prefix_caching` as the constant `true`. It does not read the server flag. So the value is wrong for a run whose config turns prefix caching off, for example the Qwen3.8-27B config with `--no-enable-prefix-caching`.
 
 `per_length.<length>`:
 

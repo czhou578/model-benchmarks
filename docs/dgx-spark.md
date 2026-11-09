@@ -12,7 +12,7 @@ The vLLM server, the harness, and the operating system use the same memory pool.
 
 ## vLLM environment
 
-Install vLLM in its own virtual environment. The model configs target vLLM 0.33.0 in a venv at `~/venvs/vllm033`. This path is only an example. Use your own path in the commands below.
+Install vLLM in its own virtual environment. The model config in `models/` targets vLLM 0.33.0 in a venv at `~/venvs/vllm033`. This path is only an example. Use your own path in the commands below.
 
 1. Make the venv and install vLLM:
 
@@ -28,7 +28,9 @@ Install vLLM in its own virtual environment. The model configs target vLLM 0.33.
 
 The vLLM 0.33.0 wheel for aarch64 uses CUDA 13.0 and torch 2.14.0. Its CUDA arch list includes the `12.0f` family target, which runs on the sm_121 GPU of the GB10. The first server start compiles kernels and can take several minutes.
 
-The published runs use vLLM 0.25.1 in `~/venvs/vllm025`. A gate run of the Qwen3.8-27B suite on 2026-11-07 compared the two versions. vLLM 0.33.0 was equal or faster in decode, MTP decode, TTFT, concurrency throughput, and prefill. Tool calling stayed within the run-to-run noise. The dashboard marks the vLLM version of each run. See [dashboard.md](dashboard.md).
+The published runs of July 2026 and of 2026-11-07 use vLLM 0.25.1 in `~/venvs/vllm025`. The Qwen3.8-27B run of 2026-11-08 uses vLLM 0.33.0. The `vllm_version` field of `environment.json` gives the version of each run. The Qwen3.6 configs in `models/legacy/` are not migrated to vLLM 0.33.0. They ran on 0.25.1 only. See [models/legacy/README.md](../models/legacy/README.md).
+
+A gate run of the Qwen3.8-27B suite on 2026-11-07 compared the two versions. vLLM 0.33.0 was equal or faster in decode, MTP decode, TTFT, concurrency throughput, and prefill. Tool calling stayed within the run-to-run noise. The dashboard marks the vLLM version of each run. See [dashboard.md](dashboard.md).
 
 ## Prefix caching
 
@@ -60,7 +62,9 @@ CAUTION: A run that fills the unified memory can make the host unresponsive. Sta
 2. It samples the memory every `--interval-s` seconds (default 5) into a CSV file.
 3. It logs a warning when `MemAvailable` is below `--warn-gib` (default 16).
 4. It sends SIGTERM to the command when `MemAvailable` stays below `--floor-gib` (default 8). The limit is `--grace-samples` low samples in a row (default 3).
-5. It copies `memory_samples.csv` and `memory_guard.json` into the run dir.
+5. It copies the CSV into the run dir as `memory_samples.csv`. It also writes `memory_guard.json` there.
+
+The guard first writes the CSV to the `--csv` path, which is `memory_samples.csv` in the current folder by default. That file stays there after the copy.
 
 `core_runner.py` handles SIGTERM and stops its managed vLLM server. The guard exits with code 3 when it refuses to start or when it stops the run.
 

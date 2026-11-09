@@ -14,7 +14,7 @@ This page tells how `core_runner.py` takes each measurement. [results-schema.md]
 5. It runs the benchmarks in this order: latency, deep context, TTFT breakdown, decode, reasoning, concurrency, prefill scaling, FLOP analysis, tool calling, speculative decoding comparison.
 6. It stops the GPU monitor and the managed server, and writes `summary.json`.
 
-The readiness request in step 3 is the only warm-up for the whole run. All benchmarks send one request at a time, except the concurrency benchmark.
+The readiness request in step 3 is the only warm-up before the first benchmark. Only the prefill benchmark sends warm-up requests of its own. All benchmarks send one request at a time, except the concurrency benchmark.
 
 ## Client-side TTFT
 
@@ -36,7 +36,7 @@ These values have no model config key.
 | Decode | `build_prompt_of_length(128)` | each `decode_lengths` value | 1 | none | none |
 | Reasoning | `reasoning_prompts` | 1024 | 1 | none | none |
 | Concurrency | `build_distinct_prompts`: a distinct prompt per request, calibrated to 256 tokens | `concurrency_max_tokens` | `concurrency_requests_per_level` | new UUID per request, when the server accepts `cache_salt` | none |
-| Prefill scaling | document text, calibrated to the exact length | 1 | `prefill_repetitions` | new UUID per request | one warm-up request per length, then 0.5 s pauses |
+| Prefill scaling | document text, calibrated to the exact length | 1 | `prefill_repetitions` | new UUID per measured request, `warmup_<n>` for the warm-up | one warm-up request per length, then 0.5 s pauses |
 | Tool calling | the task prompts | `tool_calling_max_tokens` | 1 | new UUID per request | 0.5 s pause between tasks |
 
 All requests use temperature 0, except the concurrency requests, which use `concurrency_temperature`.
@@ -81,6 +81,7 @@ All requests use temperature 0, except the concurrency requests, which use `conc
 - After an out-of-memory error or a lost connection, the benchmark skips all later lengths in the list.
 - Before this benchmark, the runner records an idle GPU baseline of `int(5 / monitor_interval_s)` samples. Only the prefill windows use it.
 - `window_energy_per_input_token_wh` divides the window energy by the input tokens of the warm-up request and of all successful repetitions.
+- The GPU window of a length opens before `prepare_exact_prompt`. So the window energy and `duration_s` also include the prompt calibration, which sends many `/tokenize` requests. `window_input_tokens` does not count the calibration.
 
 ## Concurrency
 

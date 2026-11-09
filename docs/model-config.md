@@ -114,7 +114,7 @@ Notes:
 
 - `resolved_server.json` replaces the value of each `server.environment` variable whose name contains `TOKEN`, `KEY`, `SECRET`, or `PASSWORD` with `<redacted>`.
 - The tool-calling benchmark always uses `/v1/chat/completions`. It ignores `endpoint.chat`.
-- Write `speculative_config` as a JSON string in single quotes. The runner passes `str(value)` to vLLM (the `--compare-spec` block in `main`). A YAML mapping becomes a Python repr, which is not JSON.
+- Write `speculative_config` as a JSON string in single quotes. The runner passes `str(value)` to vLLM (`step_spec_comparison` in core_runner.py). A YAML mapping becomes a Python repr, which is not JSON.
 - Keep `--speculative-config` out of `server.command` when you use `--compare-spec`. The runner adds the flag for the enabled variant. It does not remove the flag for the disabled variant.
 - The FLOP analysis looks for a model reference in this order: `local_model_path`, `model_path`, `model_id`, `endpoint.model_name`, then the argument after `serve` in `server.command` (`_model_reference`).
 - Some benchmark values have no key, for example the `max_tokens` of the latency requests. [methodology.md](methodology.md) lists them.
