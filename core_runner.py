@@ -41,13 +41,16 @@ import shutil
 import time
 import requests
 import yaml
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from benchmarks.concurrency import run_concurrency_test
 from benchmarks.decode import compare_spec_decode_results, run_decode_speed
 from benchmarks.latency import run_deep_context, run_latency_sweep
 from benchmarks.reasoning import run_reasoning_benchmark
+from benchmarks.ttft_breakdown import run_ttft_breakdown
 from harness.client import ModelClient
 from harness.environment import collect_environment
 from harness.paths import ROOT, repo_relative
@@ -137,6 +140,96 @@ def wait_for_endpoint(client: ModelClient, cfg: dict,
     )
 
 
+@dataclass
+class Run:
+    """The state of one run. The benchmark steps read it and add to it."""
+
+    cfg: dict[str, Any]
+    args: argparse.Namespace
+    run_dir: Path
+    summary: dict[str, Any]
+    client: ModelClient | None = None
+    monitor: GpuMonitor | None = None
+    server: VllmServer | None = None
+    # Start and stop time of the decode benchmark, for its energy summary.
+    decode_window: tuple[float, float] | None = None
+
+    def record(self, key: str, result: Any, summary_entry: Any = None) -> None:
+        """Write ``<key>.json`` to the run dir and add *key* to the summary.
+
+        Without *summary_entry*, the summary holds a full copy of *result*.
+        """
+        save_json(self.run_dir / f"{key}.json", result)
+        self.summary[key] = result if summary_entry is None else summary_entry
+
+
+# --------------------------------------------------------------------------- #
+# Benchmark steps. Each step reads its keys from run.cfg, writes one JSON
+# file to the run dir, and adds one entry to the summary.
+# docs/model-config.md lists the keys and their defaults.
+# --------------------------------------------------------------------------- #
+
+DEFAULT_REASONING_PROMPTS = [
+    "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show your reasoning.",
+    "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning step by step.",
+]
+
+
+def step_latency(run: Run) -> None:
+    prompt_lengths = run.cfg.get("prompt_lengths", [32, 128, 512, 2048, 8192, 16384])
+    repeats = run.cfg.get("latency_repeats", 10)
+    print(f"[core_runner] latency sweep over {prompt_lengths} ({repeats} reps each)")
+    run.record("latency", run_latency_sweep(run.client, prompt_lengths, repeats))
+
+
+def step_deep_context(run: Run) -> None:
+    context_lengths = run.cfg["context_lengths"]
+    context_repeats = run.cfg.get("context_repeats", 5)
+    print(f"[core_runner] deep context benchmark over {context_lengths} ({context_repeats} reps each)")
+    results = run_deep_context(run.client, context_lengths, output_tokens=64, repeats=context_repeats)
+    run.record("deep_context", results)
+
+
+def step_ttft_breakdown(run: Run) -> None:
+    ttft_lengths = run.cfg.get("ttft_prompt_lengths", [128, 512, 2048, 8192, 32768])
+    ttft_reps = run.cfg.get("ttft_repetitions", 10)
+    print(f"[core_runner] TTFT breakdown over {ttft_lengths} ({ttft_reps} reps each)")
+    results = run_ttft_breakdown(
+        run.client, prompt_lengths=ttft_lengths, repetitions=ttft_reps, gpu_monitor=run.monitor
+    )
+    run.record("ttft_breakdown", results)
+
+
+def step_decode(run: Run) -> None:
+    output_lengths = run.cfg.get("decode_lengths", [512, 1024, 2048])
+    print(f"[core_runner] decode speed benchmark over {output_lengths}")
+    decode_start = time.time()
+    results = run_decode_speed(run.client, output_lengths)
+    run.decode_window = (decode_start, time.time())
+    run.record("decode", results)
+
+
+def step_reasoning(run: Run) -> None:
+    prompts = run.cfg.get("reasoning_prompts", DEFAULT_REASONING_PROMPTS)
+    print(f"[core_runner] reasoning-token benchmark ({len(prompts)} prompts)")
+    run.record("reasoning", run_reasoning_benchmark(run.client, prompts))
+
+
+def step_concurrency(run: Run) -> None:
+    levels = run.cfg.get("concurrency_levels", [1, 2, 4, 8, 16])
+    requests_per_level = run.cfg.get("concurrency_requests_per_level", 5)
+    max_tokens = run.cfg.get("concurrency_max_tokens", 256)
+    temperature = run.cfg.get("concurrency_temperature", 0.0)
+    print(
+        f"[core_runner] concurrency test: levels={levels} "
+        f"({requests_per_level} reqs/level, {max_tokens} max_tokens, t={temperature})"
+    )
+    results = run_concurrency_test(
+        run.client, levels, requests_per_level, max_tokens=max_tokens, temperature=temperature,
+    )
+    run.record("concurrency", results)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Phase 1 core benchmark runner (simplified)")
     parser.add_argument("--model", required=True, help="Path to model config YAML")
@@ -188,13 +281,13 @@ def main():
 
     server: VllmServer | None = None
     monitor: GpuMonitor | None = None
-    decode_window: tuple[float, float] | None = None
     summary: dict[str, Any] = {
         "model": model_name,
         "run_dir": repo_relative(run_dir),
         "server_mode": server_mode,
         "status": "running",
     }
+    run = Run(cfg=cfg, args=args, run_dir=run_dir, summary=summary)
 
     previous_sigterm_handler = signal.getsignal(signal.SIGTERM)
 
@@ -210,84 +303,26 @@ def main():
             server.start()
             server.save_metadata(run_dir / "resolved_server.json")
 
-        client = make_client(cfg)
+        run.client = client = make_client(cfg)
         print("[core_runner] waiting for model endpoint to be ready...")
         wait_for_endpoint(client, cfg, server)
         print("[core_runner] endpoint ready")
 
-        monitor = GpuMonitor(run_dir, interval_s=cfg.get("monitor_interval_s", 1.0))
+        run.monitor = monitor = GpuMonitor(run_dir, interval_s=cfg.get("monitor_interval_s", 1.0))
         monitor.start()
 
         if not args.skip_latency:
-            prompt_lengths = cfg.get("prompt_lengths", [32, 128, 512, 2048, 8192, 16384])
-            repeats = cfg.get("latency_repeats", 10)
-            print(f"[core_runner] latency sweep over {prompt_lengths} ({repeats} reps each)")
-            latency_results = run_latency_sweep(client, prompt_lengths, repeats)
-            save_json(run_dir / "latency.json", latency_results)
-            summary["latency"] = latency_results
-
-        # A1: Deep context benchmark
-        context_lengths = cfg.get("context_lengths")
-        if context_lengths:
-            context_repeats = cfg.get("context_repeats", 5)
-            print(f"[core_runner] deep context benchmark over {context_lengths} ({context_repeats} reps each)")
-            deep_context_results = run_deep_context(client, context_lengths, output_tokens=64, repeats=context_repeats)
-            save_json(run_dir / "deep_context.json", deep_context_results)
-            summary["deep_context"] = deep_context_results
-
+            step_latency(run)
+        if cfg.get("context_lengths"):
+            step_deep_context(run)
         if not args.skip_ttft:
-            from benchmarks.ttft_breakdown import run_ttft_breakdown
-
-            ttft_lengths = cfg.get(
-                "ttft_prompt_lengths", [128, 512, 2048, 8192, 32768]
-            )
-            ttft_reps = cfg.get("ttft_repetitions", 10)
-            print(
-                f"[core_runner] TTFT breakdown over {ttft_lengths} "
-                f"({ttft_reps} reps each)"
-            )
-            ttft_results = run_ttft_breakdown(
-                client, prompt_lengths=ttft_lengths, repetitions=ttft_reps, gpu_monitor=monitor
-            )
-            save_json(run_dir / "ttft_breakdown.json", ttft_results)
-            summary["ttft_breakdown"] = ttft_results
-
+            step_ttft_breakdown(run)
         if not args.skip_decode:
-            output_lengths = cfg.get("decode_lengths", [512, 1024, 2048])
-            print(f"[core_runner] decode speed benchmark over {output_lengths}")
-            decode_start = time.time()
-            decode_results = run_decode_speed(client, output_lengths)
-            decode_window = (decode_start, time.time())
-            save_json(run_dir / "decode.json", decode_results)
-            summary["decode"] = decode_results
-
+            step_decode(run)
         if not args.skip_reasoning:
-            reasoning_prompts = cfg.get("reasoning_prompts", [
-                "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show your reasoning.",
-                "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning step by step.",
-            ])
-            print(f"[core_runner] reasoning-token benchmark ({len(reasoning_prompts)} prompts)")
-            reasoning_results = run_reasoning_benchmark(client, reasoning_prompts)
-            save_json(run_dir / "reasoning.json", reasoning_results)
-            summary["reasoning"] = reasoning_results
-
+            step_reasoning(run)
         if not args.skip_concurrency:
-            # Lazy import to avoid circular import (core_runner <-> benchmarks.concurrency)
-            from benchmarks.concurrency import run_concurrency_test
-
-            max_tokens = cfg.get("concurrency_max_tokens", 256)
-            temperature = cfg.get("concurrency_temperature", 0.0)
-            print(
-                f"[core_runner] concurrency test: levels={concurrency_levels} "
-                f"({requests_per_level} reqs/level, {max_tokens} max_tokens, "
-                f"t={temperature})"
-            )
-            concurrency_results = run_concurrency_test(
-                client, concurrency_levels, requests_per_level,
-                max_tokens=max_tokens, temperature=temperature,
-            )
-            save_json(run_dir / "concurrency.json", concurrency_results)
-            summary["concurrency"] = concurrency_results
+            step_concurrency(run)
 
         if not args.skip_prefill:
             from benchmarks.prefill import run_prefill_scaling
@@ -437,9 +472,9 @@ def main():
             print("[core_runner] stopping GPU monitor")
             gpu_summary = monitor.stop()
             summary["gpu"] = gpu_summary
-            if decode_window is not None and "decode" in summary:
+            if run.decode_window is not None and "decode" in summary:
                 summary["decode_energy"] = decode_energy_summary(
-                    monitor.samples, summary["decode"], *decode_window
+                    monitor.samples, summary["decode"], *run.decode_window
                 )
 
         if server is not None:
