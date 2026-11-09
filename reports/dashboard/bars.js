@@ -162,7 +162,7 @@
   CHARTS.push({
     order: 50,
     id: "reasoning", title: "Thinking tokens",
-    sub: "Mean reasoning tokens per prompt, capped at 1,024 output tokens.",
+    sub: "Mean reasoning tokens per prompt. The output cap is 1,024 tokens in older runs and 4,096 in newer runs.",
     draw: function (plot, runs, width) {
       var rs = runs.filter(function (r) { return r.reasoning && isNum(r.reasoning.thinking_avg); });
       var ok = hbar(plot, {

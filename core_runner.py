@@ -207,8 +207,11 @@ def step_decode(run: Run) -> None:
 
 def step_reasoning(run: Run) -> None:
     prompts = run.cfg.get("reasoning_prompts", DEFAULT_REASONING_PROMPTS)
-    print(f"[core_runner] reasoning-token benchmark ({len(prompts)} prompts)")
-    run.record("reasoning", run_reasoning_benchmark(run.client, prompts))
+    # 1024 tokens cut the Qwen3.8 palindrome prompt in every run (0 answer
+    # tokens), and two prompts in each Qwen3.6 run.
+    max_tokens = run.cfg.get("reasoning_max_tokens", 4096)
+    print(f"[core_runner] reasoning-token benchmark ({len(prompts)} prompts, max_tokens={max_tokens})")
+    run.record("reasoning", run_reasoning_benchmark(run.client, prompts, max_tokens=max_tokens))
 
 
 def step_concurrency(run: Run) -> None:
