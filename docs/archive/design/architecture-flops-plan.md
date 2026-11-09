@@ -1,5 +1,7 @@
 # Qwen3.6-35B FLOP Counter — Focused Plan
 
+> **Status (checked 2026-11-09): implemented for Qwen3.6-35B-A3B only.** `benchmarks/architecture_flops.py` writes `flops_analysis.json`. It accepts only the Qwen3.6-35B-A3B dimensions, so other models get `estimate_status: unsupported` (for example Qwen3.8-27B). The test file `tests/test_architecture_flops_estimators.py` does not exist, and no test checks the formulas, although the status list below marks these tests as done.
+
 **Model:** `nvidia/Qwen3.6-35B-A3B-NVFP4`
 **Workload:** text-only inference
 **Output:** `flops_analysis.json`

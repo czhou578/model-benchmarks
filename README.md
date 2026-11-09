@@ -153,7 +153,7 @@ The modules in `benchmarks/` import from `harness/` and from other modules in `b
 - [docs/dgx-spark.md](docs/dgx-spark.md): DGX Spark setup and the memory guard.
 - [docs/comparability.md](docs/comparability.md): which published results you can compare, and the noise.
 - [docs/results/](docs/results/): published result write-ups.
-- [docs/design/](docs/design/): design notes from the development of the harness.
+- [docs/archive/design/](docs/archive/design/): archived design notes from the development of the harness, with a status for each note.
 
 ## Contributing
 

@@ -1,5 +1,7 @@
 # Managed vLLM Server Lifecycle Plan
 
+> **Status (checked 2026-11-09): implemented.** `vllm_server.py` holds the `VllmServer` class, and `make_managed_server` in `core_runner.py` makes each managed server. This note uses the future tense, but steps 1 to 5 exist in the code. The focused tests of step 6 do not exist: no file in `tests/` uses `VllmServer`.
+
 ## Goal
 
 Make every benchmark configuration self-contained and reproducible by storing

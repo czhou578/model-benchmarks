@@ -1,4 +1,4 @@
-"""TTFT Breakdown benchmark (Phase 1, item 3 of docs/design/benchmark-upgrade-plan.md).
+"""TTFT Breakdown benchmark (Phase 1, item 3 of docs/archive/design/benchmark-upgrade-plan.md).
 
 Splits client-side TTFT (wall-clock time to first token) into:
   1. Scheduler / queue delay        (server-side queue_time_ms)

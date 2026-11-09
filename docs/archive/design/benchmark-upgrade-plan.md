@@ -1,5 +1,7 @@
 # Benchmark Upgrade Roadmap --- v3
 
+> **Status (checked 2026-11-09): roadmap, partly done.** Items 1 to 5, 7 to 9, and 11 have code. Some "DONE" marks are too strong: no run records the MTP acceptance rate (item 5), deep context measures only TTFT at 32K and 64K (items 1 and 7), the TTFT split has two parts (item 3), and the tool-calling composite has no weights (item 11). Items 6, 10, and 12 and most of Phase 6 are not done. The functions that this note puts in `core_runner.py` are now in `benchmarks/`.
+
 ## Current Strengths
 
 Your suite already measures the fundamentals well:
