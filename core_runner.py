@@ -52,7 +52,7 @@ from harness.client import (
     GenerationResult,
     ServerHTTPError,
     TokenizedPrompt,
-    _parse_server_metrics,
+    stream_generation,
 )
 from harness.environment import collect_environment
 from harness.paths import ROOT, repo_relative
@@ -263,114 +263,9 @@ class ModelClient:
             self.cache_salt_supported = resp.status_code == 200
         return resp.status_code == 200
 
-    def _execute_request(
-        self,
-        url: str,
-        payload: dict,
-    ) -> GenerationResult:
-        """Send one streaming request and return the result.
-
-        Raises ``ServerHTTPError`` on an HTTP error status.
-        """
-        start = time.time()
-        first_token_time = None
-        last_event_time = start
-        per_token_gaps: list[float] = []
-        chunks: list[str] = []
-        usage: Optional[dict] = None
-        server_metrics: dict[str, Any] | None = None
-        cached_tokens: int = 0
-
-        reasoning_chunks: list[str] = []
-        answer_chunks: list[str] = []
-        with requests.post(
-            url, headers=self.headers, json=payload, stream=True, timeout=300
-        ) as resp:
-                if resp.status_code >= 400:
-                    raise ServerHTTPError(resp, url)
-                for raw_line in resp.iter_lines():
-                    line: str = raw_line.decode("utf-8")
-                    if not line or not line.startswith("data:"):
-                        continue
-                    data = line[len("data:"):].strip()
-                    if data == "[DONE]":
-                        break
-                    try:
-                        obj = json.loads(data)
-                    except json.JSONDecodeError:
-                        continue
-
-                    if obj.get("usage"):
-                        usage = obj["usage"]
-
-                    choice = (obj.get("choices") or [{}])[0]
-
-                    # vLLM per-request timing metrics. The server puts a
-                    # ``metrics`` object on the final usage chunk (or on the
-                    # choice) when it runs with --enable-per-request-metrics.
-                    metrics = obj.get("metrics") or choice.get("metrics")
-                    if metrics:
-                        server_metrics = dict(metrics)
-                    delta = choice.get("delta") or {}
-
-                    if self.chat:
-                        reasoning_text: Optional[str] = delta.get("reasoning")
-                        content_text: Optional[str] = delta.get("content")
-                    else:
-                        reasoning_text = None
-                        content_text = choice.get("text")
-
-                    has_text = False
-                    for text_parts in (reasoning_text, content_text):
-                        if text_parts:
-                            has_text = True
-                            break
-
-                    if has_text:
-                        now = time.time()
-                        if first_token_time is None:
-                            first_token_time = now
-                        else:
-                            per_token_gaps.append(now - last_event_time)
-                        last_event_time = now
-
-                    if reasoning_text:
-                        reasoning_chunks.append(reasoning_text)
-                        chunks.append(reasoning_text)
-                    if content_text:
-                        answer_chunks.append(content_text)
-                        chunks.append(content_text)
-
-        end = time.time()
-        output_text = "".join(chunks)
-        parsed_metrics = _parse_server_metrics(server_metrics)
-        # vLLM reports prefix-cache hits under usage.prompt_tokens_details.
-        prompt_details = (usage or {}).get("prompt_tokens_details") or {}
-        if prompt_details.get("cached_tokens") is not None:
-            cached_tokens = int(prompt_details["cached_tokens"])
-
-        exact_prompt = usage.get("prompt_tokens") if usage else None
-        exact_output = usage.get("completion_tokens") if usage else None
-
-        return GenerationResult(
-            prompt_tokens=exact_prompt if exact_prompt is not None else count_tokens(payload.get("prompt", "")),
-            ttft_s=(first_token_time - start) if first_token_time else float("nan"),
-            total_time_s=end - start,
-            output_text=output_text,
-            output_tokens=exact_output if exact_output is not None else count_tokens(output_text),
-            reasoning_text="".join(reasoning_chunks),
-            answer_text="".join(answer_chunks),
-            per_token_times=per_token_gaps,
-            prompt_tokens_exact=exact_prompt is not None,
-            output_tokens_exact=exact_output is not None,
-            cached_tokens=cached_tokens,
-            queue_time_s=parsed_metrics["queue_time_s"],
-            time_to_first_token_s=parsed_metrics["time_to_first_token_s"],
-            prefill_time_s=parsed_metrics["prefill_time_s"],
-            post_queue_time_s=parsed_metrics["post_queue_time_s"],
-            generation_time_s=parsed_metrics["generation_time_s"],
-            server_metrics=server_metrics,
-        )
+    def _execute_request(self, url: str, payload: dict) -> GenerationResult:
+        """Send one streaming request. Raises ``ServerHTTPError`` on an HTTP error status."""
+        return stream_generation(url, self.headers, payload, chat=self.chat)
 
 
 # --------------------------------------------------------------------------- #
