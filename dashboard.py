@@ -158,6 +158,8 @@ def decode_rows(decode: dict[str, Any] | None) -> list[dict[str, Any]]:
             "peak": v.get("tok_per_sec_peak"),
             "min": v.get("tok_per_sec_min"),
             "median": v.get("tok_per_sec_median"),
+            # Old runs have no rate_method. Their peak is in events/s.
+            "rate_method": v.get("rate_method") or "event_gap",
             "ttft_ms": ms(v.get("ttft_s")),
             "output_tokens": v.get("actual_output_tokens"),
         }

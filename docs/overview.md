@@ -54,13 +54,13 @@ The next table gives the default parameters in the code. A model config can chan
 | 1 | Creative text, 32, 128, 512, 2048, 8192, 16384 tokens | 8 | 10 per length | new for each request | none |
 | 2 | Creative text, the `context_lengths` values (no default) | 64 (`deep_context_output_tokens`) | 5 per length | new for each request | none |
 | 3 | `"hello world "` repeated, about 128, 512, 2048, 8192, 32768 tokens | 1 | 10 per length | new for each request | 0.5 s between requests |
-| 4 | Creative text, 128 tokens | 512, 1024, 2048 | 1 per `max_tokens` value | none | none |
+| 4 | Creative text, 128 tokens | 512, 1024, 2048 | 1 per `max_tokens` value | new for each request | none |
 | 5 | Two built-in prompts | 1024 | 1 per prompt | none | none |
 | 6 | A distinct prompt of 256 tokens for each request | 256 | 5 per level, at 1, 2, 4, 8, and 16 workers | new for each request, when the server accepts `cache_salt` | none |
 | 7 | Document text, exactly 512, 2048, 8192 tokens | 1 | 1 warm-up, then 5 per length | new for each request | 5 s idle baseline (`idle_baseline_s`) before the step, 0.5 s between requests |
 | 8 | No timed requests. Estimates at 512, 2048, 8192, 32768 tokens | – | – | – | – |
 | 9 | The task prompts of `datasets/tool_calling_tasks.yaml` (85 tasks) | 4096 | 1 per task | new for each request | 0.5 s between tasks |
-| 10 | As decode (4) | As decode (4) | 1 per length, for each of two servers | none | none |
+| 10 | As decode (4) | As decode (4) | 1 per length, for each of two servers | new for each request | none |
 
 - The Qwen3.8-27B config sets 16 requests per concurrency level, six reasoning prompts, and `context_lengths` of 32768 and 65536.
 - With `tool_calling_task_set: lite`, the tool-calling step runs at most 8 tasks. The read timeout of each tool-calling request is 600 s.
@@ -124,9 +124,9 @@ vLLM can keep a prefix cache. A repeated prompt then skips most of its prefill, 
 
 - `ModelClient.generate()` puts `cache_salt` at the top level of the request body.
 - When the server rejects the field with HTTP 400, the client adds ` salt=<value>` to the prompt text instead.
-- These steps salt each request: latency sweep, deep context, TTFT breakdown, prefill scaling, and tool calling.
+- These steps salt each request: latency sweep, deep context, TTFT breakdown, decode, prefill scaling, tool calling, and the spec comparison.
 - The concurrency step salts each request only when the server accepts `cache_salt`. Else the distinct prompts keep the requests apart.
-- These requests have no salt: the readiness request, decode, reasoning, and the spec comparison. With prefix caching on, their TTFT can show a cache hit.
+- These requests have no salt: the readiness request and reasoning. With prefix caching on, their TTFT can show a cache hit.
 - The prefill warm-up request uses the fixed salt `warmup_<length>`.
 
 The Qwen3.8-27B config also turns prefix caching off with `--no-enable-prefix-caching`. [methodology.md](methodology.md#cache-isolation) gives the details.
