@@ -151,7 +151,10 @@ def test_published_runs_have_an_era() -> None:
             if not r["id"].startswith("qwen3.8-27b-nvidia-nvfp4-vllm033-gate/")}
     assert eras["qwen3.8-27b-nvidia-nvfp4/20261108_132808"] == ("E2", "provenance")
     assert eras["qwen3.8-27b-nvidia-nvfp4-prefill/20261107_125906"] == ("E1", "provenance")
-    assert all(source == "provenance" for _, source in eras.values())
+    assert eras["qwen3.8-27b-nvidia-nvfp4/20261109_143107"] == ("E4", "summary")
+    # Each published run gets its era from a record: provenance.json for the
+    # E0 to E2 runs, summary.harness from E3 on. None uses the date rule.
+    assert all(source in ("provenance", "summary") for _, source in eras.values())
     assert sum(era == "E0" for era, _ in eras.values()) == 5
 
 
