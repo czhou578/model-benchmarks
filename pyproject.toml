@@ -37,6 +37,5 @@ ignore = ["E501"]
 "benchmarks/architecture_flops.py" = ["E741"]  # `l` is the layer count.
 "benchmarks/tool_calling.py" = [
     "F402",  # A loop variable shadows dataclasses.field.
-    "F601",  # The mock data repeats the ("USD", "JPY") key.
 ]
 "benchmarks/ttft_breakdown.py" = ["F811"]  # The error() classmethod shadows the error field.

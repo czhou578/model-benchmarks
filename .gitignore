@@ -9,6 +9,7 @@ build/
 
 # Benchmark output
 /tool_calling.json
+/results/tool_calling.json
 reports/dashboard.html
 /summary.json
 /SUMMARY.md

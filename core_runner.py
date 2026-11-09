@@ -1451,6 +1451,8 @@ def main():
             # 256 tokens truncated most ticket tasks in the July 2026 runs.
             tc_max_tokens = cfg.get("tool_calling_max_tokens", 4096)
             tc_template_kwargs = cfg.get("tool_calling_chat_template_kwargs")
+            # 4096 tokens at ~12 tok/s take ~330 s; 120 s cut answers off.
+            tc_timeout_s = float(cfg.get("tool_calling_request_timeout_s", 600))
             print(f"[core_runner] running tool-calling benchmark (task_set={tc_task_set})")
             tc_result = run_tool_calling_benchmark(
                 client,
@@ -1458,9 +1460,11 @@ def main():
                 task_set=tc_task_set,
                 max_tokens=tc_max_tokens,
                 chat_template_kwargs=tc_template_kwargs,
+                request_timeout_s=tc_timeout_s,
             )
             save_json(run_dir / "tool_calling.json", tc_result)
             summary["tool_calling"] = {
+                "status": "completed",
                 "composite_score": tc_result.get("composite_score"),
                 "composite_components": tc_result.get("composite_components"),
                 "total_tasks": tc_result.get("total_tasks"),
@@ -1476,6 +1480,11 @@ def main():
                 f"components={components}"
             )
         except Exception as exc:
+            # Record the failure in summary.json; continue with the run.
+            summary["tool_calling"] = {
+                "status": "failed",
+                "error": f"{type(exc).__name__}: {exc}",
+            }
             print(f"[core_runner] warning: tool-calling benchmark failed: {exc}")
 
         # A2: Speculative decoding comparison

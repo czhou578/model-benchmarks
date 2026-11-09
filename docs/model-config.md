@@ -103,10 +103,11 @@ The runner does not validate keys. It ignores an unknown key, so a misspelled ke
 | `flop_analysis_lengths` | list of int, tokens | `[512, 2048, 8192, 32768]` | no | Sequence lengths for the decode and prefill estimates. | FLOP analysis |
 | `architecture_config_path` | path | none | no | A Hugging Face `config.json` file or its folder. A relative path starts at the folder of the model config. | FLOP analysis |
 | `local_model_path`, `model_path`, `model_id` | string | none | no | Model reference for the architecture lookup. The first key that is set wins. | FLOP analysis |
-| `tool_calling_tasks` | path | `datasets/tool_calling_tasks.yaml` | no | Task file. A relative path starts at the current directory. | tool calling |
+| `tool_calling_tasks` | path | `datasets/tool_calling_tasks.yaml` | no | Task file. A relative path starts at the current directory. When the file is not there, the path starts at the repo root. | tool calling |
 | `tool_calling_task_set` | `full` or `lite` | `full` | no | Task subset. | tool calling |
 | `tool_calling_max_tokens` | int | 4096 | no | `max_tokens` of each request. | tool calling |
 | `tool_calling_chat_template_kwargs` | map | none | no | Sent as `chat_template_kwargs` in each request. | tool calling |
+| `tool_calling_request_timeout_s` | float | 600 | no | Read timeout of each request, in seconds. 4096 tokens at 12.3 tok/s take about 330 s, so 120 s was too short. | tool calling |
 | `speculative_config` | JSON string | none | for `--compare-spec` | Value of `--speculative-config` for the spec-enabled server. | `--compare-spec` |
 
 Notes:
