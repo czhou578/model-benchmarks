@@ -1,5 +1,7 @@
 # Three-Model Benchmark Comparison
 
+> **Archived on 2026-11-09.** No published run data exists for this write-up. The `results/` folder holds no run dir from 2026-07-16, and this page names no run dir. Thus nobody can check its numbers. Do not use them. For the published Qwen3.6-35B-A3B runs, see [2026-07-qwen3.6-35b-a3b-nvfp4.md](../../results/2026-07-qwen3.6-35b-a3b-nvfp4.md).
+
 **Date:** 2026-07-16
 **Hardware:** NVIDIA GB10, driver 580.159.03, CUDA 13.0
 
