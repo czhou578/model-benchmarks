@@ -100,6 +100,10 @@
     return true;
   }
 
+  // A peak is a token rate only when the server sent per-chunk usage.
+  // An event_gap peak counts stream events, not tokens, so it is hidden.
+  function tokenPeak(d) { return d.rate_method === "token_delta" && isNum(d.peak); }
+
   CHARTS.push({
     order: 10,
     id: "decode", title: "Decode speed",
@@ -112,7 +116,7 @@
         rows: rs.map(function (r) {
           return {
             label: r.label, color: r.color, value: decodeMean(r),
-            tip: r.decode.map(function (d) { return { color: r.color, value: fmt(d.avg, 1) + " tok/s", label: fmtTokens(d.x) + " out · peak " + fmt(d.peak, 1) }; }),
+            tip: r.decode.map(function (d) { return { color: r.color, value: fmt(d.avg, 1) + " tok/s", label: fmtTokens(d.x) + " out" + (tokenPeak(d) ? " · peak " + fmt(d.peak, 1) : "") }; }),
           };
         }),
       });
@@ -120,7 +124,8 @@
         ok: ok, legendKind: "rect", runs: rs,
         cols: ["Run"].concat(xs.map(function (x) { return fmtTokens(x) + " tok/s"; }), ["Mean", "Peak"]),
         rows: rs.map(function (r) {
-          return { run: r, cells: xs.map(function (x) { return fmt(at(r.decode, x, "avg"), 1); }).concat([fmt(decodeMean(r), 1), fmt(Math.max.apply(null, r.decode.map(function (d) { return d.peak || 0; })), 1)]) };
+          var peaks = r.decode.filter(tokenPeak).map(function (d) { return d.peak; });
+          return { run: r, cells: xs.map(function (x) { return fmt(at(r.decode, x, "avg"), 1); }).concat([fmt(decodeMean(r), 1), peaks.length ? fmt(Math.max.apply(null, peaks), 1) : "–"]) };
         }),
       };
     },

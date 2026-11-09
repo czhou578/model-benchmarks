@@ -34,7 +34,7 @@ Most of these values have no model config key. The table names the key where one
 | Latency | `build_prompt_of_length(n)` | 8 | `latency_repeats` | new UUID per request | none |
 | Deep context | `build_prompt_of_length(n)` | `deep_context_output_tokens` (default 64) | `context_repeats` | new UUID per request | none |
 | TTFT breakdown | `"hello world "` × `n // 2` | 1 | `ttft_repetitions` | new UUID per request | 0.5 s pause between requests |
-| Decode | `build_prompt_of_length(128)` | each `decode_lengths` value | 1 | none | none |
+| Decode | `build_prompt_of_length(128)` | each `decode_lengths` value | 1 | new UUID per request | none |
 | Reasoning | `reasoning_prompts` | 1024 | 1 | none | none |
 | Concurrency | `build_distinct_prompts`: a distinct prompt per request, calibrated to 256 tokens | `concurrency_max_tokens` | `concurrency_requests_per_level` | new UUID per request, when the server accepts `cache_salt` | none |
 | Prefill scaling | document text, calibrated to the exact length | 1 | `prefill_repetitions` | new UUID per measured request, `warmup_<n>` for the warm-up | one warm-up request per length, then 0.5 s pauses |
@@ -60,7 +60,7 @@ All requests use temperature 0, except the concurrency requests, which use `conc
 - The deep context benchmark records a failed length and goes on to the next length. A connection error, or an HTTP error with `memory` or `oom` in its text, gives `status: oom`. Any other error gives `status: request_error`. The `error` field holds the exception type and message.
 - The TTFT breakdown and prefill benchmarks call `preflight_cache_salt()` once. It sends one short request with a `cache_salt`. The result goes to `cache_isolation_method`: `cache_salt` when the server accepts the field, else `text_salt`.
 - The prefill benchmark records `cached_tokens` for each request. A value of 0 shows that the request missed the prefix cache.
-- The decode and reasoning benchmarks send no salt. With prefix caching on, a repeated prompt can hit the cache.
+- The reasoning benchmark sends no salt. With prefix caching on, a repeated prompt can hit the cache.
 - The concurrency benchmark sends a salt only when `preflight_cache_salt()` returns `True`. Then `cache_isolation_method` is `cache_salt`. Else the benchmark sends no salt, and the distinct prompt text isolates the requests. `cache_isolation_method` then is `distinct_text`.
 
 ## TTFT breakdown
@@ -114,7 +114,7 @@ The comparison needs managed mode and `speculative_config`. It runs after all ot
 - Each variant sends one request per length.
 - The GPU monitor runs during both variants. Their samples are part of the run totals.
 - Caution: the runner does not remove a `--speculative-config` flag that `server.command` already contains. Both variants then use speculative decoding.
-- With speculative decoding, one stream event can carry several tokens. Compare `tok_per_sec_avg` only.
+- With speculative decoding, one stream event can carry several tokens. The decode benchmark asks vLLM for per-chunk usage, so `tok_per_sec_peak`, `tok_per_sec_min`, and `tok_per_sec_median` count all tokens of an event. Read `rate_method` before you compare these fields.
 
 ## GPU samples
 

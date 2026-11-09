@@ -41,8 +41,11 @@ Read these points before you compare numbers.
 - Client TTFT starts before the client sends the HTTP request (`start` in `stream_generation`, `harness/client.py`). In chat mode, it stops at the first stream event with text in `delta.reasoning` or `delta.content`. The `has_text` check in the same function sets this time. So the first reasoning token counts as the first token.
 - `prefill_tps_avg` in `latency.json` and `deep_context.json` is the mean of `prompt_tokens / client TTFT`. It includes network time, queue time, and the first decode step. It is not an engine prefill rate.
 - `prefill_scaling.json` is a curve of prefill time and prefill rate against prompt length. It is not a GPU power curve. Its `gpu` block holds the GPU data of each length window.
-- In `decode.json`, `tok_per_sec_peak`, `tok_per_sec_min`, and `tok_per_sec_median` are `1 / gap` between two stream events with text (`instant_rates` in `run_decode_speed`). One event can carry more than one token, for example with speculative decoding. These three fields then count events per second. Use `tok_per_sec_avg` for the token rate.
-- `output_truncated` in `decode.json` is `true` when `actual_output_tokens` differs from `requested_output_tokens`. A `true` value means that the model stopped before `max_tokens`. It does not mean that `max_tokens` cut the output.
+- In `decode.json`, `tok_per_sec_peak`, `tok_per_sec_min`, and `tok_per_sec_median` are rates over the gaps between two stream events with text (`event_rates` in `decode.py`). `rate_method` tells the formula:
+  - `token_delta`: the tokens that arrived in the gap / the gap. The decode request asks vLLM for per-chunk usage (`continuous_usage_stats`). So an event with several tokens, for example with speculative decoding, counts all its tokens.
+  - `event_gap`: `1 / gap`. The server sent no per-chunk usage. One event can carry more than one token, so these fields then count events per second. Use `tok_per_sec_avg` for the token rate.
+  - Old runs have no `rate_method`. Read them as `event_gap`.
+- Old runs write `output_truncated` in `decode.json`. It is `true` when `actual_output_tokens` differs from `requested_output_tokens`. Despite its name, a `true` value means that the model stopped before `max_tokens`. Newer runs write `stopped_early` and `finish_reason` instead.
 - Old runs (eras E0 and E1 in [comparability.md](comparability.md)) have wrong energy values. An old run has no `duration_s` in its `gpu` block. The dashboard does not show the old per-token value.
   - `energy_per_token_wh` in `summary.json` is the GPU energy of the whole run divided by the decode output tokens only. In the 2026-11-07 Qwen3.8-27B run, it is 0.0158 Wh/token. An estimate of the decode window from the power trace gives 0.0009 Wh/token. So the old value is about 17 times too high. Newer runs write `decode_energy` instead.
   - Every `energy_wh` is mean power × number of samples × `monitor_interval_s`. The real sample period is about 1.07 s, so the value is about 6% too low.
@@ -179,11 +182,13 @@ Each entry is keyed by the requested output length. `spec_enabled.json` and `spe
 | `requested_output_tokens` | tokens | `max_tokens` of the request. |
 | `actual_output_tokens` | tokens | `usage.completion_tokens`. It includes reasoning tokens. |
 | `output_tokens_exact` | bool | The server reported `usage.completion_tokens`. |
-| `output_truncated` | bool | `actual_output_tokens` differs from `requested_output_tokens`. See the ambiguities above. |
+| `stopped_early` | bool | `actual_output_tokens` < `requested_output_tokens`: the model stopped before `max_tokens`. Old runs write `output_truncated` instead. See the ambiguities above. |
+| `finish_reason` | | `finish_reason` of the last stream choice: `length` when `max_tokens` cut the output, `stop` when the model stopped. `null` when the server sent none. |
+| `rate_method` | | `token_delta` or `event_gap`. The formula of `tok_per_sec_peak`, `tok_per_sec_min`, and `tok_per_sec_median`. See the ambiguities above. |
 | `ttft_s` | s | Client TTFT. |
 | `decode_time_s` | s | Total request time − TTFT. |
 | `tok_per_sec_avg` | tokens/s | `actual_output_tokens / decode_time_s`. |
-| `tok_per_sec_peak`, `tok_per_sec_min`, `tok_per_sec_median` | events/s | `1 / gap` between stream events. See the ambiguities above. |
+| `tok_per_sec_peak`, `tok_per_sec_min`, `tok_per_sec_median` | tokens/s or events/s | Maximum, minimum, and median rate over the gaps between stream events. The unit depends on `rate_method`. |
 | `output_text_preview` | | First 512 characters of the output. |
 | `reasoning_tokens`, `answer_tokens` | tokens, estimated | `count_tokens` of the reasoning text and of the answer text. |
 | `reasoning_ratio` | ratio | `reasoning_tokens / answer_tokens`. `null` when there is no answer text. |

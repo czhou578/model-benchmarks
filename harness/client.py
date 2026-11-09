@@ -32,6 +32,10 @@ class GenerationResult:
     reasoning_text: str = ""          # text of delta.reasoning (the server reasoning parser)
     answer_text: str = ""            # post-reasoning answer
     per_token_times: list[float] = field(default_factory=list)
+    # Tokens that arrived in each gap of ``per_token_times``. Only set when
+    # every text event carries per-chunk usage (``continuous_usage=True``).
+    per_event_token_deltas: list[int] | None = None
+    finish_reason: str | None = None
     prompt_tokens_exact: bool = False
     output_tokens_exact: bool = False
     # vLLM server-side metrics. The server adds a ``metrics`` object to the
@@ -126,6 +130,10 @@ def stream_generation(
     usage: Optional[dict] = None
     server_metrics: dict[str, Any] | None = None
     cached_tokens: int = 0
+    finish_reason: str | None = None
+    # Cumulative ``usage.completion_tokens`` at each text event, from
+    # per-chunk usage. A None entry means that the event had no usage.
+    event_token_counts: list[int | None] = []
 
     reasoning_chunks: list[str] = []
     answer_chunks: list[str] = []
@@ -150,6 +158,8 @@ def stream_generation(
                 usage = obj["usage"]
 
             choice = (obj.get("choices") or [{}])[0]
+            if choice.get("finish_reason"):
+                finish_reason = choice["finish_reason"]
 
             # vLLM per-request timing metrics. The server puts a
             # ``metrics`` object on the final usage chunk (or on the
@@ -179,6 +189,7 @@ def stream_generation(
                 else:
                     per_token_gaps.append(now - last_event_time)
                 last_event_time = now
+                event_token_counts.append((obj.get("usage") or {}).get("completion_tokens"))
 
             if reasoning_text:
                 reasoning_chunks.append(reasoning_text)
@@ -197,6 +208,9 @@ def stream_generation(
 
     exact_prompt = usage.get("prompt_tokens") if usage else None
     exact_output = usage.get("completion_tokens") if usage else None
+    token_deltas: list[int] | None = None
+    if event_token_counts and None not in event_token_counts:
+        token_deltas = [int(b) - int(a) for a, b in zip(event_token_counts, event_token_counts[1:])]
 
     return GenerationResult(
         prompt_tokens=exact_prompt if exact_prompt is not None else count_tokens(payload.get("prompt", "")),
@@ -207,6 +221,8 @@ def stream_generation(
         reasoning_text="".join(reasoning_chunks),
         answer_text="".join(answer_chunks),
         per_token_times=per_token_gaps,
+        per_event_token_deltas=token_deltas,
+        finish_reason=finish_reason,
         prompt_tokens_exact=exact_prompt is not None,
         output_tokens_exact=exact_output is not None,
         cached_tokens=cached_tokens,
@@ -345,8 +361,14 @@ class ModelClient:
         max_tokens: int = 256,
         temperature: float = 0.0,
         cache_salt: str | None = None,
+        continuous_usage: bool = False,
     ) -> GenerationResult:
         """Send a generation request, optionally isolating it from prefix cache.
+
+        With *continuous_usage*, the request also sets
+        ``stream_options.continuous_usage_stats``. vLLM then adds the
+        cumulative ``usage`` to each chunk, and the result holds
+        ``per_event_token_deltas``. Other requests stay the same.
 
         If *cache_salt* is given the request carries it as a top-level
         ``cache_salt`` field so vLLM's prefix cache cannot reuse KV blocks.
@@ -362,6 +384,8 @@ class ModelClient:
             "stream": True,
             "stream_options": {"include_usage": True},
         }
+        if continuous_usage:
+            options["stream_options"] = {"include_usage": True, "continuous_usage_stats": True}
 
         # vLLM ignores unknown fields such as ``extra_body``, so the salt
         # must sit at the top level of the JSON body.

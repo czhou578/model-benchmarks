@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import statistics
+import uuid
 from typing import Any, Optional
 
 from benchmarks.reasoning import analyze_reasoning_tokens
@@ -10,16 +11,30 @@ from harness.client import ModelClient
 from harness.prompts import build_prompt_of_length, count_tokens
 
 
+def event_rates(gaps: list[float], token_deltas: list[int] | None) -> tuple[list[float], str]:
+    """Return the rate of each gap between stream events, and the method.
+
+    ``token_delta``: tokens that arrived in the gap / gap. The server sent
+    per-chunk usage, so a multi-token event (speculative decoding) counts
+    all its tokens. ``event_gap``: 1 / gap, in events per second. The
+    fallback when the server sends no per-chunk usage.
+    """
+    if token_deltas is not None and len(token_deltas) == len(gaps):
+        return [d / g for d, g in zip(token_deltas, gaps) if g > 0], "token_delta"
+    return [1.0 / g for g in gaps if g > 0], "event_gap"
+
+
 def run_decode_speed(client: ModelClient, output_lengths: list[int],
                       fixed_prompt_tokens: int = 128) -> dict[str, Any]:
     prompt = build_prompt_of_length(fixed_prompt_tokens)
     results = {}
     for n_out in output_lengths:
-        gen = client.generate(prompt, max_tokens=n_out, temperature=0.0)
+        # A new salt per request keeps a cached prefill out of the TTFT.
+        gen = client.generate(prompt, max_tokens=n_out, temperature=0.0,
+                              cache_salt=uuid.uuid4().hex, continuous_usage=True)
         decode_time = gen.total_time_s - gen.ttft_s if gen.ttft_s == gen.ttft_s else gen.total_time_s
         tok_per_sec_overall = gen.output_tokens / decode_time if decode_time > 0 else None
-        instant_rates = [1.0 / g for g in gen.per_token_times if g > 0]
-        output_truncated = gen.output_tokens != n_out
+        instant_rates, rate_method = event_rates(gen.per_token_times, gen.per_event_token_deltas)
 
         # Analyze reasoning tokens (thinking vs answer)
         # Use the already-split reasoning and answer text from the model client
@@ -45,7 +60,9 @@ def run_decode_speed(client: ModelClient, output_lengths: list[int],
             "requested_output_tokens": n_out,
             "actual_output_tokens": gen.output_tokens,
             "output_tokens_exact": gen.output_tokens_exact,
-            "output_truncated": output_truncated,
+            "stopped_early": gen.output_tokens < n_out,
+            "finish_reason": gen.finish_reason,
+            "rate_method": rate_method,
             "ttft_s": round(gen.ttft_s, 4) if gen.ttft_s == gen.ttft_s else None,
             "decode_time_s": round(decode_time, 3),
             "tok_per_sec_avg": round(tok_per_sec_overall, 2) if tok_per_sec_overall else None,

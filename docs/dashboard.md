@@ -49,6 +49,7 @@ VS Code forwards the port and opens the page in your browser. Reload the page af
 - The chart legends add the vLLM version to each run label when the shown runs use more than one version. The page reads the version from `environment.json`: `vllm_server_version`, else `vllm_version`.
 - The card numbers: decode speed, TTFT at 2K tokens, peak throughput, tool tasks passed, lowest free memory, and mean GPU power.
 - Charts for decode speed, TTFT, throughput under load, long-context TTFT, thinking tokens, and the MTP speed-up.
+- The decode chart shows the peak rate only when `rate_method` is `token_delta`. An older run counts stream events, not tokens, so its peak shows as "–".
 - Charts for tool-calling scores, the tool-calling pass rate by category, and memory headroom.
 - Two tables: "All runs" with the era, the key numbers, and the server settings, and "Server-side TTFT split". The "Prefix cache" column shows the flag in the server command, or "default" when the command has no flag.
 - A Table toggle on each chart. The toggle shows the chart values as a table.
