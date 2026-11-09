@@ -14,7 +14,7 @@ The PR merge times are in PST.
 | E1 | 2026-11-07 | #42 and #44, merged 2026-11-06 21:42 | 0.25.1, 2.11.0+cu130 | `results/qwen3.8-27b-nvidia-nvfp4/20261107_094900` (full run), `results/qwen3.8-27b-nvidia-nvfp4-prefill/20261107_125906` (prefill rerun) | `cache_salt` reaches vLLM. Server timings. New tool-calling scorer. Prefill scaling works. | Concurrency, energy |
 | E2 | 2026-11-08 | #67 to #69, merged 2026-11-07 17:35. #70, merged 2026-11-08 13:26 | 0.33.0, 2.14.0+cu130 | `results/qwen3.8-27b-nvidia-nvfp4/20261108_132808` | Fixes to the TTFT split and the energy integral. A distinct concurrency prompt for each request. Configs on vLLM 0.33.0 with `--no-enable-prefix-caching`. | Tool calling, with care |
 | E3 | 2026-11-09 | #73 to #75, merged 2026-11-09 12:29 to 12:32 | 0.33.0 in the configs | None | 600 s tool-calling timeout. `tool_calling.status` in `summary.json`. | Decode rates, reasoning, TTFT breakdown, tool-calling composite, FLOP analysis |
-| E4 | from 2026-11-09 | #96 to #107, merged 2026-11-09 14:09 to 14:21, and the `SCHEMA_VERSION` 4 change | 0.33.0 in the configs | None yet | Decode rates in tokens. Salted decode and reasoning. Reasoning cap 4096 and new Qwen3.8 prompts. Calibrated TTFT-breakdown prompts. Refusal score. FLOP estimates for dense models and a fixed prefill estimate. | – |
+| E4 | from 2026-11-09 | #96 to #107, merged 2026-11-09 14:09 to 14:21, and the `SCHEMA_VERSION` 4 change | 0.33.0, 2.14.0+cu130 | `results/qwen3.8-27b-nvidia-nvfp4/20261109_143107` | Decode rates in tokens. Salted decode and reasoning. Reasoning cap 4096 and new Qwen3.8 prompts. Calibrated TTFT-breakdown prompts. Refusal score. FLOP estimates for dense models and a fixed prefill estimate. | – |
 
 ### E0: July 2026, Qwen3.6-35B-A3B
 
@@ -123,16 +123,18 @@ The harness does not repeat a run. Each published number comes from one run. [me
 
 ### Reference runs
 
-Three runs of Qwen3.8-27B NVFP4 give the only same-model reference. The gate run is the vLLM 0.33.0 migration gate of 2026-11-07. It used the E1 harness, and it is not published.
+Four runs of Qwen3.8-27B NVFP4 give the only same-model reference. The gate run is the vLLM 0.33.0 migration gate of 2026-11-07. It used the E1 harness, and it is not published.
 
 | Run | vLLM | Tool tasks passed | Composite | Decode, no spec | TTFT median at 2K |
 |---|---|---|---|---|---|
 | `20261107_094900` (E1) | 0.25.1 | 52 of 85 | 5.03 | 12.17 tok/s | 793 ms |
 | Gate run | 0.33.0 | 50 of 85 | 4.78 | 12.18 tok/s | 645 ms |
 | `20261108_132808` (E2) | 0.33.0 | 50 of 85 | 4.78 | 12.32 tok/s | 650 ms |
+| `20261109_143107` (E4) | 0.33.0 | 51 of 85 | 4.83 | 12.22 tok/s | 650 ms |
 
 - The gate run and the E2 run use the same vLLM and the same tool-calling code. Each task got the same result in both runs. The same task timed out at 120 s in both runs.
 - Between these two runs, decode differs by 1.1% and TTFT at 2K by 0.8%.
+- Between the E2 run and the E4 run, each metric that you can compare differs by about 2% or less. Only one tool task changed result: the task that timed out at 120 s in E2 passes with the 600 s timeout.
 - From vLLM 0.25.1 to 0.33.0, six tasks changed result: four to fail and two to pass. TTFT at 2K fell by 19%. This is an effect of vLLM, not noise.
 
 ### Rules of thumb
