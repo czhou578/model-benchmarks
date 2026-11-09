@@ -4,7 +4,7 @@ This page tells how `core_runner.py` runs each benchmark, and how to add a new o
 
 ## Current benchmarks
 
-The runner runs the benchmarks in the order of this table. The function `main()` in core_runner.py sets this order.
+The runner runs the benchmarks in the order of this table. The function `run_benchmarks()` in core_runner.py sets this order.
 
 | Benchmark | Code | Output file in the run dir | `summary.json` key | Control |
 |---|---|---|---|---|
@@ -25,18 +25,15 @@ An unhandled error in a benchmark stops the run. The runner then writes `summary
 
 ## How the runner wires a benchmark
 
-Each benchmark block in `main()` has the same six steps:
+Each benchmark has one step function in core_runner.py, for example `step_decode(run)`. `run_benchmarks(run)` checks the skip flags and calls the steps in order. The `Run` object holds the state of the run: `cfg`, `args`, `run_dir`, `summary`, `client`, `monitor`, and `server`.
 
-1. It checks the skip flag: `if not args.skip_<name>:`.
-2. It imports the module inside the block: `from benchmarks.<name> import run_<name>`.
-3. It reads its parameters with `cfg.get("<key>", <default>)`.
-4. It calls the run function with `client`, the parameters, and optionally `gpu_monitor=monitor`.
-5. It writes the result: `save_json(run_dir / "<name>.json", result)`.
-6. It adds an entry to the `summary` dict.
+A step function does these things:
+
+1. It reads its parameters with `run.cfg.get("<key>", <default>)`.
+2. It calls the run function of its module with `run.client`, the parameters, and optionally `gpu_monitor=run.monitor`.
+3. It calls `run.record("<name>", result)`. This writes `<name>.json` to the run dir and adds the `<name>` entry to the summary. Use `summary_entry=` to put a short form in the summary.
 
 The modules in `benchmarks/` import only from `harness/`, never from `core_runner`. Keep it so: an import of `core_runner` from a benchmark makes a circular import.
-
-The docstring of core_runner.py mentions `register_benchmark()`. The code does not define it. There is no plugin registry.
 
 ## Conventions
 
@@ -52,16 +49,16 @@ The docstring of core_runner.py mentions `register_benchmark()`. The code does n
 
 1. Create `benchmarks/<name>.py` with a function `run_<name>(client, ..., gpu_monitor=None) -> dict`.
 2. Add `--skip-<name>` to the argument parser in `main()`.
-3. Add a block to `main()` with the six steps above. Put it at the point in the order where the benchmark must run.
+3. Add a function `step_<name>(run)` to core_runner.py. Call it from `run_benchmarks()` at the point in the order where the benchmark must run.
 4. Add new keys to the model configs that need values other than the defaults.
-5. Add tests in `tests/test_<name>.py`.
+5. Add tests in `tests/test_<name>.py`. Add the step to `ALL_STEPS` in `tests/test_core_runner_main.py`.
 6. Add the new keys to [model-config.md](model-config.md) and the new fields to [results-schema.md](results-schema.md).
 7. Optional: show the metric in the dashboard. The next section tells how.
 
 | File | Change |
 |---|---|
 | `benchmarks/<name>.py` | New module. |
-| `core_runner.py` | Skip flag, benchmark block, `summary` entry. |
+| `core_runner.py` | Skip flag, `step_<name>()`, the call in `run_benchmarks()`. |
 | `models/*.yml` | New keys, only where the defaults do not fit. |
 | `tests/test_<name>.py` | New tests. |
 | `docs/model-config.md`, `docs/results-schema.md` | New keys and fields. |

@@ -46,10 +46,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from benchmarks.architecture_flops import run_flops_analysis
 from benchmarks.concurrency import run_concurrency_test
 from benchmarks.decode import compare_spec_decode_results, run_decode_speed
 from benchmarks.latency import run_deep_context, run_latency_sweep
+from benchmarks.prefill import run_prefill_scaling
 from benchmarks.reasoning import run_reasoning_benchmark
+from benchmarks.tool_calling import run_tool_calling_benchmark
 from benchmarks.ttft_breakdown import run_ttft_breakdown
 from harness.client import ModelClient
 from harness.environment import collect_environment
@@ -230,15 +233,149 @@ def step_concurrency(run: Run) -> None:
     run.record("concurrency", results)
 
 
+def step_prefill(run: Run) -> None:
+    target_lengths = run.cfg.get("prefill_target_lengths", [512, 2048, 8192])
+    repetitions = run.cfg.get("prefill_repetitions", 5)
+    # Record a 5 s GPU idle baseline before the prefill requests.
+    gpu_interval = run.cfg.get("monitor_interval_s", 1.0)
+    if gpu_interval > 0.2:
+        print("[core_runner] capturing GPU idle baseline...")
+    run.monitor.start_idle()
+    for _ in range(int(5.0 / gpu_interval)):
+        run.monitor.record_idle()
+        time.sleep(gpu_interval)
+    print("[core_runner] idle baseline captured, starting prefill benchmark")
+
+    print(f"[core_runner] prefill scaling benchmark over {target_lengths} ({repetitions} reps)")
+    results = run_prefill_scaling(run.client, target_lengths, repetitions=repetitions, gpu_monitor=run.monitor)
+    run.record("prefill_scaling", results, summary_entry={
+        k: {"status": v.get("status"), "n_success": v.get("n_success")}
+        for k, v in results.get("per_length", {}).items()
+    })
+
+
+def step_flops(run: Run) -> None:
+    print("[core_runner] running FLOP analysis")
+    flop_lengths = run.cfg.get("flop_analysis_lengths", [512, 2048, 8192, 32768])
+    server_config: dict[str, Any] | None = None
+    try:
+        server_config = _get_server_model_config(run.client)
+    except Exception as exc:
+        print(f"[core_runner] warning: could not fetch server config: {exc}")
+    result = run_flops_analysis(
+        run.cfg, server_config=server_config,
+        prefill_lengths=flop_lengths, context_lengths=flop_lengths,
+    )
+    run.record("flops_analysis", result, summary_entry={
+        "status": result.get("estimate_status"),
+        "model": result.get("architecture", {}).get("model", "unknown"),
+    })
+
+
+def step_tool_calling(run: Run) -> None:
+    """Run the tool-calling tasks. A failure goes to the summary, and the run continues."""
+    cfg = run.cfg
+    try:
+        task_set = cfg.get("tool_calling_task_set", "full")
+        # A thinking model spends hundreds of tokens before its first
+        # tool call, and vLLM parses tool calls only after </think>.
+        # 256 tokens truncated most ticket tasks in the July 2026 runs.
+        # 4096 tokens at ~12 tok/s take ~330 s, so the timeout is 600 s.
+        print(f"[core_runner] running tool-calling benchmark (task_set={task_set})")
+        result = run_tool_calling_benchmark(
+            run.client,
+            tasks_path=cfg.get("tool_calling_tasks", "datasets/tool_calling_tasks.yaml"),
+            task_set=task_set,
+            max_tokens=cfg.get("tool_calling_max_tokens", 4096),
+            chat_template_kwargs=cfg.get("tool_calling_chat_template_kwargs"),
+            request_timeout_s=float(cfg.get("tool_calling_request_timeout_s", 600)),
+        )
+        run.record("tool_calling", result, summary_entry={
+            "status": "completed",
+            "composite_score": result.get("composite_score"),
+            "composite_components": result.get("composite_components"),
+            "total_tasks": result.get("total_tasks"),
+            "total_correct": result.get("total_correct"),
+            "categories": list(result.get("category_scores", {}).keys()),
+            "failure_modes": result.get("failure_modes"),
+        })
+        print(
+            f"[core_runner] tool_calling: score={result['composite_score']} "
+            f"{result['total_correct']}/{result['total_tasks']}  "
+            f"components={result.get('composite_components', {})}"
+        )
+    except Exception as exc:
+        run.summary["tool_calling"] = {"status": "failed", "error": f"{type(exc).__name__}: {exc}"}
+        print(f"[core_runner] warning: tool-calling benchmark failed: {exc}")
+
+
+def step_spec_comparison(run: Run) -> None:
+    """Restart vLLM with and without speculative decoding, and compare decode speed."""
+    if run.summary["server_mode"] != "managed" or run.server is None:
+        raise ValueError("--compare-spec requires managed server mode")
+    spec_config = run.cfg.get("speculative_config")
+    if not spec_config:
+        raise ValueError("--compare-spec requires speculative_config in the model YAML")
+
+    output_lengths = run.cfg.get("decode_lengths", [512, 1024, 2048])
+    base_command = list(run.server.command)
+    run.server.stop()
+    run.server.save_metadata(run.run_dir / "resolved_server.json")
+    run.server = None
+
+    def run_variant(label: str, command: list[str]) -> dict[str, Any]:
+        variant_server = make_managed_server(
+            run.cfg, run.run_dir, log_name=f"vllm_{label}.log", command=command
+        )
+        try:
+            print(f"[core_runner] starting vLLM variant: {label}")
+            variant_server.start()
+            variant_client = make_client(run.cfg)
+            wait_for_endpoint(variant_client, run.cfg, variant_server)
+            return run_decode_speed(variant_client, output_lengths)
+        finally:
+            variant_server.stop()
+            variant_server.save_metadata(run.run_dir / f"resolved_server_{label}.json")
+
+    spec_results = run_variant("spec_enabled", base_command + ["--speculative-config", str(spec_config)])
+    save_json(run.run_dir / "spec_enabled.json", spec_results)
+    non_spec_results = run_variant("spec_disabled", base_command)
+    save_json(run.run_dir / "spec_disabled.json", non_spec_results)
+    run.record("spec_comparison", compare_spec_decode_results(spec_results, non_spec_results, output_lengths))
+
+
+def run_benchmarks(run: Run) -> None:
+    """Run the benchmark steps in their fixed order, without the skipped ones."""
+    args, cfg = run.args, run.cfg
+    if not args.skip_latency:
+        step_latency(run)
+    if cfg.get("context_lengths"):
+        step_deep_context(run)
+    if not args.skip_ttft:
+        step_ttft_breakdown(run)
+    if not args.skip_decode:
+        step_decode(run)
+    if not args.skip_reasoning:
+        step_reasoning(run)
+    if not args.skip_concurrency:
+        step_concurrency(run)
+    if not args.skip_prefill:
+        step_prefill(run)
+    step_flops(run)
+    step_tool_calling(run)
+    if args.compare_spec:
+        step_spec_comparison(run)
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Phase 1 core benchmark runner (simplified)")
+    parser = argparse.ArgumentParser(description="Run the benchmark suite against one model config.")
     parser.add_argument("--model", required=True, help="Path to model config YAML")
-    parser.add_argument("--skip-latency", action="store_true")
-    parser.add_argument("--skip-decode", action="store_true")
-    parser.add_argument("--skip-reasoning", action="store_true")
-    parser.add_argument("--skip-concurrency", action="store_true")
-    parser.add_argument("--skip-prefill", action="store_true")
-    parser.add_argument("--skip-ttft", action="store_true")
+    parser.add_argument("--skip-latency", action="store_true", help="Skip the latency sweep")
+    parser.add_argument("--skip-decode", action="store_true", help="Skip the decode speed benchmark")
+    parser.add_argument("--skip-reasoning", action="store_true", help="Skip the reasoning benchmark")
+    parser.add_argument("--skip-concurrency", action="store_true", help="Skip the concurrency benchmark")
+    parser.add_argument("--skip-prefill", action="store_true", help="Skip the prefill scaling benchmark")
+    parser.add_argument("--skip-ttft", action="store_true", help="Skip the TTFT breakdown")
     parser.add_argument("--compare-spec", action="store_true",
                         help="Run decode benchmark with spec-dec enabled and disabled, then compare")
     parser.add_argument(
@@ -279,8 +416,6 @@ def main():
             "largest concurrency level; high levels will submit fewer requests than workers"
         )
 
-    server: VllmServer | None = None
-    monitor: GpuMonitor | None = None
     summary: dict[str, Any] = {
         "model": model_name,
         "run_dir": repo_relative(run_dir),
@@ -298,189 +433,38 @@ def main():
 
     try:
         if server_mode == "managed":
-            server = make_managed_server(cfg, run_dir)
-            print(f"[core_runner] starting managed vLLM: {' '.join(server.command)}")
-            server.start()
-            server.save_metadata(run_dir / "resolved_server.json")
+            run.server = make_managed_server(cfg, run_dir)
+            print(f"[core_runner] starting managed vLLM: {' '.join(run.server.command)}")
+            run.server.start()
+            run.server.save_metadata(run_dir / "resolved_server.json")
 
-        run.client = client = make_client(cfg)
+        run.client = make_client(cfg)
         print("[core_runner] waiting for model endpoint to be ready...")
-        wait_for_endpoint(client, cfg, server)
+        wait_for_endpoint(run.client, cfg, run.server)
         print("[core_runner] endpoint ready")
 
-        run.monitor = monitor = GpuMonitor(run_dir, interval_s=cfg.get("monitor_interval_s", 1.0))
-        monitor.start()
+        run.monitor = GpuMonitor(run_dir, interval_s=cfg.get("monitor_interval_s", 1.0))
+        run.monitor.start()
 
-        if not args.skip_latency:
-            step_latency(run)
-        if cfg.get("context_lengths"):
-            step_deep_context(run)
-        if not args.skip_ttft:
-            step_ttft_breakdown(run)
-        if not args.skip_decode:
-            step_decode(run)
-        if not args.skip_reasoning:
-            step_reasoning(run)
-        if not args.skip_concurrency:
-            step_concurrency(run)
-
-        if not args.skip_prefill:
-            from benchmarks.prefill import run_prefill_scaling
-
-            target_lengths = cfg.get(
-                "prefill_target_lengths",
-                [512, 2048, 8192],
-            )
-            repetitions = cfg.get("prefill_repetitions", 5)
-            # Start idle baseline for GPU telemetry
-            gpu_interval = cfg.get("monitor_interval_s", 1.0)
-            if gpu_interval > 0.2:
-                print("[core_runner] capturing GPU idle baseline...")
-            monitor.start_idle()
-            for _ in range(int(5.0 / gpu_interval)):
-                monitor.record_idle()
-                time.sleep(gpu_interval)
-            print("[core_runner] idle baseline captured, starting prefill benchmark")
-
-            print(f"[core_runner] prefill scaling benchmark over {target_lengths} ({repetitions} reps)")
-            prefill_results = run_prefill_scaling(client, target_lengths, repetitions=repetitions, gpu_monitor=monitor)
-            save_json(run_dir / "prefill_scaling.json", prefill_results)
-            summary["prefill_scaling"] = {
-                k: {"status": v.get("status"), "n_success": v.get("n_success")}
-                for k, v in prefill_results.get("per_length", {}).items()
-            }
-
-        # Architecture-based FLOP estimation
-        print("[core_runner] running FLOP analysis")
-        from benchmarks.architecture_flops import run_flops_analysis
-
-        flop_lengths = cfg.get("flop_analysis_lengths", [512, 2048, 8192, 32768])
-        # Fetch the model config from the running vLLM server
-        server_config: dict[str, Any] | None = None
-        try:
-            server_config = _get_server_model_config(client)
-        except Exception as exc:
-            print(f"[core_runner] warning: could not fetch server config: {exc}")
-        flops_result = run_flops_analysis(
-            cfg, server_config=server_config,
-            prefill_lengths=flop_lengths, context_lengths=flop_lengths,
-        )
-        save_json(run_dir / "flops_analysis.json", flops_result)
-        summary["flops_analysis"] = {
-            "status": flops_result.get("estimate_status"),
-            "model": flops_result.get("architecture", {}).get("model", "unknown"),
-        }
-
-        # Tool-calling benchmark (Phase 1–3)
-        try:
-            from benchmarks.tool_calling import run_tool_calling_benchmark
-
-            tc_tasks = cfg.get("tool_calling_tasks", "datasets/tool_calling_tasks.yaml")
-            tc_task_set = cfg.get("tool_calling_task_set", "full")
-            # A thinking model spends hundreds of tokens before its first
-            # tool call, and vLLM parses tool calls only after </think>.
-            # 256 tokens truncated most ticket tasks in the July 2026 runs.
-            tc_max_tokens = cfg.get("tool_calling_max_tokens", 4096)
-            tc_template_kwargs = cfg.get("tool_calling_chat_template_kwargs")
-            # 4096 tokens at ~12 tok/s take ~330 s; 120 s cut answers off.
-            tc_timeout_s = float(cfg.get("tool_calling_request_timeout_s", 600))
-            print(f"[core_runner] running tool-calling benchmark (task_set={tc_task_set})")
-            tc_result = run_tool_calling_benchmark(
-                client,
-                tasks_path=tc_tasks,
-                task_set=tc_task_set,
-                max_tokens=tc_max_tokens,
-                chat_template_kwargs=tc_template_kwargs,
-                request_timeout_s=tc_timeout_s,
-            )
-            save_json(run_dir / "tool_calling.json", tc_result)
-            summary["tool_calling"] = {
-                "status": "completed",
-                "composite_score": tc_result.get("composite_score"),
-                "composite_components": tc_result.get("composite_components"),
-                "total_tasks": tc_result.get("total_tasks"),
-                "total_correct": tc_result.get("total_correct"),
-                "categories": list(tc_result.get("category_scores", {}).keys()),
-                "failure_modes": tc_result.get("failure_modes"),
-            }
-            components = tc_result.get("composite_components", {})
-            print(
-                f"[core_runner] tool_calling: "
-                f"score={tc_result['composite_score']} "
-                f"{tc_result['total_correct']}/{tc_result['total_tasks']}  "
-                f"components={components}"
-            )
-        except Exception as exc:
-            # Record the failure in summary.json; continue with the run.
-            summary["tool_calling"] = {
-                "status": "failed",
-                "error": f"{type(exc).__name__}: {exc}",
-            }
-            print(f"[core_runner] warning: tool-calling benchmark failed: {exc}")
-
-        # A2: Speculative decoding comparison
-        if args.compare_spec:
-            if server_mode != "managed" or server is None:
-                raise ValueError("--compare-spec requires managed server mode")
-            spec_config = cfg.get("speculative_config")
-            if not spec_config:
-                raise ValueError("--compare-spec requires speculative_config in the model YAML")
-
-            output_lengths = cfg.get("decode_lengths", [512, 1024, 2048])
-            base_command = list(server.command)
-            server.stop()
-            server.save_metadata(run_dir / "resolved_server.json")
-            server = None
-
-            def run_variant(label: str, command: list[str]) -> dict[str, Any]:
-                variant_server = make_managed_server(
-                    cfg, run_dir, log_name=f"vllm_{label}.log", command=command
-                )
-                try:
-                    print(f"[core_runner] starting vLLM variant: {label}")
-                    variant_server.start()
-                    variant_client = make_client(cfg)
-                    wait_for_endpoint(variant_client, cfg, variant_server)
-                    return run_decode_speed(variant_client, output_lengths)
-                finally:
-                    variant_server.stop()
-                    variant_server.save_metadata(
-                        run_dir / f"resolved_server_{label}.json"
-                    )
-
-            spec_results = run_variant(
-                "spec_enabled",
-                base_command + ["--speculative-config", str(spec_config)],
-            )
-            save_json(run_dir / "spec_enabled.json", spec_results)
-            non_spec_results = run_variant("spec_disabled", base_command)
-            save_json(run_dir / "spec_disabled.json", non_spec_results)
-
-            comparison = compare_spec_decode_results(
-                spec_results, non_spec_results, output_lengths
-            )
-            save_json(run_dir / "spec_comparison.json", comparison)
-            summary["spec_comparison"] = comparison
-
+        run_benchmarks(run)
         summary["status"] = "completed"
     except BaseException as exc:
         summary["status"] = "failed"
         summary["error"] = f"{type(exc).__name__}: {exc}"
         raise
     finally:
-        if monitor is not None:
+        if run.monitor is not None:
             print("[core_runner] stopping GPU monitor")
-            gpu_summary = monitor.stop()
-            summary["gpu"] = gpu_summary
+            summary["gpu"] = run.monitor.stop()
             if run.decode_window is not None and "decode" in summary:
                 summary["decode_energy"] = decode_energy_summary(
-                    monitor.samples, summary["decode"], *run.decode_window
+                    run.monitor.samples, summary["decode"], *run.decode_window
                 )
 
-        if server is not None:
+        if run.server is not None:
             print("[core_runner] stopping managed vLLM")
-            server.stop()
-            server.save_metadata(run_dir / "resolved_server.json")
+            run.server.stop()
+            run.server.save_metadata(run_dir / "resolved_server.json")
 
         signal.signal(signal.SIGTERM, previous_sigterm_handler)
         save_json(run_dir / "summary.json", summary)
