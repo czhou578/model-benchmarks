@@ -6,7 +6,11 @@ The configs come from tests/fixtures. No Hugging Face download, no server.
 from __future__ import annotations
 
 import json
+import sys
+import types
 from pathlib import Path
+
+import pytest
 
 from benchmarks.architecture_flops import run_flops_analysis
 
@@ -73,3 +77,39 @@ def test_qwen38_27b_prefill_dense_ffn_scales_with_length():
     prefill = _analyze(CONFIG_27B, [2048])["flops"]["prefill"]["2048"]
     assert prefill["dense_ffn"] == 2048 * 64 * 3 * 2 * 5120 * 17408
     assert prefill["lm_head_flops"] == 2 * 5120 * 248320
+
+
+def _fake_transformers(monkeypatch, calls: list[dict]) -> None:
+    config = json.loads(CONFIG_27B.read_text())
+
+    class AutoConfig:
+        @staticmethod
+        def from_pretrained(reference, **kwargs):
+            calls.append({"reference": reference, **kwargs})
+            return config
+
+    module = types.ModuleType("transformers")
+    module.AutoConfig = AutoConfig
+    monkeypatch.setitem(sys.modules, "transformers", module)
+
+
+@pytest.mark.parametrize(("opt_in", "expected"), [(None, False), (True, True)])
+def test_hugging_face_lookup_needs_an_opt_in_for_remote_code(monkeypatch, opt_in, expected):
+    calls: list[dict] = []
+    _fake_transformers(monkeypatch, calls)
+    cfg = {"model_id": "Qwen/Qwen3.8-27B"}
+    if opt_in is not None:
+        cfg["architecture_trust_remote_code"] = opt_in
+
+    result = run_flops_analysis(cfg, context_lengths=[512], prefill_lengths=[512])
+
+    assert calls == [{"reference": "Qwen/Qwen3.8-27B", "trust_remote_code": expected}]
+    assert result["estimate_status"] == "exact_from_config"
+
+
+def test_missing_transformers_gives_a_clear_warning(monkeypatch):
+    monkeypatch.setitem(sys.modules, "transformers", None)
+    result = run_flops_analysis({"model_id": "Qwen/Qwen3.8-27B"})
+
+    assert result["estimate_status"] == "unsupported"
+    assert any("transformers is not installed" in w for w in result["warnings"])

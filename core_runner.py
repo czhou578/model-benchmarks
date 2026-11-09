@@ -28,7 +28,6 @@ import json
 import signal
 import shutil
 import time
-import requests
 import yaml
 from dataclasses import dataclass
 from datetime import datetime
@@ -49,22 +48,6 @@ from harness.paths import ROOT, repo_relative
 from harness.provenance import fetch_server_version, harness_provenance
 from harness.telemetry import GpuMonitor, decode_energy_summary
 from vllm_server import VllmServer
-
-
-def _get_server_model_config(client: ModelClient) -> dict[str, Any]:
-    """Fetch the unmodified model config from the running vLLM server."""
-    try:
-        r = requests.get(f"{client.base_url}/v1/models", timeout=10)
-        if r.status_code != 200:
-            return {}
-        data = r.json()
-        model_data = data.get("data", [{}])[0] if data.get("data") else {}
-        config = model_data.get("config", {})
-        if isinstance(config, dict) and config:
-            return config
-    except Exception:
-        pass
-    return {}
 
 
 # --------------------------------------------------------------------------- #
@@ -274,14 +257,8 @@ def step_prefill(run: Run) -> None:
 def step_flops(run: Run) -> None:
     print("[core_runner] running FLOP analysis")
     flop_lengths = run.cfg.get("flop_analysis_lengths", [512, 2048, 8192, 32768])
-    server_config: dict[str, Any] | None = None
-    try:
-        server_config = _get_server_model_config(run.client)
-    except Exception as exc:
-        print(f"[core_runner] warning: could not fetch server config: {exc}")
     result = run_flops_analysis(
-        run.cfg, server_config=server_config,
-        prefill_lengths=flop_lengths, context_lengths=flop_lengths,
+        run.cfg, prefill_lengths=flop_lengths, context_lengths=flop_lengths,
     )
     run.record("flops_analysis", result, summary_entry={
         "status": result.get("estimate_status"),

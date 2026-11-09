@@ -107,6 +107,7 @@ The runner does not validate keys. It ignores an unknown key, so a misspelled ke
 | `flop_analysis_lengths` | list of int, tokens | `[512, 2048, 8192, 32768]` | no | Sequence lengths for the decode and prefill estimates. | FLOP analysis |
 | `architecture_config_path` | path | none | no | A Hugging Face `config.json` file or its folder. A relative path starts at the folder of the model config. | FLOP analysis |
 | `local_model_path`, `model_path`, `model_id` | string | none | no | Model reference for the architecture lookup. The first key that is set wins. | FLOP analysis |
+| `architecture_trust_remote_code` | bool | false | no | Lets the Hugging Face config lookup run Python code from the model repository. Set it only for a repository that you trust. | FLOP analysis |
 | `tool_calling_tasks` | path | `datasets/tool_calling_tasks.yaml` | no | Task file. A relative path starts at the current directory. When the file is not there, the path starts at the repo root. | tool calling |
 | `tool_calling_task_set` | `full` or `lite` | `full` | no | Task subset. | tool calling |
 | `tool_calling_max_tokens` | int | 4096 | no | `max_tokens` of each request. | tool calling |
