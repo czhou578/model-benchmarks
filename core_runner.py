@@ -23,7 +23,7 @@ Not implemented here (plug in later via register_benchmark()):
   code correctness (HumanEval/MBPP), Deep-SWE, HLE.
 
 Usage:
-    python core_runner.py --model models/qwen3.6_35b_unsloth_nvfp4.yml
+    python core_runner.py --model models/qwen3.8_27b_nvidia_nvfp4.yml
 
 Every run gets its own timestamped directory under results/<model>/<ts>/.
 The results/ directory sits next to this script. --results-dir changes it.
