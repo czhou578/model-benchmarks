@@ -44,7 +44,7 @@ def test_harness_provenance_without_git(monkeypatch, failure) -> None:
         return subprocess.CompletedProcess(cmd, 128, stdout="", stderr="fatal")
     monkeypatch.setattr(provenance.subprocess, "run", run)
     info = provenance.harness_provenance()
-    assert info == {"schema_version": 3, "git_commit": None, "git_dirty": None}
+    assert info == {"schema_version": provenance.SCHEMA_VERSION, "git_commit": None, "git_dirty": None}
 
 
 class _Response:

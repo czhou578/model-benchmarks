@@ -15,7 +15,7 @@ from harness.paths import ROOT
 # eras E0 to E2 have no version in summary.json; a provenance.json file in
 # their run dir gives their era. Increase this number when a change starts a
 # new era, and add the era to docs/comparability.md.
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 def _git(args: list[str], repo: Path) -> str | None:

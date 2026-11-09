@@ -13,7 +13,8 @@ The PR merge times are in PST.
 | E0 | 2026-07-29 | The first published runs | 0.25.1, 2.11.0+cu130 | The five dirs `results/qwen3.6-35b-a3b-*/20260729_*` | – | Client TTFT, TTFT breakdown, prefill scaling, concurrency, tool calling, energy |
 | E1 | 2026-11-07 | #42 and #44, merged 2026-11-06 21:42 | 0.25.1, 2.11.0+cu130 | `results/qwen3.8-27b-nvidia-nvfp4/20261107_094900` (full run), `results/qwen3.8-27b-nvidia-nvfp4-prefill/20261107_125906` (prefill rerun) | `cache_salt` reaches vLLM. Server timings. New tool-calling scorer. Prefill scaling works. | Concurrency, energy |
 | E2 | 2026-11-08 | #67 to #69, merged 2026-11-07 17:35. #70, merged 2026-11-08 13:26 | 0.33.0, 2.14.0+cu130 | `results/qwen3.8-27b-nvidia-nvfp4/20261108_132808` | Fixes to the TTFT split and the energy integral. A distinct concurrency prompt for each request. Configs on vLLM 0.33.0 with `--no-enable-prefix-caching`. | Tool calling, with care |
-| E3 | from 2026-11-09 | #73 to #75, merged 2026-11-09 12:29 to 12:32 | 0.33.0 in the configs | None yet | 600 s tool-calling timeout. `tool_calling.status` in `summary.json`. | – |
+| E3 | 2026-11-09 | #73 to #75, merged 2026-11-09 12:29 to 12:32 | 0.33.0 in the configs | None | 600 s tool-calling timeout. `tool_calling.status` in `summary.json`. | Decode rates, reasoning, TTFT breakdown, tool-calling composite, FLOP analysis |
+| E4 | from 2026-11-09 | #96 to #107, merged 2026-11-09 14:09 to 14:21, and the `SCHEMA_VERSION` 4 change | 0.33.0 in the configs | None yet | Decode rates in tokens. Salted decode and reasoning. Reasoning cap 4096 and new Qwen3.8 prompts. Calibrated TTFT-breakdown prompts. Refusal score. FLOP estimates for dense models and a fixed prefill estimate. | – |
 
 ### E0: July 2026, Qwen3.6-35B-A3B
 
@@ -48,21 +49,36 @@ The PR merge times are in PST.
 - `summary.json` records `tool_calling.status`, and `failure_modes` has `request_timeout`.
 - #74 changed the HTTP error handling and deep context errors. #75 fixed `batch_run.py`. Neither changes the numbers of a run without errors.
 - #76 to #88 move code into `harness/` and `benchmarks/`. Their descriptions state no behavior change.
+- No run uses this harness state. A run from #99 to #107 has `harness.schema_version` 3, but it also has some E4 changes. Do not use such a checkout.
+
+### E4: from 2026-11-09
+
+Runs of this era have `harness.schema_version` 4. They also have `vllm_server_version` in `environment.json` and a relative `log_path` (#99).
+
+- Decode (#101): the peak, min, and median rates count tokens per second (`rate_method: token_delta`). Before, they counted stream events per second. With MTP, one event holds several tokens, so the old values were too low. The mean rate (`tok_per_sec_avg`) uses the same method as before.
+- Decode (#101): each decode request has a new `cache_salt`, also in the spec comparison. `output_truncated` is replaced by `stopped_early` and `finish_reason`.
+- Reasoning (#102): the token cap is `reasoning_max_tokens` (default 4096, before a fixed 1024). Prompts 3 to 6 of the Qwen3.8 config have new text without `<antThinking>`. Each request has a new salt. Without a reasoning parser, the benchmark splits the output at the `<think>` tags.
+- Spec comparison (#103): the disabled variant removes each speculative decoding flag of `server.command`. Only a config with such a flag, for example the legacy unsloth config, gets other numbers.
+- TTFT breakdown (#104): each prompt has the exact token length of its row. Before, the "128" row had 180 server tokens. `actual_tokens` holds the `/tokenize` count.
+- Prefill scaling (#104): the GPU window opens after the prompt calibration. Thus the window energy and `duration_s` no longer include the `/tokenize` requests. `server_cache_settings.prefix_caching` holds the real flag, or `null`.
+- Tool calling (#96): the `refusal` component of the composite reads the new `correct_refusal` field. Before, it read the refusal pass rate. The pass counts do not change. `tool_calling_repeats` can repeat the task set.
+- FLOP analysis (#105 to #107): the estimator reads the dimensions from `config.json`, so Qwen3.8-27B gets an estimate. `architecture.model` is the `model_type`. The prefill estimate counted the prompt length twice in the attention terms. The new prefill values are about S times lower. The decode values of Qwen3.6-35B-A3B do not change.
 
 ## Metrics across era boundaries
 
 "Yes" means that the harness measures the metric with the same method on both sides. The vLLM version can still change the number. E1 and E2 also differ in the vLLM and torch versions. Read a difference between them as an effect of the vLLM upgrade.
 
-| Metric | E0 and later eras | E1 and E2 | E2 and E3 |
-|---|---|---|---|
-| Client TTFT: latency, deep context | No: cache hits | Yes | Yes |
-| TTFT breakdown | No: no server data | Yes, from `server_ttft_s` | Yes |
-| Decode, with and without MTP | Yes | Yes | Yes |
-| Reasoning tokens | Yes | Yes | Yes |
-| Concurrency | No: shared prompt | No: shared prompt, other length | Yes |
-| Prefill scaling | No: no data | Yes, from the prefill rerun | Yes |
-| Tool calling | No: old scorer | Yes, inside the noise | With care: timeout and mock |
-| Energy | No: old method | No: old method | Yes |
+| Metric | E0 and later eras | E1 and E2 | E2 and E3 | E3 and E4 |
+|---|---|---|---|---|
+| Client TTFT: latency, deep context | No: cache hits | Yes | Yes | Yes |
+| TTFT breakdown | No: no server data | Yes, from `server_ttft_s` | Yes | No: exact prompt lengths |
+| Decode, with and without MTP | Yes | Yes | Yes | Mean: yes. Peak, min, median: no |
+| Reasoning tokens | Yes | Yes | Yes | No: cap, prompts, salt |
+| Concurrency | No: shared prompt | No: shared prompt, other length | Yes | Yes |
+| Prefill scaling | No: no data | Yes, from the prefill rerun | Yes | Throughput: yes. Window energy: no |
+| Tool calling | No: old scorer | Yes, inside the noise | With care: timeout and mock | Pass count: yes. Composite: no |
+| Energy | No: old method | No: old method | Yes | Yes |
+| FLOP analysis | Yes, Qwen3.6-35B-A3B only | Yes, but 27B is `unsupported` | Yes | Decode: yes. Prefill: no |
 
 ## How the dashboard marks the eras
 
@@ -92,7 +108,7 @@ Known limits:
 - An unpublished run from before E3 has no schema version and no `provenance.json`. The page uses the date rule for it. Such a run after 2026-11-07 shows no era, and a run from an old checkout gets no "Pre-fix scoring" badge. To fix this, add a `provenance.json` to its run dir.
 - The runner writes `SCHEMA_VERSION` from `harness/provenance.py`. A new era needs a new number there. Otherwise the new runs show the old era.
 - "Older vLLM" compares only the shown runs. When you hide the newer run, the badge goes away.
-- The era badge is plain. Only "Pre-fix scoring" marks an era as a warning. No warning badge marks the E1 and E2 or E2 and E3 boundaries, or the old whole-run energy. "Run energy" in the "All runs" table is about 6% low for E0 and E1.
+- The era badge is plain. Only "Pre-fix scoring" marks an era as a warning. No warning badge marks the E1 and E2, E2 and E3, or E3 and E4 boundaries, or the old whole-run energy. "Run energy" in the "All runs" table is about 6% low for E0 and E1.
 - The "Prefix cache" column shows the flag in the server command. Without a flag, it shows "default", because the vLLM default differs between versions. Read `vllm.log` for the real value.
 
 ## Noise

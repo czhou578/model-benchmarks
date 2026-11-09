@@ -20,6 +20,7 @@ import benchmarks.reasoning
 import benchmarks.tool_calling
 import benchmarks.ttft_breakdown
 import core_runner
+from harness.provenance import SCHEMA_VERSION
 
 ALL_STEPS = [
     "latency", "deep_context", "ttft_breakdown", "decode", "reasoning",
@@ -184,4 +185,4 @@ def test_summary_and_environment_record_the_provenance(tmp_path, monkeypatch):
 def test_run_label_is_absent_when_not_set(tmp_path, monkeypatch):
     _, _, summary = _run_main(tmp_path, monkeypatch)
     assert "run_label" not in summary
-    assert summary["harness"]["schema_version"] == 3
+    assert summary["harness"]["schema_version"] == SCHEMA_VERSION
