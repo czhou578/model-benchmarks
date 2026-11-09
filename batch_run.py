@@ -6,13 +6,16 @@ which ones pass, fail, or need attention.
 Usage:
     python batch_run.py                  # run all models, stream output to console
     python batch_run.py --model name.yml # run only one model
-    python batch_run.py --jobs 2         # run up to 2 models in parallel
     python batch_run.py --dry-run        # show what would run without executing
 
+The script runs the models one at a time. It reads only models/*.yml and
+models/*.yaml, not the subfolders of models/.
+
 Output:
-    - Live progress lines to the terminal (coloured when supported)
-    - A machine-parseable summary.json written alongside this script
-    - A human-readable SUMMARY.md with per-model pass/fail, errors, and stats
+    - Live progress lines and the core_runner output to the terminal
+    - The core_runner output of each model in <output-dir>/logs/<name>.log
+    - A machine-parseable summary.json in --output-dir (default: current directory)
+    - A human-readable SUMMARY.md in --output-dir with per-model pass/fail and errors
 """
 
 from __future__ import annotations
@@ -21,6 +24,7 @@ import argparse
 import json
 import subprocess
 import sys
+import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,6 +33,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent
 # core_runner.py writes its run directories here by default.
 RESULTS_DIR = ROOT / "results"
+MODELS_DIR = ROOT / "models"
+CORE_RUNNER = ROOT / "core_runner.py"
 
 # --------------------------------------------------------------------------- #
 # Colours (auto-disable when stdout is not a TTY)
@@ -100,6 +106,98 @@ def find_model_mode(cfg: dict) -> str:
 # Single model run
 # --------------------------------------------------------------------------- #
 
+# core_runner.py prints this line right after it makes the run directory.
+RUN_DIR_PREFIX = "[core_runner] writing results to "
+MODEL_TIMEOUT_S = 3600 * 24  # generous per-model cap
+
+
+def list_run_dirs(name: str) -> set[Path]:
+    """Return the run directories that exist now for one model name."""
+    model_dir = RESULTS_DIR / name
+    if not model_dir.is_dir():
+        return set()
+    return {p.resolve() for p in model_dir.iterdir() if p.is_dir()}
+
+
+def stream_process(cmd: list[str], log_file: Any, timeout_s: float) -> tuple[int | None, list[str]]:
+    """Run cmd and copy its output to the console and to log_file.
+
+    Return (returncode, output lines). The return code is None when the
+    process exceeds timeout_s and batch_run kills it.
+    """
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=ROOT)
+    timed_out = threading.Event()
+
+    def kill() -> None:
+        timed_out.set()
+        proc.kill()
+
+    timer = threading.Timer(timeout_s, kill)
+    timer.start()
+    lines: list[str] = []
+    try:
+        for line in proc.stdout:
+            lines.append(line)
+            sys.stdout.write(line)
+            sys.stdout.flush()
+            log_file.write(line)
+            log_file.flush()
+        returncode = proc.wait()
+    finally:
+        timer.cancel()
+    return (None if timed_out.is_set() else returncode), lines
+
+
+def find_new_run_dir(name: str, before: set[Path], lines: list[str]) -> Path | None:
+    """Find the run directory that this attempt made.
+
+    Use the run-dir line that core_runner prints. If that line is missing,
+    use the one directory that did not exist before the attempt.
+    """
+    for line in lines:
+        if line.startswith(RUN_DIR_PREFIX):
+            path = Path(line[len(RUN_DIR_PREFIX):].strip())
+            path = (path if path.is_absolute() else ROOT / path).resolve()
+            if path not in before:
+                return path
+    new_dirs = list_run_dirs(name) - before
+    return new_dirs.pop() if len(new_dirs) == 1 else None
+
+
+def run_attempt(model_yaml: Path, core_runner: Path, name: str, log_file: Any, timeout_s: float) -> dict[str, Any]:
+    """Run core_runner.py once. Return the status, error, run_dir and summary."""
+    before = list_run_dirs(name)
+    cmd = [sys.executable, str(core_runner), "--model", str(model_yaml), "--results-dir", str(RESULTS_DIR)]
+    try:
+        returncode, lines = stream_process(cmd, log_file, timeout_s)
+    except Exception as exc:
+        return {"status": "error", "error": f"subprocess exception: {exc}"}
+    if returncode is None:
+        return {"status": "timeout", "error": f"process exceeded the {timeout_s:.0f} s timeout"}
+
+    out: dict[str, Any] = {"status": "error"}
+    summary = None
+    run_dir = find_new_run_dir(name, before, lines)
+    if run_dir is not None:
+        out["run_dir"] = str(run_dir.relative_to(ROOT)) if run_dir.is_relative_to(ROOT) else str(run_dir)
+        try:
+            summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            summary = None
+
+    if isinstance(summary, dict):
+        out["summary"] = summary
+        if summary.get("status") == "completed" and returncode == 0:
+            out.update(status="pass", error=None)
+        else:
+            out["status"] = "fail"
+            out["error"] = summary.get("error") or f"status={summary.get('status')}, exit code {returncode}"
+    elif returncode != 0:
+        out["error"] = f"core_runner exit code {returncode}, no summary.json for this run"
+    else:
+        out["error"] = "no summary.json for this run"
+    return out
+
 
 def run_one_model(
     model_yaml: Path,
@@ -107,10 +205,17 @@ def run_one_model(
     *,
     retry: bool = True,
     max_retries: int = 1,
+    log_dir: Path = Path("logs"),
 ) -> dict[str, Any]:
-    """Execute core_runner.py for one model YAML and return a result dict."""
+    """Execute core_runner.py for one model YAML and return a result dict.
+
+    Retry on a failed status, a nonzero exit code, a timeout or a missing
+    summary.json, at most max_retries times. Do not retry when retry is False.
+    """
     name = model_name_from_yaml(model_yaml)
-    result = {
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path = log_dir / f"{name}.log"
+    result: dict[str, Any] = {
         "name": name,
         "yaml": str(model_yaml),
         "status": "unknown",
@@ -118,68 +223,29 @@ def run_one_model(
         "error": None,
         "run_dir": None,
         "summary": None,
+        "log": str(log_path),
+        "attempts": 0,
     }
+    deadline = time.time() + MODEL_TIMEOUT_S
 
-    deadline = time.time() + 3600 * 24  # generous per-model cap
-
-    for attempt in range(1 + (max_retries if retry else 0)):
-        if time.time() > deadline:
-            result["status"] = "timeout"
-            result["error"] = "exceeded per-model time budget (24 h)"
-            return result
-
-        if attempt > 0:
-            log(f"  {c('yellow', f'Retry {attempt} for {name}...')}")
-            time.sleep(2)
-
-        attempt_start = time.time()
-        try:
-            proc = subprocess.run(
-                [sys.executable, str(core_runner), "--model", str(model_yaml)],
-                capture_output=True,
-                text=True,
-                timeout=3600 * 24,
-            )
-        except subprocess.TimeoutExpired:
-            result["status"] = "timeout"
-            result["error"] = "process exceeded 24 h timeout"
-            continue
-        except Exception as exc:
-            result["status"] = "error"
-            result["error"] = f"subprocess exception: {exc}"
-            continue
-
-        result["duration_s"] = round(time.time() - attempt_start, 1)
-
-        # core_runner writes summary.json to its run directory.
-        # Try to find it by scanning the results tree.
-        if RESULTS_DIR.exists():
-            for sd in sorted(RESULTS_DIR.glob(f"{name}/*/summary.json"), reverse=True):
-                try:
-                    with open(sd) as f:
-                        summary = json.load(f)
-                    result["run_dir"] = str(sd.parent.relative_to(ROOT))
-                    result["summary"] = summary
-                    result["status"] = "completed" if summary.get("status") == "completed" else "failed"
-                    if result["status"] == "failed" and attempt < max_retries:
-                        result["error"] = summary.get("error", "status=failed")
-                        continue  # retry
-                    break
-                except Exception:
-                    pass
-
-        if result["status"] in ("completed", "failed") or not retry:
-            if not result["error"] and result["status"] == "completed":
-                result["status"] = "pass"
-            elif not result["error"]:
-                result["status"] = "fail"
-            break
-
-        # If we get here: status was unknown → retry
-        result["error"] = result.get("error") or "no summary.json found"
-
-    if result.get("error") and result["status"] == "unknown":
-        result["status"] = "error"
+    with open(log_path, "w", encoding="utf-8") as log_file:
+        for attempt in range(1 + (max(max_retries, 0) if retry else 0)):
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                result.update(status="timeout", error="exceeded per-model time budget (24 h)")
+                break
+            if attempt > 0:
+                log(f"  {c('yellow', f'Retry {attempt} for {name}...')}")
+                time.sleep(2)
+            log_file.write(f"=== batch_run: attempt {attempt + 1} for {name} ===\n")
+            start = time.time()
+            # Clear the fields so that a result never shows an earlier attempt's run dir.
+            result.update(run_dir=None, summary=None, error=None)
+            result.update(run_attempt(model_yaml, core_runner, name, log_file, remaining))
+            result["duration_s"] = round(time.time() - start, 1)
+            result["attempts"] = attempt + 1
+            if result["status"] == "pass":
+                break
 
     return result
 
@@ -221,6 +287,8 @@ def generate_summary_md(results: list[dict[str, Any]], output_path: Path) -> Non
             lines.append(f"- **Duration:** {r['duration_s']:.1f}s")
         if r.get("run_dir"):
             lines.append(f"- **Run dir:** `{r['run_dir']}`")
+        if r.get("log"):
+            lines.append(f"- **Log:** `{r['log']}`")
         if r.get("summary"):
             s = r["summary"]
             lines.append(f"- **Server mode:** {s.get('server_mode', 'N/A')}")
@@ -271,17 +339,17 @@ def c_short(status: str) -> str:
 # --------------------------------------------------------------------------- #
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Run core_runner.py on all model YAMLs")
     parser.add_argument("--model", help="Run only this specific model YAML (relative to models/)")
-    parser.add_argument("--jobs", type=int, default=1, help="Max parallel runs (default 1)")
     parser.add_argument("--dry-run", action="store_true", help="Show what would run without executing")
     parser.add_argument("--no-retry", action="store_true", help="Do not retry failed runs")
     parser.add_argument("--max-retries", type=int, default=1, help="Number of retry attempts on failure")
-    parser.add_argument("--output-dir", default=".", help="Directory for summary output (default: .)")
-    args = parser.parse_args()
+    parser.add_argument("--output-dir", default=".", help="Directory for summary and log output (default: .)")
+    args = parser.parse_args(argv)
 
-    models_dir = Path("models")
+    # Only the top level of models/: batch_run skips subfolders such as models/legacy/.
+    models_dir = MODELS_DIR
     if not models_dir.is_dir():
         log(f"{c('red', 'ERROR')}: models/ directory not found")
         sys.exit(1)
@@ -322,35 +390,15 @@ def main() -> None:
             log(f"  {name}{port_str} [{mode_str}]")
         return
 
-    # Port conflict warning
-    try:
-        import yaml
-
-        ports: dict[int, str] = {}
-        for mf in model_files:
-            with open(mf) as f:
-                cfg = yaml.safe_load(f)
-            if isinstance(cfg, dict):
-                p = find_model_port(cfg)
-                if p is not None:
-                    if p in ports:
-                        log(
-                            f"{c('yellow', 'WARNING')}: port {p} is used by "
-                            f"{ports[p]} and {model_name_from_yaml(mf)} — "
-                            f"managed servers will conflict!"
-                        )
-                    ports[p] = model_name_from_yaml(mf)
-    except Exception:
-        pass
-
-    # Run models sequentially (parallel is tricky because they all share
-    # the same GPU — running them one at a time is the safe default).
+    # Run the models one at a time. They share the GPU. core_runner stops each
+    # managed server before the next model starts, so models can share a port.
     log(f"{c('bold', 'BATCH RUN')} — starting {len(model_files)} model(s) ...")
     log(f"{'─' * 60}")
 
     start_wall = time.time()
     results: list[dict[str, Any]] = []
-    core_runner = Path("core_runner.py")
+    out = Path(args.output_dir)
+    out.mkdir(parents=True, exist_ok=True)
 
     for i, mf in enumerate(model_files, 1):
         name = model_name_from_yaml(mf)
@@ -359,9 +407,10 @@ def main() -> None:
 
         r = run_one_model(
             mf,
-            core_runner,
+            CORE_RUNNER,
             retry=not args.no_retry,
             max_retries=args.max_retries,
+            log_dir=out / "logs",
         )
         results.append(r)
 
@@ -376,6 +425,7 @@ def main() -> None:
         if r.get("error"):
             err_short = r["error"][:120]
             log(f"    {c('dim', err_short)}")
+            log(f"    {c('dim', 'log: ' + r['log'])}")
 
     total = len(results)
     passed = sum(1 for r in results if r["status"] == "pass")
@@ -383,8 +433,6 @@ def main() -> None:
     wall = time.time() - start_wall
 
     # Write summary artifacts
-    out = Path(args.output_dir)
-    out.mkdir(parents=True, exist_ok=True)
 
     # summary.json — machine-parseable
     summary_json = {

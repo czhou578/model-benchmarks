@@ -33,7 +33,6 @@ ignore = ["E501"]
 
 # Known findings. Each one needs a code change outside the packaging work.
 [tool.ruff.lint.per-file-ignores]
-"batch_run.py" = ["F841"]  # batch_run discards the core_runner output.
 "benchmarks/architecture_flops.py" = ["E741"]  # `l` is the layer count.
 "benchmarks/tool_calling.py" = [
     "F402",  # A loop variable shadows dataclasses.field.
