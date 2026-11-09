@@ -8,8 +8,8 @@ The runner runs the benchmarks in the order of this table. The function `main()`
 
 | Benchmark | Code | Output file in the run dir | `summary.json` key | Control |
 |---|---|---|---|---|
-| Latency | `run_latency_sweep` in core_runner.py | `latency.json` | `latency`, full copy | `--skip-latency` |
-| Deep context | `run_deep_context` in core_runner.py | `deep_context.json` | `deep_context`, full copy | runs only when `context_lengths` is set |
+| Latency | `run_latency_sweep` in `benchmarks/latency.py` | `latency.json` | `latency`, full copy | `--skip-latency` |
+| Deep context | `run_deep_context` in `benchmarks/latency.py` | `deep_context.json` | `deep_context`, full copy | runs only when `context_lengths` is set |
 | TTFT breakdown | `benchmarks/ttft_breakdown.py` | `ttft_breakdown.json` | `ttft_breakdown`, full copy | `--skip-ttft` |
 | Decode | `run_decode_speed` in core_runner.py | `decode.json` | `decode`, full copy | `--skip-decode` |
 | Reasoning | `run_reasoning_benchmark` in core_runner.py | `reasoning.json` | `reasoning`, full copy | `--skip-reasoning` |
