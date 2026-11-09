@@ -38,7 +38,8 @@ import requests
 import yaml
 import re
 
-from core_runner import ROOT, ModelClient
+from core_runner import ModelClient
+from harness.paths import ROOT
 
 
 # --------------------------------------------------------------------------- #

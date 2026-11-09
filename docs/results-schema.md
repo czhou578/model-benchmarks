@@ -32,7 +32,7 @@ Read these points before you compare numbers.
 
 - A field that ends in `_s` holds seconds. A field that ends in `_ms` holds milliseconds. The `ttft_*_s` fields are seconds.
 - `tok_per_sec_*`, `*_tps*`, and `*_tok_s` fields are tokens per second. The fields in `reasoning.json` are token counts, not rates.
-- Exception: in `prefill_scaling.json`, the `effective_prefill_tps` and `engine_prefill_tps` blocks hold tokens per second, but their keys end in `_s`. `prefill.py` calls `_stat_summary` with the default suffix `s`.
+- Exception: in `prefill_scaling.json`, the `effective_prefill_tps` and `engine_prefill_tps` blocks hold tokens per second, but their keys end in `_s`. `prefill.py` calls `stat_summary` with the default suffix `s`.
 - Client TTFT starts before the client sends the HTTP request (`start` in `ModelClient._execute_request`). In chat mode, it stops at the first stream event with text in `delta.reasoning` or `delta.content`. The `has_text` check in the same function sets this time. So the first reasoning token counts as the first token.
 - `prefill_tps_avg` in `latency.json` and `deep_context.json` is the mean of `prompt_tokens / client TTFT`. It includes network time, queue time, and the first decode step. It is not an engine prefill rate.
 - `prefill_scaling.json` is a curve of prefill time and prefill rate against prompt length. It is not a GPU power curve. Its `gpu` block holds the GPU data of each length window.

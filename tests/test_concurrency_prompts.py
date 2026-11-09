@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import requests
 
 from benchmarks import concurrency
-from core_runner import count_tokens
+from harness.prompts import count_tokens
 
 TEMPLATE_TOKENS = 12
 
