@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import time
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import requests
 
@@ -217,3 +217,196 @@ def stream_generation(
         generation_time_s=parsed_metrics["generation_time_s"],
         server_metrics=server_metrics,
     )
+
+
+class ModelClient:
+    """Client for one model on an OpenAI-compatible server (chat or completions)."""
+
+    def __init__(self, base_url: str, model_name: str, api_key: Optional[str] = None,
+                 chat: bool = True):
+        self.base_url = base_url.rstrip("/")
+        self.model_name = model_name
+        self.chat = chat
+        self.headers = {"Content-Type": "application/json"}
+        if api_key:
+            self.headers["Authorization"] = f"Bearer {api_key}"
+        # None: not known yet. The first salted request or the preflight
+        # sets it. After that the client does not test the field again.
+        self.cache_salt_supported: bool | None = None
+
+    def _request_target(self, prompt: str) -> tuple[str, dict[str, Any]]:
+        """Return the URL and the payload base for *prompt* in the endpoint mode."""
+        if self.chat:
+            return (f"{self.base_url}/v1/chat/completions",
+                    {"model": self.model_name, "messages": [{"role": "user", "content": prompt}]})
+        return f"{self.base_url}/v1/completions", {"model": self.model_name, "prompt": prompt}
+
+    def wait_until_ready(
+        self,
+        timeout_s: int = 600,
+        poll_s: float = 3.0,
+        process_check: Optional[Callable[[], None]] = None,
+    ) -> None:
+        """Wait until the vLLM engine is loaded and can actually process a request.
+
+        The /v1/models HTTP 200 check only verifies the server is listening,
+        not that the model weights have been loaded.  A dummy chat completion
+        forces the engine to respond, which catches the loading period and
+        prevents the latency sweep (which fires immediately after this call)
+        from hitting a still-initialising model — that was why every latency
+        entry showed n=0 (TTFT was NaN).
+        """
+        health_url = f"{self.base_url}/v1/models"
+        deadline = time.time() + timeout_s
+        last_err = None
+
+        # Step 1: wait for the HTTP server to accept connections.
+        while time.time() < deadline:
+            if process_check:
+                process_check()
+            try:
+                r = requests.get(health_url, headers=self.headers, timeout=5)
+                if r.status_code == 200:
+                    break
+            except requests.RequestException as e:
+                last_err = e
+            time.sleep(poll_s)
+        else:
+            raise TimeoutError(f"HTTP server unreachable after {timeout_s}s (last error: {last_err})")
+
+        # Step 2: drive a real test request to confirm the model engine
+        # is actually able to produce output.  This is what /v1/models
+        # alone cannot tell us.
+        warmup_done = False
+        while time.time() < deadline:
+            if process_check:
+                process_check()
+            try:
+                url, payload = self._request_target("hi")
+                payload.update({
+                    "max_tokens": 1,
+                    "temperature": 0.0,
+                    "stream": False,
+                })
+                resp = requests.post(url, headers=self.headers, json=payload, timeout=30)
+                if resp.status_code == 200:
+                    warmup_done = True
+                    break
+                last_err = f"HTTP {resp.status_code}: {resp.text[:MAX_ERROR_BODY_CHARS]}"
+            except requests.RequestException as e:
+                last_err = e
+            time.sleep(poll_s)
+
+        if not warmup_done:
+            raise TimeoutError(
+                f"Model engine not ready after {timeout_s}s — "
+                f"/v1/models returned 200 but a real generation request failed "
+                f"(last error: {last_err}). "
+                f"The model weights are likely still being loaded from disk."
+            )
+
+    def tokenize_prompt(self, prompt: str) -> TokenizedPrompt:
+        """Count the tokens the server sees for *prompt* through ``/tokenize``.
+
+        In chat mode the request carries the same single user message as
+        ``generate`` and ``add_generation_prompt``, so the count includes the
+        chat template. The prefill benchmark uses this count to build prompts
+        of an exact token length.
+        """
+        if self.chat:
+            payload = {
+                "model": self.model_name,
+                "messages": [{"role": "user", "content": prompt}],
+                "add_generation_prompt": True,
+            }
+        else:
+            payload = {
+                "model": self.model_name,
+                "prompt": prompt,
+                "add_special_tokens": True,
+            }
+
+        response = requests.post(
+            f"{self.base_url}/tokenize",
+            headers=self.headers,
+            json=payload,
+            timeout=300,
+        )
+        response.raise_for_status()
+        data = response.json()
+        tokens = data.get("tokens") or []
+        count = data.get("count")
+        return TokenizedPrompt(count=int(count) if count is not None else len(tokens), tokens=tokens)
+
+    def generate(
+        self,
+        prompt: str,
+        max_tokens: int = 256,
+        temperature: float = 0.0,
+        cache_salt: str | None = None,
+    ) -> GenerationResult:
+        """Send a generation request, optionally isolating it from prefix cache.
+
+        If *cache_salt* is given the request carries it as a top-level
+        ``cache_salt`` field so vLLM's prefix cache cannot reuse KV blocks.
+        The client decides the salt mode once (``cache_salt_supported``).
+        While the mode is unknown, an HTTP 400 whose body names ``cache_salt``
+        sets the text mode: the client then appends `` salt=<value>`` to the
+        prompt text for this and all later requests. Any other HTTP error
+        raises ``ServerHTTPError`` with the status and the server body.
+        """
+        options = {
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "stream": True,
+            "stream_options": {"include_usage": True},
+        }
+
+        # vLLM ignores unknown fields such as ``extra_body``, so the salt
+        # must sit at the top level of the JSON body.
+        mode = self.cache_salt_supported
+        if cache_salt is not None and mode is not False:
+            url, payload = self._request_target(prompt)
+            try:
+                result = self._execute_request(url, {**payload, **options, "cache_salt": cache_salt})
+            except ServerHTTPError as e:
+                if mode is True or e.status_code != 400 or "cache_salt" not in e.body:
+                    raise
+                self.cache_salt_supported = False
+            else:
+                self.cache_salt_supported = True
+                return result
+
+        salt = f" salt={cache_salt}" if cache_salt is not None else ""
+        url, payload = self._request_target(prompt + salt)
+        return self._execute_request(url, {**payload, **options})
+
+    def preflight_cache_salt(self) -> bool | None:
+        """Test whether the server supports the ``cache_salt`` field.
+
+        Sends one minimal request with a top-level ``cache_salt`` field.
+        Returns ``True`` if the server accepts it, ``False`` on another status,
+        ``None`` on connection failure. A 200 or a 400 also sets
+        ``cache_salt_supported``, which ``generate`` uses.
+        """
+        try:
+            url, payload = self._request_target("hi")
+            payload.update({
+                "max_tokens": 1,
+                "temperature": 0.0,
+                "stream": False,
+                "cache_salt": "preflight",
+            })
+            resp = requests.post(
+                url, headers=self.headers, json=payload, timeout=30
+            )
+        except (requests.RequestException, ValueError):
+            return None
+        if resp.status_code in (200, 400):
+            self.cache_salt_supported = resp.status_code == 200
+        return resp.status_code == 200
+
+    def _execute_request(self, url: str, payload: dict) -> GenerationResult:
+        """Send one streaming request. Raises ``ServerHTTPError`` on an HTTP error status."""
+        return stream_generation(url, self.headers, payload, chat=self.chat)
+
