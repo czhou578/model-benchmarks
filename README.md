@@ -98,12 +98,11 @@ FLOP analysis and tool calling have no skip flag.
 |---|---|
 | `--model FILE` | Run one model config. The path is relative to `models/`. |
 | `--dry-run` | List the model configs and their ports, then stop. |
-| `--jobs N` | Run up to `N` model configs in parallel. The default is 1. |
 | `--max-retries N` | Retry a failed run `N` times. The default is 1. |
 | `--no-retry` | Do not retry a failed run. |
-| `--output-dir DIR` | Write `summary.json` and `SUMMARY.md` to `DIR`. The default is the current directory. |
+| `--output-dir DIR` | Write `summary.json`, `SUMMARY.md` and `logs/<name>.log` to `DIR`. The default is the current directory. |
 
-Keep `--jobs 1` on a single GPU. Parallel runs share the GPU memory and the server ports. `batch_run.py` passes only `--model` to `core_runner.py`.
+`batch_run.py` runs the model configs one at a time. It reads only the top level of `models/`, not its subfolders. It passes only `--model` and `--results-dir` to `core_runner.py`. A run fails when `core_runner.py` exits with a nonzero code, writes no `summary.json`, or writes a status other than `completed`. `batch_run.py` then retries the run. It shows the `core_runner.py` output on the console and writes it to `logs/<name>.log`.
 
 ## Published results
 
