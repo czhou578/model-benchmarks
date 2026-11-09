@@ -28,7 +28,7 @@ A run also writes `model_config.yml`, `environment.json`, `gpu_samples.csv`, and
 ## Requirements
 
 - An NVIDIA GPU with a driver and `nvidia-smi`.
-- vLLM. The model configs target vLLM 0.33.0. The published results use vLLM 0.25.1. This harness drives vLLM; it does not install it.
+- vLLM. The model configs target vLLM 0.33.0. The newest published run uses vLLM 0.33.0, and the older runs use 0.25.1. This harness drives vLLM; it does not install it.
 - Python 3.10 or later.
 - Hugging Face access to the model weights, and disk space for them.
 - On a DGX Spark: the setup notes in [docs/dgx-spark.md](docs/dgx-spark.md).
@@ -113,17 +113,15 @@ FLOP analysis and tool calling have no skip flag.
 
 ## Published results
 
-The write-ups in [docs/results/](docs/results/) describe past runs. Each write-up names its date and the harness state. Runs before 2026-11-07 use the earlier tool-calling scorer and cache-salt placement. Do not compare their TTFT or tool-calling numbers with newer runs. [docs/dashboard.md](docs/dashboard.md) explains why.
+The write-ups in [docs/results/](docs/results/) describe past runs. Each write-up names its date and the harness state. Fixes to the harness divide the runs into eras. Before you compare two runs, read [docs/comparability.md](docs/comparability.md).
 
-Test system of the published runs, from `environment.json` in the run dirs:
+Test system of the published runs, from `environment.json` in the run dirs. All runs use an NVIDIA GB10 (DGX Spark, 121 GB unified memory) and CUDA 13.0.
 
-| Component | Value |
-|---|---|
-| GPU | NVIDIA GB10 (DGX Spark, 121 GB unified memory) |
-| Driver | 580.173.02 (2026-11 runs), 580.159.03 (2026-07 runs) |
-| CUDA | 13.0 |
-| PyTorch | 2.11.0+cu130 |
-| vLLM | 0.25.1 |
+| Era | Runs | Driver | PyTorch | vLLM |
+|---|---|---|---|---|
+| E0 | 2026-07-29, five Qwen3.6-35B-A3B runs | 580.159.03 | 2.11.0+cu130 | 0.25.1 |
+| E1 | 2026-11-07, two Qwen3.8-27B runs | 580.173.02 | 2.11.0+cu130 | 0.25.1 |
+| E2 | 2026-11-08, one Qwen3.8-27B run | 580.173.02 | 2.14.0+cu130 | 0.33.0 |
 
 ## Code layout
 
@@ -152,6 +150,7 @@ The modules in `benchmarks/` import from `harness/` and from other modules in `b
 - [docs/adding-a-benchmark.md](docs/adding-a-benchmark.md): how to add a benchmark.
 - [docs/dashboard.md](docs/dashboard.md): how to build, serve, and read the dashboard.
 - [docs/dgx-spark.md](docs/dgx-spark.md): DGX Spark setup and the memory guard.
+- [docs/comparability.md](docs/comparability.md): which published results you can compare, and the noise.
 - [docs/results/](docs/results/): published result write-ups.
 - [docs/design/](docs/design/): design notes from the development of the harness.
 
