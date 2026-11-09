@@ -1,5 +1,7 @@
 # MoE-Specific Metrics — Measurement Plan
 
+> **Status (checked 2026-11-09): not implemented.** No code measures active experts, expert imbalance, routing overhead, or expert occupancy, and no run writes `moe_metrics.json`. The FLOP estimator uses 256 experts and 8 experts per token for Qwen3.6-35B-A3B, not the 64 experts and top-2 routing in this note. `roofline.json` and `--skip-roofline` do not exist.
+
 **Phase:** Roadmap item #19 (Phase 7 — Systems Analysis)
 **Model:** `Qwen3.6-35B-A3B-NVFP4` (35B total / 3.5B active per token, top-2 expert routing)
 

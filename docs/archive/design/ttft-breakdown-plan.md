@@ -1,5 +1,7 @@
 # TTFT Breakdown Benchmark — Implementation Plan
 
+> **Status (checked 2026-11-09): superseded.** `benchmarks/ttft_breakdown.py` exists, but vLLM reports no prefill time. Thus the code splits TTFT in two parts, not four: the queue time (`scheduler_delay`) and the post-queue time (`post_queue`, equal to the server TTFT). `prefill_ms` and `first_decode_ms` stay `null`. See [methodology.md](../../methodology.md) and [results-schema.md](../../results-schema.md) for the current split.
+
 ## Goal
 
 Split client-side TTFT (wall-clock time to first token) into four
