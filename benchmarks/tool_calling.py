@@ -20,7 +20,7 @@ Usage::
 
     python -m benchmarks.tool_calling --tasks datasets/tool_calling_tasks.yaml --base-url http://localhost:8000/v1 --model <model-name>
 
-Or import ``run_tool_calling_benchmark(client, tasks)`` from core_runner benchmarks.
+Or import ``run_tool_calling_benchmark(client, tasks)`` from benchmarks.tool_calling.
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ import requests
 import yaml
 import re
 
-from core_runner import ModelClient
+from harness.client import ModelClient
 from harness.paths import ROOT
 
 

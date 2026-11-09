@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 
 import benchmarks.tool_calling as tc
-from core_runner import ModelClient
+from harness.client import ModelClient
 
 _TOOLS = [
     {

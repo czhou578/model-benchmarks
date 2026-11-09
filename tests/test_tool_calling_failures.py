@@ -5,7 +5,7 @@ from __future__ import annotations
 import requests
 
 import benchmarks.tool_calling as tc
-from core_runner import ModelClient
+from harness.client import ModelClient
 from harness.paths import ROOT
 
 _TOOLS = tc._build_tools_definition([{

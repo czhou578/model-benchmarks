@@ -18,7 +18,7 @@ The readiness request in step 3 is the only warm-up for the whole run. All bench
 
 ## Client-side TTFT
 
-- `ModelClient._execute_request` records `start = time.time()` before it sends the HTTP request.
+- `stream_generation` in `harness/client.py` records `start = time.time()` before it sends the HTTP request.
 - The first-token time is the arrival time of the first stream event with text. In chat mode, the text is in `delta.reasoning` or `delta.content`. In completions mode, the client reads `choices[0].text`.
 - TTFT is the first-token time minus `start`. It includes the HTTP connection, the server queue, and the prefill. It also includes the first decode step and the return trip of the first event.
 - A reasoning model streams its thinking text in `delta.reasoning`. The first thinking token stops the TTFT clock. TTFT does not wait for the answer text.

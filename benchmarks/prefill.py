@@ -1,6 +1,6 @@
 """Model-specific prompt preparation for the prefill-scaling benchmark.
 
-The approximate tokenizer in core_runner is useful for fallback accounting, but
+The approximate tokenizer in harness/prompts.py is useful for fallback accounting, but
 benchmark lengths must use the tokenizer and chat template of the running model.
 """
 
@@ -14,7 +14,7 @@ from typing import Any, Protocol
 
 import requests
 
-from core_runner import ModelClient
+from harness.client import ModelClient
 from harness.stats import stat_summary
 
 
