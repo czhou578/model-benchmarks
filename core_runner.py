@@ -532,6 +532,22 @@ def _parse_server_metrics(metrics: dict[str, Any] | None) -> dict[str, Any]:
     return out
 
 
+MAX_ERROR_BODY_CHARS = 1000
+
+
+class ServerHTTPError(requests.HTTPError):
+    """An HTTP error response. The message holds the status and the server body."""
+
+    def __init__(self, response: Any, url: str) -> None:
+        self.status_code = int(response.status_code)
+        try:
+            body = response.text or ""
+        except Exception:  # noqa: BLE001 - the body is only for the message
+            body = ""
+        self.body = body[:MAX_ERROR_BODY_CHARS]
+        super().__init__(f"HTTP {self.status_code} from {url}: {self.body}", response=response)
+
+
 class ModelClient:
     def __init__(self, base_url: str, model_name: str, api_key: Optional[str] = None,
                  chat: bool = True):
@@ -541,6 +557,16 @@ class ModelClient:
         self.headers = {"Content-Type": "application/json"}
         if api_key:
             self.headers["Authorization"] = f"Bearer {api_key}"
+        # None: not known yet. The first salted request or the preflight
+        # sets it. After that the client does not test the field again.
+        self.cache_salt_supported: bool | None = None
+
+    def _request_target(self, prompt: str) -> tuple[str, dict[str, Any]]:
+        """Return the URL and the payload base for *prompt* in the endpoint mode."""
+        if self.chat:
+            return (f"{self.base_url}/v1/chat/completions",
+                    {"model": self.model_name, "messages": [{"role": "user", "content": prompt}]})
+        return f"{self.base_url}/v1/completions", {"model": self.model_name, "prompt": prompt}
 
     def wait_until_ready(
         self,
@@ -583,20 +609,17 @@ class ModelClient:
             if process_check:
                 process_check()
             try:
-                test_prompt = {"role": "user", "content": "hi"}
-                url = (f"{self.base_url}/v1/chat/completions"
-                       if self.chat else f"{self.base_url}/v1/completions")
-                payload = {
-                    "model": self.model_name,
-                    "messages": [test_prompt],
+                url, payload = self._request_target("hi")
+                payload.update({
                     "max_tokens": 1,
                     "temperature": 0.0,
                     "stream": False,
-                }
+                })
                 resp = requests.post(url, headers=self.headers, json=payload, timeout=30)
                 if resp.status_code == 200:
                     warmup_done = True
                     break
+                last_err = f"HTTP {resp.status_code}: {resp.text[:MAX_ERROR_BODY_CHARS]}"
             except requests.RequestException as e:
                 last_err = e
             time.sleep(poll_s)
@@ -604,7 +627,7 @@ class ModelClient:
         if not warmup_done:
             raise TimeoutError(
                 f"Model engine not ready after {timeout_s}s — "
-                f"/v1/models returned 200 but a real chat completion failed "
+                f"/v1/models returned 200 but a real generation request failed "
                 f"(last error: {last_err}). "
                 f"The model weights are likely still being loaded from disk."
             )
@@ -652,82 +675,73 @@ class ModelClient:
         """Send a generation request, optionally isolating it from prefix cache.
 
         If *cache_salt* is given the request carries it as a top-level
-        ``cache_salt`` field so vLLM's prefix cache cannot reuse KV blocks.  On a 400
-        response from the server the request is retried with a text-based salt
-        appended to the prompt (ensures the content itself is unique).
+        ``cache_salt`` field so vLLM's prefix cache cannot reuse KV blocks.
+        The client decides the salt mode once (``cache_salt_supported``).
+        While the mode is unknown, an HTTP 400 whose body names ``cache_salt``
+        sets the text mode: the client then appends `` salt=<value>`` to the
+        prompt text for this and all later requests. Any other HTTP error
+        raises ``ServerHTTPError`` with the status and the server body.
         """
-        base_payload = {
-            "model": self.model_name,
+        options = {
             "max_tokens": max_tokens,
             "temperature": temperature,
             "stream": True,
             "stream_options": {"include_usage": True},
         }
 
-        if self.chat:
-            url = f"{self.base_url}/v1/chat/completions"
-            base_payload["messages"] = [{"role": "user", "content": prompt}]
-        else:
-            url = f"{self.base_url}/v1/completions"
-            base_payload["prompt"] = prompt
-
-        # Try 1: cache_salt as a top-level request field (content unchanged).
         # vLLM ignores unknown fields such as ``extra_body``, so the salt
         # must sit at the top level of the JSON body.
-        if cache_salt is not None:
-            result = self._execute_request(url, {
-                **base_payload,
-                "cache_salt": cache_salt,
-            })
-            if result is not None:
+        mode = self.cache_salt_supported
+        if cache_salt is not None and mode is not False:
+            url, payload = self._request_target(prompt)
+            try:
+                result = self._execute_request(url, {**payload, **options, "cache_salt": cache_salt})
+            except ServerHTTPError as e:
+                if mode is True or e.status_code != 400 or "cache_salt" not in e.body:
+                    raise
+                self.cache_salt_supported = False
+            else:
+                self.cache_salt_supported = True
                 return result
 
-        # Fallback: server rejected cache_salt → append salt to prompt text
         salt = f" salt={cache_salt}" if cache_salt is not None else ""
-        if self.chat:
-            base_payload["messages"] = [{"role": "user", "content": prompt + salt}]
-        else:
-            base_payload["prompt"] = prompt + salt
-        result = self._execute_request(url, base_payload)
-        if result is not None:
-            return result
-        raise RuntimeError("generation request failed (cache_salt fallback)")
+        url, payload = self._request_target(prompt + salt)
+        return self._execute_request(url, {**payload, **options})
 
     def preflight_cache_salt(self) -> bool | None:
         """Test whether the server supports the ``cache_salt`` field.
 
         Sends one minimal request with a top-level ``cache_salt`` field.
-        Returns ``True`` if the server accepts it, ``False`` on 400, ``None`` on
-        connection failure.
+        Returns ``True`` if the server accepts it, ``False`` on another status,
+        ``None`` on connection failure. A 200 or a 400 also sets
+        ``cache_salt_supported``, which ``generate`` uses.
         """
         try:
-            url = (f"{self.base_url}/v1/chat/completions"
-                   if self.chat else f"{self.base_url}/v1/completions")
-            payload = {
-                "model": self.model_name,
+            url, payload = self._request_target("hi")
+            payload.update({
                 "max_tokens": 1,
                 "temperature": 0.0,
                 "stream": False,
                 "cache_salt": "preflight",
-            }
-            if self.chat:
-                payload["messages"] = [{"role": "user", "content": "hi"}]
-            else:
-                payload["prompt"] = "hi"
-
+            })
             resp = requests.post(
                 url, headers=self.headers, json=payload, timeout=30
             )
-            return resp.status_code == 200
         except (requests.RequestException, ValueError):
             return None
+        if resp.status_code in (200, 400):
+            self.cache_salt_supported = resp.status_code == 200
+        return resp.status_code == 200
 
     def _execute_request(
         self,
         url: str,
         payload: dict,
-    ) -> GenerationResult | None:
-        """Send one streaming request and return the result, or None on 400."""
+    ) -> GenerationResult:
+        """Send one streaming request and return the result.
+
+        Raises ``ServerHTTPError`` on an HTTP error status.
+        """
         start = time.time()
         first_token_time = None
         last_event_time = start
@@ -742,11 +756,8 @@ class ModelClient:
         with requests.post(
             url, headers=self.headers, json=payload, stream=True, timeout=300
         ) as resp:
-                # If the server rejects the cache_salt param, bail so the
-                # caller can retry with the text-based fallback.
-                if resp.status_code == 400:
-                    return None
-                resp.raise_for_status()
+                if resp.status_code >= 400:
+                    raise ServerHTTPError(resp, url)
                 for raw_line in resp.iter_lines():
                     line: str = raw_line.decode("utf-8")
                     if not line or not line.startswith("data:"):
@@ -843,7 +854,9 @@ def run_deep_context(client: ModelClient, context_lengths: list[int],
     For each context length, builds a prompt of that length and generates
     a small decode (``output_tokens``). Captures TTFT and prefill TPS.
     Each request carries a fresh cache salt, so repeats never hit the
-    prefix cache. On OOM: records ``status: "oom"`` and continues.
+    prefix cache. On OOM it records ``status: "oom"``. On another request
+    failure it records ``status: "request_error"``. Both keep the error text
+    in ``error`` and go on to the next length.
     """
     results = {}
     for ctx_len in context_lengths:
@@ -852,7 +865,8 @@ def run_deep_context(client: ModelClient, context_lengths: list[int],
         ttfts: list[float] = []
         prefill_tps: list[float] = []
         exact = None
-        oom_detected = False
+        status = "success"
+        error: str | None = None
         for i in range(repeats):
             try:
                 gen = client.generate(
@@ -863,14 +877,18 @@ def run_deep_context(client: ModelClient, context_lengths: list[int],
                 if gen.ttft_s == gen.ttft_s and gen.ttft_s > 0:
                     ttfts.append(gen.ttft_s)
                     prefill_tps.append(gen.prompt_tokens / gen.ttft_s)
-            except requests.exceptions.ConnectionError:
-                oom_detected = True
+            except Exception as e:  # noqa: BLE001 - record and go to the next length
+                error = f"{type(e).__name__}: {e}"
+                text = str(e).lower()
+                if isinstance(e, requests.exceptions.ConnectionError) or (
+                    isinstance(e, requests.exceptions.HTTPError)
+                    and ("memory" in text or "oom" in text)
+                ):
+                    status = "oom"
+                else:
+                    status = "request_error"
+                print(f"  deep context {label}: {status}: {error}")
                 break
-            except requests.exceptions.HTTPError as e:
-                if "memory" in str(e).lower() or "oom" in str(e).lower():
-                    oom_detected = True
-                    break
-                raise
         results[label] = {
             "requested_context_tokens": ctx_len,
             "prompt_tokens_exact": exact,
@@ -879,8 +897,10 @@ def run_deep_context(client: ModelClient, context_lengths: list[int],
             "ttft_median_s": round(statistics.median(ttfts), 4) if ttfts else None,
             "ttft_p95_s": round(_percentile(ttfts, 95), 4) if ttfts else None,
             "prefill_tps_avg": round(statistics.mean(prefill_tps), 1) if prefill_tps else None,
-            "status": "oom" if oom_detected else "success",
+            "status": status,
         }
+        if error is not None:
+            results[label]["error"] = error
     return results
 
 

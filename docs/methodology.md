@@ -8,7 +8,8 @@ This page tells how `core_runner.py` takes each measurement. [results-schema.md]
 2. In managed mode, it starts the server and writes `resolved_server.json`.
 3. It waits for readiness (`ModelClient.wait_until_ready`):
    - It polls `GET /v1/models` every `ready_poll_s` seconds until the server returns HTTP 200.
-   - It then sends a chat completion `"hi"` with `max_tokens` 1 until the server returns HTTP 200.
+   - It then sends the request `"hi"` with `max_tokens` 1 until the server returns HTTP 200. In chat mode, the request goes to `/v1/chat/completions` with a `messages` body. With `endpoint.chat: false`, it goes to `/v1/completions` with a `prompt` body.
+   - At the time limit, the `TimeoutError` holds the last error. For an HTTP error, this is the status and the server body.
 4. It starts the GPU monitor.
 5. It runs the benchmarks in this order: latency, deep context, TTFT breakdown, decode, reasoning, concurrency, prefill scaling, FLOP analysis, tool calling, speculative decoding comparison.
 6. It stops the GPU monitor and the managed server, and writes `summary.json`.
@@ -52,7 +53,10 @@ All requests use temperature 0, except the concurrency requests, which use `conc
 ## Cache isolation
 
 - `ModelClient.generate(..., cache_salt=...)` puts `cache_salt` at the top level of the request body. vLLM then does not share prefix-cache blocks between requests with different salts.
-- When the server returns HTTP 400, the client sends the request again with ` salt=<value>` added to the prompt text. This fallback changes the prompt and its token count a little.
+- The client decides the salt mode once and keeps it in `ModelClient.cache_salt_supported`. The first salted request or `preflight_cache_salt()` sets it.
+- The first salted request can get HTTP 400 with a body that contains `cache_salt`. Then the client sends the request again with ` salt=<value>` added to the prompt text. All later requests use this text salt. The text salt changes the prompt and its token count a little.
+- Any other HTTP error raises `ServerHTTPError`, a subclass of `requests.HTTPError`. Its message holds the status code and the first 1000 characters of the server body. For example, a prompt above `--max-model-len` gives HTTP 400 with the vLLM error text.
+- The deep context benchmark records a failed length and goes on to the next length. A connection error, or an HTTP error with `memory` or `oom` in its text, gives `status: oom`. Any other error gives `status: request_error`. The `error` field holds the exception type and message.
 - The TTFT breakdown and prefill benchmarks call `preflight_cache_salt()` once. It sends one short request with a `cache_salt`. The result goes to `cache_isolation_method`: `cache_salt` when the server accepts the field, else `text_salt`.
 - The prefill benchmark records `cached_tokens` for each request. A value of 0 shows that the request missed the prefix cache.
 - The decode and reasoning benchmarks send no salt. With prefix caching on, a repeated prompt can hit the cache.
