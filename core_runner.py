@@ -277,8 +277,9 @@ def step_tool_calling(run: Run) -> None:
             max_tokens=cfg.get("tool_calling_max_tokens", 4096),
             chat_template_kwargs=cfg.get("tool_calling_chat_template_kwargs"),
             request_timeout_s=float(cfg.get("tool_calling_request_timeout_s", 600)),
+            repeats=int(cfg.get("tool_calling_repeats", 1)),
         )
-        run.record("tool_calling", result, summary_entry={
+        summary_entry = {
             "status": "completed",
             "composite_score": result.get("composite_score"),
             "composite_components": result.get("composite_components"),
@@ -286,7 +287,10 @@ def step_tool_calling(run: Run) -> None:
             "total_correct": result.get("total_correct"),
             "categories": list(result.get("category_scores", {}).keys()),
             "failure_modes": result.get("failure_modes"),
-        })
+        }
+        if "repeats" in result:
+            summary_entry["repeats"] = result["repeats"]
+        run.record("tool_calling", result, summary_entry=summary_entry)
         print(
             f"[core_runner] tool_calling: score={result['composite_score']} "
             f"{result['total_correct']}/{result['total_tasks']}  "

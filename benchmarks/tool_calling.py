@@ -1176,7 +1176,7 @@ _WEIGHTS: dict[str, tuple[str, str]] = {
     "param_correctness": ("single_tool", "param_correctness_avg"),
     "multi_tool": ("multi_tool", "multi_tool_score_avg"),
     "schema_compliance": ("schema_compliance", "strict_compliance"),
-    "refusal": ("refusal", "correct_refusal_or_default"),
+    "refusal": ("refusal", "correct_refusal"),
 }
 
 
@@ -1196,8 +1196,8 @@ def _compute_weighted_composite(
     """
     components: dict[str, float] = {}
     composite = 0.0
-    for key, (cat, field) in _WEIGHTS.items():
-        score = category_scores.get(cat, {}).get(field)
+    for key, (cat, score_key) in _WEIGHTS.items():
+        score = category_scores.get(cat, {}).get(score_key)
         if score is None:
             # Fallback: use pass_rate if the category exists but the
             # specific field is missing.  If the category is entirely
@@ -1306,6 +1306,16 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
                     asked_clarification / total, 4
                 ) if total else None,
             })
+
+        # A correct refusal is a reply with no tool call. A truncated reply
+        # or a failed request also has no tool call, but it is no refusal.
+        if cat == "refusal":
+            refused = sum(
+                1 for r in cat_results
+                if r.actual_tool is None and r.tool_correct
+                and r.finish_reason != "length"
+            )
+            cat_score["correct_refusal"] = round(refused / total, 4) if total else None
 
         # Schema-compliance-specific fields.
         if cat == "schema_compliance":
@@ -1580,6 +1590,7 @@ def run_tool_calling_benchmark(
     temperature: float = 0.0,
     chat_template_kwargs: dict[str, Any] | None = None,
     request_timeout_s: float = DEFAULT_REQUEST_TIMEOUT_S,
+    repeats: int = 1,
 ) -> dict[str, Any]:
     """Run tool-calling benchmark suite.
 
@@ -1595,11 +1606,15 @@ def run_tool_calling_benchmark(
             request, for example ``{"enable_thinking": False}``.
         request_timeout_s: HTTP read timeout in seconds for each request.
             A timeout counts as a ``request_timeout`` failure.
+        repeats: Number of passes over the task set. The top-level fields
+            hold the first pass.
 
     Returns:
         Dict with ``config``, ``total_tasks``, ``composite_score``,
         ``composite_components``, ``category_scores``, ``per_task``, and
-        ``failure_modes``.
+        ``failure_modes``. With ``repeats`` > 1, also ``repeats``: the
+        values, mean, stdev, min, and max of ``composite_score`` and
+        ``total_correct``.
     """
 
     _, tasks = load_tasks(resolve_tasks_path(tasks_path))
@@ -1641,6 +1656,52 @@ def run_tool_calling_benchmark(
     tools_definition = _build_tools_definition(all_tools)
     config["tool_definitions_count"] = len(tools_definition)
 
+    if repeats < 1:
+        raise ValueError(f"repeats must be at least 1, got {repeats}")
+    config["repeats"] = repeats
+    runs: list[BenchmarkResult] = []
+    for rep in range(1, repeats + 1):
+        if repeats > 1:
+            print(f"[tool_calling] repeat {rep}/{repeats}")
+        results = _run_task_list(
+            client, tasks, tools_definition, max_tokens=max_tokens,
+            chat_template_kwargs=chat_template_kwargs, temperature=temperature,
+            request_timeout_s=request_timeout_s,
+        )
+        runs.append(_aggregate(results, config))
+
+    # The top-level fields hold the first repeat, so one repeat gives the
+    # same output as before. ``repeats`` holds the spread over all repeats.
+    aggregated = runs[0]
+    aggregated.config["end_time"] = datetime.now(timezone.utc).isoformat()
+
+    output = {
+        "config": aggregated.config,
+        "total_tasks": aggregated.total_tasks,
+        "total_correct": aggregated.total_correct,
+        "composite_score": aggregated.composite_score,
+        "composite_components": getattr(
+            aggregated, "composite_components", {}
+        ),
+        "category_scores": aggregated.category_scores,
+        "per_task": aggregated.per_task,
+        "failure_modes": aggregated.failure_modes,
+    }
+    if repeats > 1:
+        output["repeats"] = _repeat_summary(runs)
+    return output
+
+
+def _run_task_list(
+    client: ModelClient,
+    tasks: list[dict],
+    tools_definition: list[dict],
+    max_tokens: int,
+    chat_template_kwargs: dict[str, Any] | None,
+    temperature: float,
+    request_timeout_s: float,
+) -> list[TaskResult]:
+    """Run each task once, in file order, and return the task results."""
     # Run tasks sequentially. Tasks of category multi_tool and tasks with an
     # expected_sequence (the error-recovery tasks) use the multi-turn loop.
     # All other tasks use the one-shot runner.
@@ -1692,21 +1753,22 @@ def run_tool_calling_benchmark(
         if idx < total:
             time.sleep(0.5)  # small stabilization gap
 
-    aggregated = _aggregate(results, config)
-    aggregated.config["end_time"] = datetime.now(timezone.utc).isoformat()
+    return results
 
-    return {
-        "config": aggregated.config,
-        "total_tasks": aggregated.total_tasks,
-        "total_correct": aggregated.total_correct,
-        "composite_score": aggregated.composite_score,
-        "composite_components": getattr(
-            aggregated, "composite_components", {}
-        ),
-        "category_scores": aggregated.category_scores,
-        "per_task": aggregated.per_task,
-        "failure_modes": aggregated.failure_modes,
-    }
+
+def _repeat_summary(runs: list[BenchmarkResult]) -> dict[str, Any]:
+    """Give the mean and the spread of the composite and the pass count."""
+    summary: dict[str, Any] = {"n": len(runs)}
+    for key in ("composite_score", "total_correct"):
+        values = [getattr(r, key) for r in runs]
+        summary[key] = {
+            "values": values,
+            "mean": round(statistics.mean(values), 4),
+            "stdev": round(statistics.stdev(values), 4) if len(values) > 1 else 0.0,
+            "min": min(values),
+            "max": max(values),
+        }
+    return summary
 
 
 # --------------------------------------------------------------------------- #
@@ -1748,6 +1810,10 @@ def main() -> None:
         help="Send chat_template_kwargs={'enable_thinking': false} with every request",
     )
     parser.add_argument(
+        "--repeats", type=int, default=1,
+        help="Run the task set N times and report the mean and the spread",
+    )
+    parser.add_argument(
         "--output", type=str, default=None,
         help="Output JSON file (default: results/tool_calling.json in the repo)",
     )
@@ -1766,6 +1832,7 @@ def main() -> None:
         max_tokens=args.max_tokens,
         chat_template_kwargs={"enable_thinking": False} if args.disable_thinking else None,
         request_timeout_s=args.request_timeout,
+        repeats=args.repeats,
     )
 
     output_path = Path(args.output) if args.output else ROOT / "results" / "tool_calling.json"
@@ -1777,6 +1844,12 @@ def main() -> None:
         f"[tool_calling] composite_score={result['composite_score']}  "
         f"{result['total_correct']}/{result['total_tasks']} correct"
     )
+    if "repeats" in result:
+        spread = result["repeats"]["composite_score"]
+        print(
+            f"[tool_calling] {args.repeats} repeats: composite mean={spread['mean']} "
+            f"stdev={spread['stdev']} range={spread['min']}..{spread['max']}"
+        )
 
 
 if __name__ == "__main__":

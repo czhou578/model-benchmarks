@@ -13,7 +13,7 @@ python -m benchmarks.tool_calling --base-url http://127.0.0.1:8000 \
     --model nvidia/Qwen3.8-27B-NVFP4 --task-set lite
 ```
 
-The other options are `--tasks`, `--max-tokens` (default 4096), `--request-timeout` (default 600 s), `--disable-thinking`, and `--output` (default `results/tool_calling.json` in the repo root).
+The other options are `--tasks`, `--max-tokens` (default 4096), `--request-timeout` (default 600 s), `--disable-thinking`, `--repeats` (default 1), and `--output` (default `results/tool_calling.json` in the repo root).
 
 ## Requests
 
@@ -32,6 +32,11 @@ The other options are `--tasks`, `--max-tokens` (default 4096), `--request-timeo
 | `tool_calling_max_tokens` | 4096 | `max_tokens` of each request. In a multi-turn task, it applies to each turn. |
 | `tool_calling_chat_template_kwargs` | none | Copied into each request as `chat_template_kwargs`. `config.chat_template_kwargs` in `tool_calling.json` records it. |
 | `tool_calling_request_timeout_s` | 600 | Read timeout of each request, in seconds. In a multi-turn task, it applies to each turn. `config.request_timeout_s` records it. |
+| `tool_calling_repeats` | 1 | Number of passes over the task set. `config.repeats` records it. |
+
+## Repeats
+
+With `repeats` above 1, the benchmark runs the full task set that number of times. The top-level fields hold the first pass only. The `repeats` field holds `n` and two entries: `composite_score` and `total_correct`. Each entry has the `values` of all passes, the `mean`, the `stdev`, the `min`, and the `max`. With 1 repeat, the output has no `repeats` field. The `summary.json` entry copies the `repeats` field.
 
 A thinking model writes its reasoning before the first tool call. vLLM parses tool calls only after the reasoning ends. A low `tool_calling_max_tokens` cuts the output before any tool call. The task then records `finish_reason: length`, and `failure_modes.truncated_output` counts it.
 
@@ -129,10 +134,11 @@ Each category gets `pass_count`, `total`, `pass_rate`, `tool_accuracy`, `param_c
 | `param_correctness` | `single_tool` | `param_correctness_avg` |
 | `multi_tool` | `multi_tool` | `multi_tool_score_avg` |
 | `schema_compliance` | `schema_compliance` | `strict_compliance` |
-| `refusal` | `refusal` | `correct_refusal_or_default` |
+| `refusal` | `refusal` | `correct_refusal` |
 
 - When the field is not in the category, the component uses the category `pass_rate`. When the category is not in the run, the component is 0.
-- Only `ambiguous` has `correct_refusal_or_default`. So the `refusal` component is the `pass_rate` of the 2 refusal tasks.
+- `refusal.correct_refusal` is the fraction of refusal tasks with no tool call, a successful request, and a `finish_reason` other than `length`. A truncated reply passes the task, but it is not a refusal.
+- In runs before this field, the `refusal` component read the missing `correct_refusal_or_default` field. It was the `pass_rate` of the 2 refusal tasks, so a truncated reply counted as a refusal.
 - `ambiguous` and `error_recovery` tasks do not enter the composite. They count in `total_correct` and `category_scores`.
 - `error_recovery.self_corrected` counts tasks with `no_hallucinated_params`. The multi-turn runner never sets that field, so the value is 1.0 unless a task raised an exception.
 

@@ -108,6 +108,7 @@ The runner does not validate keys. It ignores an unknown key, so a misspelled ke
 | `tool_calling_max_tokens` | int | 4096 | no | `max_tokens` of each request. | tool calling |
 | `tool_calling_chat_template_kwargs` | map | none | no | Sent as `chat_template_kwargs` in each request. | tool calling |
 | `tool_calling_request_timeout_s` | float | 600 | no | Read timeout of each request, in seconds. 4096 tokens at 12.3 tok/s take about 330 s, so 120 s was too short. | tool calling |
+| `tool_calling_repeats` | int | 1 | no | Number of passes over the task set. With more than 1, `tool_calling.json` adds the mean and the spread of the composite and the pass count. | tool calling |
 | `speculative_config` | JSON string | none | for `--compare-spec` | Value of `--speculative-config` for the spec-enabled server. | `--compare-spec` |
 
 Notes:
