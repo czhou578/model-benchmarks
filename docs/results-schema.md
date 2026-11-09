@@ -195,14 +195,18 @@ Each entry is keyed by the requested output length. `spec_enabled.json` and `spe
 
 ## reasoning.json
 
-Each request uses `max_tokens` 1024. All counts come from `count_tokens`, not from the model tokenizer. The text in `delta.reasoning` is the thinking text, and the text in `delta.content` is the answer text.
+Each request uses `max_tokens` from `reasoning_max_tokens` (default 4096). Old runs used 1024 and have no `max_tokens` field. All counts come from `count_tokens`, not from the model tokenizer. The text in `delta.reasoning` is the thinking text, and the text in `delta.content` is the answer text.
 
-`decode.json` uses a fallback when the stream has no reasoning text: `analyze_reasoning_tokens` splits the output by tags or by marker phrases. `reasoning.json` uses this fallback only when the output is empty.
+`decode.json` uses a fallback when the stream has no reasoning text: `analyze_reasoning_tokens` splits the output by tags or by marker phrases. `reasoning.json` uses the tags only: `<think>`, `<thinking>`, or `<antThinking>`. Old runs used the fallback only when the output was empty.
 
 | Field | Unit | Meaning |
 |---|---|---|
 | `per_prompt[].thinking_tokens`, `per_prompt[].answer_tokens` | tokens | Counts of the reasoning text and of the answer text. |
 | `per_prompt[].ratio_thinking_to_answer` | ratio | Thinking tokens / answer tokens. |
+| `per_prompt[].split_method` | | `reasoning_parser` (`delta.reasoning`), `tags` (tags in the output text), or `none` (all text is the answer). |
+| `per_prompt[].output_tokens` | tokens | `usage.completion_tokens`, or the client estimate. |
+| `per_prompt[].finish_reason`, `per_prompt[].truncated` | | The stream `finish_reason`. `truncated` is `true` when it is `length`: `max_tokens` cut the output. `null` when the server sent no `finish_reason`. |
+| `max_tokens`, `n_truncated` | tokens, count | `max_tokens` of each request, and the number of prompts with `truncated: true`. |
 | `per_prompt[].reasoning_text_preview`, `answer_text_preview`, `prompt_preview` | | First 128, 128, and 80 characters. |
 | `thinking_tokens_avg`, `thinking_tokens_median`, `thinking_tokens_max` | tokens | Statistics over all prompts. |
 | `answer_tokens_avg`, `answer_tokens_median`, `answer_tokens_max` | tokens | Statistics over all prompts. |

@@ -74,33 +74,20 @@ monitor_interval_s: 1.0
 prompt_lengths: [32, 128, 512, 2048, 8192, 16384]
 latency_repeats: 10
 decode_lengths: [512, 1024, 2048]
-# Same prompts as the Qwen3.6 configs, so the reasoning numbers stay comparable.
-# Prompts 3 to 6 start with an <antThinking> block. Known limit: Qwen3 does not
-# use this tag, so the block is plain prompt text. It does not turn reasoning
-# on or off. Qwen3 thinks by default, and the qwen3 reasoning parser splits
-# its <think> output.
+# The same six tasks as the Qwen3.6 configs. Prompts 3 to 6 had an
+# <antThinking> block, which Qwen3 does not use, so they are now plain text.
+# Qwen3 thinks by default, and the qwen3 reasoning parser splits its <think>
+# output. With 1024 tokens, the palindrome prompt thought for the whole budget
+# and gave 0 answer tokens in both runs. 4096 matches tool_calling_max_tokens.
+reasoning_max_tokens: 4096
 reasoning_prompts:
   - "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show your reasoning."
   - "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning step by step."
-  - |
-    <antThinking>
-    I'll work through this problem step by step.
-    </antThinking>
-    Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph?
-  - |
-    <antThinking>
-    Let me think through this carefully.
-    </antThinking>
-    A farmer has 17 sheep, all but 9 die. How many are left?
-  - |
-    <antThinking>
-    Let me break this down systematically.
-    </antThinking>
+  - "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph?"
+  - "A farmer has 17 sheep, all but 9 die. How many are left?"
+  - >-
     A bag contains 3 red marbles and 5 blue marbles. If you draw two marbles without replacement, what is the probability that both are blue? Show each step of your calculation.
-  - |
-    <antThinking>
-    I need to analyze this problem step by step.
-    </antThinking>
+  - >-
     Write a Python function that finds the longest palindromic substring in a given string. Explain your algorithm choice and trace through an example like "babad" or "cbbd".
 
 concurrency_levels: [1, 2, 4, 8, 16]

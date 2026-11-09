@@ -97,6 +97,7 @@ The runner does not validate keys. It ignores an unknown key, so a misspelled ke
 | `ttft_repetitions` | int | 10 | no | Requests per prompt length. | TTFT breakdown |
 | `decode_lengths` | list of int, tokens | `[512, 1024, 2048]` | no | `max_tokens` values. | decode, `--compare-spec` |
 | `reasoning_prompts` | list of strings | two built-in prompts | no | Prompts. | reasoning |
+| `reasoning_max_tokens` | int | 4096 | no | `max_tokens` of each request. 1024 cut the longest Qwen3.8 and Qwen3.6 prompts before the answer. | reasoning |
 | `concurrency_levels` | list of int | `[1, 2, 4, 8, 16]` | no | Parallel workers at each level. | concurrency |
 | `concurrency_requests_per_level` | int | 5 | no | Total requests at each level. The runner warns when this is below the largest level. | concurrency |
 | `concurrency_max_tokens` | int | 256 | no | `max_tokens` of each request. | concurrency |
