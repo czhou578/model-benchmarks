@@ -7,8 +7,8 @@ from typing import Any
 
 import pytest
 
-import core_runner
 import harness.client
+from benchmarks import latency
 from harness.client import ModelClient
 from harness.client import GenerationResult, _parse_server_metrics
 
@@ -151,8 +151,8 @@ def test_latency_and_deep_context_use_fresh_salts():
                 output_text="x", output_tokens=1, prompt_tokens_exact=True,
             )
 
-    core_runner.run_latency_sweep(_Client(), prompt_lengths=[32], repeats=3)
-    core_runner.run_deep_context(_Client(), context_lengths=[64], repeats=2)
+    latency.run_latency_sweep(_Client(), prompt_lengths=[32], repeats=3)
+    latency.run_deep_context(_Client(), context_lengths=[64], repeats=2)
 
     assert len(salts) == 5
     assert all(salts)

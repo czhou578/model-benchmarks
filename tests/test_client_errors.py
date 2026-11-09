@@ -8,8 +8,8 @@ from typing import Any
 import pytest
 import requests
 
-import core_runner
 import harness.client
+from benchmarks import latency
 from harness.client import ModelClient
 from harness.client import MAX_ERROR_BODY_CHARS, GenerationResult, ServerHTTPError
 
@@ -159,7 +159,7 @@ def test_deep_context_records_failure_and_runs_next_length():
                 output_text="x", output_tokens=1, prompt_tokens_exact=True,
             )
 
-    result = core_runner.run_deep_context(_Client(), context_lengths=[256, 32], repeats=2)
+    result = latency.run_deep_context(_Client(), context_lengths=[256, 32], repeats=2)
 
     assert result["256"]["status"] == "request_error"
     assert "max-model-len" in result["256"]["error"]
@@ -175,7 +175,7 @@ def test_deep_context_marks_oom_and_does_not_swallow_interrupt():
         def generate(self, *args: Any, **kwargs: Any) -> GenerationResult:
             raise requests.exceptions.HTTPError("HTTP 500: CUDA out of memory")
 
-    result = core_runner.run_deep_context(_OomClient(), context_lengths=[32], repeats=1)
+    result = latency.run_deep_context(_OomClient(), context_lengths=[32], repeats=1)
     assert result["32"]["status"] == "oom"
     assert "out of memory" in result["32"]["error"]
 
@@ -184,4 +184,4 @@ def test_deep_context_marks_oom_and_does_not_swallow_interrupt():
             raise KeyboardInterrupt
 
     with pytest.raises(KeyboardInterrupt):
-        core_runner.run_deep_context(_StopClient(), context_lengths=[32], repeats=1)
+        latency.run_deep_context(_StopClient(), context_lengths=[32], repeats=1)
