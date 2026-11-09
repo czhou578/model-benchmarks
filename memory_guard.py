@@ -83,13 +83,15 @@ def main() -> int:
                         help="Log a warning below this MemAvailable (default 16)")
     parser.add_argument("--min-start-gib", type=float, default=40.0,
                         help="Refuse to start below this MemAvailable (default 40)")
-    parser.add_argument("--interval-s", type=float, default=5.0)
+    parser.add_argument("--interval-s", type=float, default=5.0,
+                        help="Seconds between two memory samples (default 5)")
     parser.add_argument("--grace-samples", type=int, default=3,
-                        help="Low samples in a row before the guard stops the command")
+                        help="Low samples in a row before the guard stops the command (default 3)")
     parser.add_argument("--report-every-s", type=float, default=300.0,
                         help="Log the memory state at this interval (default 300)")
     parser.add_argument("--csv", default="memory_samples.csv",
-                        help="Where to write samples before the run directory is known")
+                        help="CSV file for all samples. At the end, the guard copies it "
+                             "into the run directory (default memory_samples.csv)")
     parser.add_argument("command", nargs=argparse.REMAINDER,
                         help="The command to run, after --")
     args = parser.parse_args()

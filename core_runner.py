@@ -9,8 +9,8 @@ A run does these steps. docs/methodology.md gives the details.
 1. Load the model config. Make the run dir results/<name>/<timestamp>/.
    --results-dir changes the results/ folder.
 2. Write environment.json.
-3. In managed mode, start vLLM (vllm_server.py). Wait until the endpoint
-   answers a real generation request.
+3. In managed mode, start vLLM (vllm_server.py). In both modes, wait
+   until the endpoint answers a real generation request.
 4. Start the GPU monitor (harness/telemetry.py).
 5. Run the benchmark steps in the order of run_benchmarks().
 6. Stop the monitor and the server. Write summary.json.

@@ -438,7 +438,13 @@ def load_architecture_config(
     server_config: Mapping[str, Any] | None = None,
     auto_config_loader: Callable[[str], Any] | None = None,
 ) -> ConfigLoadResult:
-    """Load full architecture config in the Phase 1 precedence order."""
+    """Load the full architecture config from the first source that fits.
+
+    The sources, in order: a local config file, Hugging Face (only when the
+    local config is not complete), and the server config. The first config
+    that is complete and matches the Qwen3.6-35B dimensions wins. Without
+    one, the result has the status ``unsupported``.
+    """
     warnings: list[str] = []
     candidates: list[tuple[str, dict[str, Any]]] = []
 
@@ -511,7 +517,7 @@ def load_architecture_config(
 
 
 # --------------------------------------------------------------------------- #
-# Phase 2 — Composable component estimators
+# Composable component estimators
 # --------------------------------------------------------------------------- #
 
 # Results from a single component's layer-level computation.

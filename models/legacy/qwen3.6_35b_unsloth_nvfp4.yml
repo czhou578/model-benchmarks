@@ -60,7 +60,10 @@ reasoning_prompts:
   # --- Baseline: existing prompts (soft reasoning request, no explicit CoT trigger) ---
   - "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show your reasoning."
   - "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning step by step."
-  # --- CoT-triggering: explicit <antThinking> block to activate Qwen3 reasoning mode ---
+  # --- Prompts with an <antThinking> block. Known limit: Qwen3 does not use
+  # this tag, so the block is plain prompt text. It does not turn reasoning
+  # on or off. Qwen3 thinks by default, and the qwen3 reasoning parser
+  # splits its <think> output. ---
   - |
     <antThinking>
     I'll work through this problem step by step.

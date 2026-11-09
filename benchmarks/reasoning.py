@@ -10,14 +10,23 @@ from harness.prompts import count_tokens
 
 
 def analyze_reasoning_tokens(text: str) -> dict[str, Any]:
-    """Separate thinking tokens from answer tokens in a model's output.
+    """Split a model output into thinking tokens and answer tokens.
 
-    Handles three formats:
-    1. Qwen3 XML tags:  <antThinking>...thinking...</antThinking>answer...
-    2. Anthropic XML tags: <thinking>...thinking...</thinking>answer...
-    3. Plain-text reasoning: common reasoning markers followed by structured answer.
+    The function checks three formats in this order:
+
+    1. ``<antThinking>...</antThinking>`` then the answer.
+    2. ``<thinking>...</thinking>`` then the answer.
+    3. Plain text: a reasoning marker phrase, such as "let me think", in
+       the first 500 characters, with list or step markup after it. The text
+       before the marker counts as thinking, the rest as the answer.
+       Without such a marker, all text is the answer.
+
+    The function does not parse ``<think>``, the tag that Qwen3 writes. The
+    vLLM qwen3 reasoning parser moves that text to ``delta.reasoning``, so
+    the benchmarks call this function only when the stream has no reasoning
+    text. Counts come from ``count_tokens``.
     """
-    # Format 1: Qwen3 XML tags (check first — more specific)
+    # Format 1: <antThinking> tags (checked first)
     think_open, think_close = "<antThinking>", "</antThinking>"
     if think_open in text and think_close in text:
         start = text.index(think_open) + len(think_open)
@@ -32,7 +41,7 @@ def analyze_reasoning_tokens(text: str) -> dict[str, Any]:
             "ratio_thinking_to_answer": round(think_tokens / answer_tokens, 3) if answer_tokens else None,
         }
 
-    # Format 2: Anthropic XML tags
+    # Format 2: <thinking> tags
     think_open, think_close = "<thinking>", "</thinking>"
     if think_open in text and think_close in text:
         start = text.index(think_open) + len(think_open)
@@ -97,9 +106,9 @@ def run_reasoning_benchmark(client: ModelClient, prompts: list[str], max_tokens:
     for p in prompts:
         gen = client.generate(p, max_tokens=max_tokens, temperature=0.0)
 
-        # Prefer the client's pre-split reasoning/answer text (for Qwen3-style
-        # reasoning mode where the server returns delta.reasoning separately).
-        # Fall back to re-analyzing the combined output_text for non-chat mode.
+        # The stream splits the text: delta.reasoning is the thinking text,
+        # and delta.content (or the completions text) is the answer. The
+        # fallback runs only when both are empty, so its input is empty too.
         if gen.reasoning_text or gen.answer_text:
             stats = {
                 "thinking_tokens": count_tokens(gen.reasoning_text),

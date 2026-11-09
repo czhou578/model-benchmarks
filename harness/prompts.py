@@ -13,7 +13,9 @@ else:
 def count_tokens(text: str) -> int:
     """Count tokens with tiktoken cl100k_base, or estimate from words without it.
 
-    The runner uses this count only when the server reports no token usage.
+    The client uses this count when the server reports no token usage. The
+    reasoning counts and the concurrency ``client_estimate`` lengths always
+    use it.
     """
     if _ENC is not None:
         return len(_ENC.encode(text))
@@ -21,7 +23,11 @@ def count_tokens(text: str) -> int:
 
 
 def build_prompt_of_length(target_tokens: int) -> str:
-    """Build a substantive, non-repetitive prompt that forces creative generation.
+    """Build a creative-writing prompt of about *target_tokens* tokens.
+
+    The text cycles through five instruction blocks, so a long prompt repeats
+    them. With tiktoken, the text is cut to exactly *target_tokens* tokens of
+    cl100k_base. Without it, the text is at least the word-based estimate.
 
     The old approach (repeat a pangram) caused the model to comment on the
     repetitive structure rather than generating independent content, hitting

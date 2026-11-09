@@ -1,16 +1,25 @@
 """Tool-calling benchmark.
 
-Phase 1 — Single-Tool Invocation
-  Simple one-shot tool calls. Tests tool selection and parameter validation.
+The default task file has 85 tasks in these groups:
 
-Phase 2 — Multi-Tool Chaining
+Single-tool invocation
+  One-shot tool calls. Tests tool selection and parameter validation.
+  The group also holds the ``ambiguous`` and ``refusal`` tasks, where the
+  correct answer can be a question or no tool call.
+
+Multi-tool chaining (``multi_tool``)
   Multi-turn chains where the model must orchestrate multiple tools.
   The output of one tool feeds into the next.
 
-Phase 3 — Schema Compliance & Error Recovery
-  Schema compliance: strict JSON Schema constraint validation (minLength,
-  maxLength, pattern, enum, required, nested objects).
-  Error recovery: model self-corrects when a tool returns an error.
+Schema compliance (``schema_compliance``)
+  Strict JSON Schema constraint validation (minLength, maxLength, pattern,
+  enum, required, nested objects).
+
+Error recovery (``error_recovery``)
+  Multi-turn tasks. The model must correct its call after a tool error.
+
+The composite score is the plain sum of six components, from 0 to 6
+(``_compute_weighted_composite``). docs/tool-calling.md describes the scoring.
 
 Input : ``datasets/tool_calling_tasks.yaml``
 Output: ``tool_calling.json`` inside the run directory. The standalone CLI
@@ -20,7 +29,7 @@ Usage::
 
     python -m benchmarks.tool_calling --tasks datasets/tool_calling_tasks.yaml --base-url http://localhost:8000/v1 --model <model-name>
 
-Or import ``run_tool_calling_benchmark(client, tasks)`` from benchmarks.tool_calling.
+Or import ``run_tool_calling_benchmark(client, tasks_path=...)`` from benchmarks.tool_calling.
 """
 
 from __future__ import annotations
@@ -886,7 +895,7 @@ def _run_multi_turn_task(
 ) -> MultiTurnTaskResult:
     """Execute a multi-tool chain task.
 
-    The loop runs up to ``max_expected_turns`` rounds:
+    The loop runs up to ``max(expected_turns, 5)`` rounds:
       1. Send the conversation history (prompt + tool calls + responses).
       2. The model may return 0, 1, or multiple tool calls.
       3. Simulate tool responses via the mock executor.
@@ -1158,8 +1167,9 @@ _NON_SINGLE_TOOL_CATEGORIES = frozenset({
     "multi_tool", "error_recovery", "schema_compliance", "ambiguous", "refusal",
 })
 
-# Default weights per the plan.  Each key maps to the ``category_scores``
-# field name that provides the component value.
+# The six components of the composite score. Each key maps to the category
+# and the ``category_scores`` field that gives the component value. The
+# composite applies no weights: it is the sum of the six values.
 _WEIGHTS: dict[str, tuple[str, str]] = {
     "tool_accuracy": ("single_tool", "tool_accuracy"),
     "param_completeness": ("single_tool", "param_completeness_avg"),
@@ -1173,11 +1183,16 @@ _WEIGHTS: dict[str, tuple[str, str]] = {
 def _compute_weighted_composite(
     category_scores: dict[str, dict[str, Any]],
 ) -> tuple[float, dict[str, float]]:
-    """Compute the weighted composite score across categories.
+    """Compute the composite score: the plain sum of the six components.
+
+    Each component is a ``category_scores`` field with a value from 0 to 1,
+    so the composite is from 0 to 6. The function applies no weights. When
+    the field is missing, the component is the ``pass_rate`` of the
+    category. When the category is missing, the component is 0.
 
     Returns:
-        ``(composite, components)`` where *components* is a dict of the
-        individual (unweighted) component values used.
+        ``(composite, components)`` where *components* maps each component
+        name to its value.
     """
     components: dict[str, float] = {}
     composite = 0.0
@@ -1399,7 +1414,7 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
         }
 
     total_correct = sum(1 for r in results if r.correct)
-    # Compute the weighted composite score from category scores.
+    # Compute the composite score (a plain sum) from the category scores.
     composite, _weighted_components = (
         _compute_weighted_composite(category_scores)
     ) if category_scores else (0.0, {})
@@ -1613,9 +1628,8 @@ def run_tool_calling_benchmark(
         "start_time": datetime.now(timezone.utc).isoformat(),
     }
 
-    # Resolve tools from the first task (all Phase-1 tasks share the same set).
-    # If tasks define different tool subsets, we pick the union so the model
-    # can always see the full tool list.
+    # Send the union of the tools of all tasks with every request, so the
+    # model always sees the full tool list.
     all_tools: list[dict] = []
     tools_seen_names: set[str] = set()
     for task in tasks:
@@ -1627,8 +1641,9 @@ def run_tool_calling_benchmark(
     tools_definition = _build_tools_definition(all_tools)
     config["tool_definitions_count"] = len(tools_definition)
 
-    # Run tasks sequentially.  Multi-tool tasks use the multi-turn loop;
-    # single-tool tasks use the original one-shot runner.
+    # Run tasks sequentially. Tasks of category multi_tool and tasks with an
+    # expected_sequence (the error-recovery tasks) use the multi-turn loop.
+    # All other tasks use the one-shot runner.
     results: list[TaskResult] = []
     total = len(tasks)
     for idx, task in enumerate(tasks, 1):
@@ -1703,7 +1718,7 @@ def main() -> None:
     """Standalone entry point for running the benchmark."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Tool-calling benchmark (Phase 1–3)")
+    parser = argparse.ArgumentParser(description="Tool-calling benchmark")
     parser.add_argument(
         "--tasks", default="datasets/tool_calling_tasks.yaml",
         help="Path to the YAML task file",

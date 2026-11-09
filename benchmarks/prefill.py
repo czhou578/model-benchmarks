@@ -1,7 +1,8 @@
-"""Model-specific prompt preparation for the prefill-scaling benchmark.
+"""The prefill-scaling benchmark and its prompt calibration.
 
 The approximate tokenizer in harness/prompts.py is useful for fallback accounting, but
 benchmark lengths must use the tokenizer and chat template of the running model.
+concurrency.py also uses calibrate_prompt.
 """
 
 from __future__ import annotations
@@ -285,12 +286,17 @@ def run_prefill_scaling(
     """Measure cold-prefill throughput across a range of prompt lengths.
 
     Each request uses ``max_tokens=1`` to minimize decode contamination.
-    A unique ``cache_salt`` per request guarantees no prefix-cache reuse.
+    Each measured request carries a new ``cache_salt``, so it misses the
+    prefix cache. The warm-up request of a length uses ``warmup_<length>``.
+    The GPU window of a length opens before the prompt calibration, so the
+    window energy includes the ``/tokenize`` requests of the calibration.
 
     Args:
         client: ModelClient connected to a running vLLM endpoint.
-        target_lengths: Prompt lengths to benchmark (default 512, 2K, 8K, 32K, 64K).
-        repetitions: Measured requests per length.
+        target_lengths: Prompt lengths to benchmark. The function default is
+            512, 2K, 8K, 32K, and 64K. core_runner.py passes
+            ``prefill_target_lengths`` (default 512, 2K, and 8K).
+        repetitions: Measured requests per length, after one warm-up request.
         gpu_monitor: Optional ``GpuMonitor`` for per-length GPU telemetry.
 
     Returns:

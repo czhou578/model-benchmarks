@@ -2,8 +2,9 @@
 concurrency.py — Measure throughput and latency degradation as request
 concurrency increases.
 
-How does aggregate throughput change when I fire 1, 4, 16, or 32 requests
-simultaneously? At what point does the GPU bottleneck show up?
+How does aggregate throughput change when 1, 2, 4, 8, or 16 requests (the
+default levels) run at the same time? At what point does the GPU bottleneck
+show up?
 
 Each request sends its own prompt. All prompts have the same token count.
 Their text differs from the first words, so the prefix cache cannot share
@@ -166,7 +167,10 @@ def run_concurrency_test(
     Args:
         client: ModelClient instance connected to a vLLM endpoint.
         concurrency_levels: List of concurrency levels to test (default 1,2,4,8,16).
-        requests_per_level: How many requests to fire at each concurrency level.
+        requests_per_level: Total requests at each level. The level sets the
+            number of worker threads. The function default is 16.
+            core_runner.py passes ``concurrency_requests_per_level``
+            (default 5).
         max_tokens: Max output tokens per request.
         temperature: Generation temperature.
         prompt_tokens: Target token count of each prompt.

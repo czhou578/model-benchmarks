@@ -29,7 +29,7 @@ class GenerationResult:
     total_time_s: float
     output_text: str
     output_tokens: int
-    reasoning_text: str = ""          # thinking tokens (Qwen3 plain-text or <thinking> tags)
+    reasoning_text: str = ""          # text of delta.reasoning (the server reasoning parser)
     answer_text: str = ""            # post-reasoning answer
     per_token_times: list[float] = field(default_factory=list)
     prompt_tokens_exact: bool = False
@@ -250,8 +250,9 @@ class ModelClient:
         """Wait until the vLLM engine is loaded and can actually process a request.
 
         The /v1/models HTTP 200 check only verifies the server is listening,
-        not that the model weights have been loaded.  A dummy chat completion
-        forces the engine to respond, which catches the loading period and
+        not that the model weights have been loaded.  A dummy generation
+        request (chat or completions, as the client mode sets) forces the
+        engine to respond, which catches the loading period and
         prevents the latency sweep (which fires immediately after this call)
         from hitting a still-initialising model — that was why every latency
         entry showed n=0 (TTFT was NaN).
