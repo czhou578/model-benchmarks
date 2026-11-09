@@ -45,12 +45,12 @@ VS Code forwards the port and opens the page in your browser. Reload the page af
 
 ## What the page shows
 
-- One card per run. Each card shows the start time, the vLLM version, the status, the spec-decoding state, and the badges below.
-- The chart legends add the vLLM version to each run label when the shown runs use more than one version. The page reads the version from `environment.json`.
+- One card per run. Each card shows the start time, the vLLM version, the `run_label` from `summary.json` when the run has one, and the badges below.
+- The chart legends add the vLLM version to each run label when the shown runs use more than one version. The page reads the version from `environment.json`: `vllm_server_version`, else `vllm_version`.
 - The card numbers: decode speed, TTFT at 2K tokens, peak throughput, tool tasks passed, lowest free memory, and mean GPU power.
 - Charts for decode speed, TTFT, throughput under load, long-context TTFT, thinking tokens, and the MTP speed-up.
 - Charts for tool-calling scores, the tool-calling pass rate by category, and memory headroom.
-- Two tables: "All runs" with the key numbers and server settings, and "Server-side TTFT split". The "Prefix cache" column shows the flag in the server command, or "default" when the command has no flag.
+- Two tables: "All runs" with the era, the key numbers, and the server settings, and "Server-side TTFT split". The "Prefix cache" column shows the flag in the server command, or "default" when the command has no flag.
 - A Table toggle on each chart. The toggle shows the chart values as a table.
 - Run filter chips above the charts. Each chip shows or hides one run.
 
@@ -64,14 +64,15 @@ A card can show these badges:
 |---|---|
 | Completed, Failed | The `status` in `summary.json`. |
 | MTP spec on, No spec decode | The vLLM command in `resolved_server.json` has a `--speculative-config` flag, or not. |
+| Era E0 to Era EN | The harness era of the run. See the next section. |
 | Older vLLM | The run used an older vLLM version than the newest shown run. Compare runs on different versions with care. |
-| Pre-fix scoring | The run dir timestamp is before 2026-11-07 (`SCORING_FIX_DATE` in `dashboard.py`). See the next section. |
+| Pre-fix scoring | The run is from era E0, before the fixes of 2026-11-07. See the next section. |
 | Shared concurrency prompt | The run sent one prompt to every concurrency request. Its concurrency numbers are not comparable with newer runs. See `prompt_mode` in [results-schema.md](results-schema.md). |
 | Stopped for memory | `memory_guard.py` stopped the run because free memory was too low. |
 
 ## Pre-fix scoring and other eras
 
-The badges and the note above the charts mark old runs. [comparability.md](comparability.md) tells which metrics of each era you can compare, and gives the known limits of the badges.
+The badges and the note above the charts mark old runs. The page reads the era from `harness.schema_version` in `summary.json`, else from `provenance.json` in the run dir, else from the run dir date. [comparability.md](comparability.md#how-the-dashboard-marks-the-eras) gives the rule, the metrics of each era that you can compare, and the known limits of the badges.
 
 ## Page source
 

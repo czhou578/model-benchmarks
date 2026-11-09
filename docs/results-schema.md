@@ -25,6 +25,9 @@ One run writes one run dir: `<results-dir>/<name>/<YYYYMMDD_HHMMSS>/`. [model-co
 | `gpu_samples.csv` | `GpuMonitor.stop` | when the monitor took at least one sample |
 | `summary.json` | `main`, in its `finally` block | always, also after a failure |
 | `memory_samples.csv`, `memory_guard.json` | `memory_guard.py` | only when `memory_guard.py` wraps the run |
+| `provenance.json` | a person, by hand | only in the published E0 to E2 run dirs, which have no `harness` block |
+
+`provenance.json` holds `schema_version` (N for era EN), `era` (for example `E2`), `note` (one line: why the run is in that era), and `added` (the date of the file). The dashboard reads the era from it. See [comparability.md](comparability.md#how-the-dashboard-marks-the-eras).
 
 The published run dirs in `results/` do not include `gpu_samples.csv`, `vllm.log`, or `vllm_spec_*.log`. `.gitignore` keeps these files out of the repo.
 

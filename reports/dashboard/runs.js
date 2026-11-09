@@ -24,11 +24,13 @@
       var t = h("div", { style: "min-width:0" }, head);
       h("h3", { class: "run-title" }, t, r.model);
       h("p", { class: "run-meta" }, t, fmtDate(r.started) + " · vLLM " + (r.env.vllm || "?"));
+      if (r.run_label) h("p", { class: "run-meta" }, t, r.run_label);
       var badges = h("div", { class: "badges" }, card);
       if (r.status === "completed") badge(badges, "good", "Completed");
       else if (r.status === "failed") badge(badges, "critical", "Failed");
       else badge(badges, "warning", r.status || "Unknown");
       badge(badges, null, r.server.speculative ? "MTP spec on" : "No spec decode");
+      if (r.era) badge(badges, null, "Era " + r.era);
       if (olderVllm(r, newest)) badge(badges, "warning", "Older vLLM");
       if (r.pre_fix) badge(badges, "warning", "Pre-fix scoring");
       if (r.concurrency_prompt_mode === "shared") badge(badges, "warning", "Shared concurrency prompt");

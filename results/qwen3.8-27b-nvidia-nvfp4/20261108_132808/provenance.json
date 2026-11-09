@@ -1,0 +1,6 @@
+{
+  "schema_version": 2,
+  "era": "E2",
+  "note": "Harness after #67 to #70 on vLLM 0.33.0: 120 s tool-calling timeout, no harness block in summary.json.",
+  "added": "2026-11-10"
+}

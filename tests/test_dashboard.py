@@ -105,6 +105,55 @@ def test_run_env_has_the_vllm_version_key(tmp_path: Path) -> None:
     env = dashboard.collect_run(run_dir)["env"]
     assert env["vllm"] == "0.33.0" and env["vllm_key"] == [0, 33, 0]
 
+    # The version that the server reports wins over the local import.
+    (run_dir / "environment.json").write_text(
+        json.dumps({"vllm_version": "0.25.1", "vllm_server_version": "0.33.1"}))
+    assert dashboard.collect_run(run_dir)["env"]["vllm_key"] == [0, 33, 1]
+
+
+def _set_summary(run_dir: Path, **fields) -> None:
+    summary = json.loads((run_dir / "summary.json").read_text())
+    summary.update(fields)
+    (run_dir / "summary.json").write_text(json.dumps(summary))
+
+
+def test_era_comes_from_summary_then_provenance_then_date(tmp_path: Path) -> None:
+    old = _write_run(tmp_path, "m", "20260729_150000", spec=False, memory=False)
+    new = _write_run(tmp_path, "m", "20261108_100000", spec=False, memory=False)
+    # Date fallback: before the scoring fix is E0; after it, unknown.
+    assert (dashboard.collect_run(old)["era"], dashboard.collect_run(old)["pre_fix"]) == ("E0", True)
+    run = dashboard.collect_run(new)
+    assert (run["era"], run["era_source"], run["pre_fix"]) == (None, "date", False)
+
+    (new / "provenance.json").write_text(json.dumps({"schema_version": 2, "era": "E2"}))
+    run = dashboard.collect_run(new)
+    assert (run["era"], run["era_source"], run["schema_version"]) == ("E2", "provenance", 2)
+
+    _set_summary(new, harness={"schema_version": 3, "git_commit": "abc", "git_dirty": False})
+    run = dashboard.collect_run(new)
+    assert (run["era"], run["era_source"]) == ("E3", "summary")
+
+    # A run from an old checkout after the date is still E0 by its record.
+    (new / "provenance.json").write_text(json.dumps({"schema_version": 0}))
+    _set_summary(new, harness=None)
+    assert dashboard.collect_run(new)["pre_fix"] is True
+
+
+def test_run_label_reaches_the_page_data(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, "m", "20261110_100000", spec=False, memory=False)
+    assert dashboard.collect_run(run_dir)["run_label"] is None
+    _set_summary(run_dir, run_label="prefill rerun")
+    assert dashboard.collect_run(run_dir)["run_label"] == "prefill rerun"
+
+
+def test_published_runs_have_an_era() -> None:
+    eras = {r["id"]: (r["era"], r["era_source"]) for r in dashboard.collect_runs(dashboard.ROOT / "results")
+            if not r["id"].startswith("qwen3.8-27b-nvidia-nvfp4-vllm033-gate/")}
+    assert eras["qwen3.8-27b-nvidia-nvfp4/20261108_132808"] == ("E2", "provenance")
+    assert eras["qwen3.8-27b-nvidia-nvfp4-prefill/20261107_125906"] == ("E1", "provenance")
+    assert all(source == "provenance" for _, source in eras.values())
+    assert sum(era == "E0" for era, _ in eras.values()) == 5
+
 
 def test_only_the_decode_window_energy_per_token_is_shown(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path, "m", "20261107_100000", spec=False, memory=False)
