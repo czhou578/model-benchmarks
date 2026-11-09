@@ -9,7 +9,8 @@ import pytest
 import requests
 
 import core_runner
-from core_runner import ModelClient
+import harness.client
+from harness.client import ModelClient
 from harness.client import MAX_ERROR_BODY_CHARS, GenerationResult, ServerHTTPError
 
 
@@ -43,7 +44,7 @@ def _patch_post(monkeypatch, responses: list[_Resp], captured: list[tuple[str, d
         captured.append((url, json))
         return responses.pop(0)
 
-    monkeypatch.setattr(core_runner.requests, "post", fake_post)
+    monkeypatch.setattr(harness.client.requests, "post", fake_post)
 
 
 def test_http_400_raises_with_status_and_body(monkeypatch):
@@ -119,7 +120,7 @@ def test_preflight_sets_cache_salt_mode(monkeypatch):
 
 
 def test_completion_mode_warmup_sends_prompt(monkeypatch):
-    monkeypatch.setattr(core_runner.requests, "get", lambda *a, **k: _Resp(200))
+    monkeypatch.setattr(harness.client.requests, "get", lambda *a, **k: _Resp(200))
     captured: list[tuple[str, dict]] = []
     _patch_post(monkeypatch, [_Resp(200)], captured)
     client = ModelClient("http://127.0.0.1:8000", "m", chat=False)

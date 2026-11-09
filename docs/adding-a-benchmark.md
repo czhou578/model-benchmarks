@@ -34,7 +34,7 @@ Each benchmark block in `main()` has the same six steps:
 5. It writes the result: `save_json(run_dir / "<name>.json", result)`.
 6. It adds an entry to the `summary` dict.
 
-The import is inside the block because each module in `benchmarks/` imports from `core_runner`. A top-level import in core_runner.py makes a circular import.
+The modules in `benchmarks/` import only from `harness/`, never from `core_runner`. Keep it so: an import of `core_runner` from a benchmark makes a circular import.
 
 The docstring of core_runner.py mentions `register_benchmark()`. The code does not define it. There is no plugin registry.
 

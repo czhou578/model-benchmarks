@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-import core_runner
+import harness.client
 from benchmarks.prefill import prepare_exact_prompt
-from core_runner import ModelClient
+from harness.client import ModelClient
 
 TEMPLATE_TOKENS = 12
 
@@ -33,7 +33,7 @@ def _patch_tokenize(monkeypatch, captured: list[dict], data=None) -> None:
         text = json["messages"][0]["content"] if "messages" in json else json["prompt"]
         return _FakeJsonResponse({"count": TEMPLATE_TOKENS + len(text) // 4, "tokens": []})
 
-    monkeypatch.setattr(core_runner.requests, "post", fake_post)
+    monkeypatch.setattr(harness.client.requests, "post", fake_post)
 
 
 def test_tokenize_prompt_renders_chat_template(monkeypatch):

@@ -8,7 +8,8 @@ from typing import Any
 import pytest
 
 import core_runner
-from core_runner import ModelClient
+import harness.client
+from harness.client import ModelClient
 from harness.client import GenerationResult, _parse_server_metrics
 
 
@@ -66,7 +67,7 @@ def _patch_post(monkeypatch, lines: list[str], captured: list[dict]) -> None:
         captured.append(json)
         return _FakeResponse(lines)
 
-    monkeypatch.setattr(core_runner.requests, "post", fake_post)
+    monkeypatch.setattr(harness.client.requests, "post", fake_post)
 
 
 def test_generate_sends_cache_salt_at_top_level(monkeypatch):
