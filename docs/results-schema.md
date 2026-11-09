@@ -56,6 +56,8 @@ Read these points before you compare numbers.
 | `run_dir` | | Path of the run dir. |
 | `server_mode` | | `managed` or `external`. |
 | `status` | | `running`, `completed`, or `failed`. |
+| `harness` | | Provenance of the harness (`harness_provenance` in `harness/provenance.py`). See the next table. Runs before E3 do not have it. |
+| `run_label` | | `run_label` from the model config, as text. It tells the purpose of the run. Present only when the config sets it. |
 | `error` | | Exception type and message. Present only when `status` is `failed`. |
 | `latency`, `deep_context`, `ttft_breakdown`, `decode`, `reasoning`, `concurrency`, `spec_comparison` | | Full copy of the file with the same name. |
 | `prefill_scaling` | | `status` and `n_success` for each length. |
@@ -64,6 +66,14 @@ Read these points before you compare numbers.
 | `gpu` | | GPU data of the whole run. See the next table. |
 | `decode_energy` | | GPU energy of the decode benchmark. See the next table. Present when the decode benchmark and the GPU monitor ran. |
 | `energy_per_token_wh` | Wh/token | Old runs only. Whole-run energy / decode output tokens. Do not use it. |
+
+`harness`:
+
+| Field | Meaning |
+|---|---|
+| `schema_version` | `SCHEMA_VERSION` in `harness/provenance.py`. Version N is era EN in [comparability.md](comparability.md). E3 runs have 3. |
+| `git_commit` | `git rev-parse HEAD` of the harness checkout. `null` without git. |
+| `git_dirty` | `true` when a tracked file differs from `git_commit`. Untracked files, for example new run dirs, do not count. `null` without git. |
 
 `decode_energy` (`decode_energy_summary`):
 
@@ -102,8 +112,9 @@ GPU data (`GpuMonitor.stop` for the whole run, `_window_summary` for one window)
 | `gpu_memory_total` | nvidia-smi `memory.total` as raw text. `[N/A]` on the GB10. |
 | `cuda_version` | Last line of `nvcc --version`, the CUDA toolkit on `PATH`. |
 | `torch_version`, `vllm_version` | `__version__` in the Python that runs core_runner.py. A managed server can use another Python. |
+| `vllm_server_version` | The `version` from `GET <base_url>/version` of the server, after readiness. It is the version that served the requests. `null` when the request fails, or when the run stops before readiness. |
 
-The file records no model revision and no weight checksum.
+The runner writes the file before it starts the server. It writes the file again after readiness, with `vllm_server_version`. The file records no model revision and no weight checksum.
 
 ## resolved_server.json
 
@@ -113,10 +124,10 @@ The runner writes it after it starts a managed server, and again after it stops 
 |---|---|---|
 | `command`, `command_display` | | Server argument list, and the same list as one shell string. |
 | `base_url`, `host`, `port` | | From `endpoint.base_url`. |
-| `environment` | | `server.environment`. Names with `TOKEN`, `KEY`, `SECRET`, or `PASSWORD` show `<redacted>`. |
+| `environment` | | `server.environment`. A secret-like name shows `<redacted>` (`is_secret_name` in `vllm_server.py`). See [model-config.md](model-config.md#keys). |
 | `pid`, `return_code` | | Process ID and exit code. |
 | `started_at_unix`, `stopped_at_unix` | s, Unix time | Start and stop of the server process. |
-| `log_path` | | Path of the vLLM log. |
+| `log_path` | | Path of the vLLM log, relative to the run dir, for example `vllm.log`. Runs before E3 hold the path that the runner got, relative to the current directory or absolute. |
 
 ## latency.json and deep_context.json
 
@@ -302,5 +313,7 @@ E1 runs (old TTFT split): the client set `post_queue_ms` to server TTFT − queu
 
 E0 to E2 runs:
 
+- `summary.json` has no `harness` block and no `run_label`. `environment.json` has no `vllm_server_version`.
+- `log_path` in `resolved_server.json` is not relative to the run dir. The E2 run holds an absolute path on the test machine.
 - The `tool_calling` entry in `summary.json` has no `status`.
 - In E1 and E2, `tool_calling.json` has no `config.request_timeout_s` and no `failure_modes.request_timeout`. The read timeout was 120 s. A timeout counts in `request_failed`.

@@ -10,6 +10,7 @@ This page tells how `core_runner.py` takes each measurement. [results-schema.md]
    - It polls `GET /v1/models` every `ready_poll_s` seconds until the server returns HTTP 200.
    - It then sends the request `"hi"` with `max_tokens` 1 until the server returns HTTP 200. In chat mode, the request goes to `/v1/chat/completions` with a `messages` body. With `endpoint.chat: false`, it goes to `/v1/completions` with a `prompt` body.
    - At the time limit, the `TimeoutError` holds the last error. For an HTTP error, this is the status and the server body.
+   - After readiness, it sends `GET /version` and writes the server vLLM version to `environment.json`.
 4. It starts the GPU monitor.
 5. It runs the benchmarks in this order: latency, deep context, TTFT breakdown, decode, reasoning, concurrency, prefill scaling, FLOP analysis, tool calling, speculative decoding comparison.
 6. It stops the GPU monitor and the managed server, and writes `summary.json`.
@@ -154,7 +155,7 @@ The estimator supports only the Qwen3.6-35B-A3B dimensions (`_FIXED_DIMENSIONS`)
 - Client-side timing: TTFT and the rates use the client wall clock. They include HTTP and network time.
 - Small samples: the default repeats are 10 or 5. The decode and reasoning benchmarks send one request per setting. The runner has no seed option and no run-level repeats.
 - No model revision: `resolved_server.json` records the server command, which names the model repository. `environment.json` records the GPU, driver, CUDA, torch, and vLLM versions. No file records a model revision or a weight checksum.
-- Version source: `environment.json` reads the torch and vLLM versions from the Python that runs `core_runner.py`. A managed server from another environment can use other versions.
+- Version source: `environment.json` reads the torch and vLLM versions from the Python that runs `core_runner.py`. A managed server from another environment can use other versions. From era E3, `vllm_server_version` holds the version that the server reports. Use it for the server version.
 - External mode: the runner writes no `resolved_server.json` and no `vllm.log`. The run dir does not record the server settings.
 - Token estimates: reasoning token counts use tiktoken `cl100k_base`, not the model tokenizer.
 - FLOP analysis: it supports one model architecture.

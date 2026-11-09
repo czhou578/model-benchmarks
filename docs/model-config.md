@@ -74,6 +74,7 @@ The runner does not validate keys. It ignores an unknown key, so a misspelled ke
 | Key | Type | Default | Required | Meaning | Used by |
 |---|---|---|---|---|---|
 | `name` | string | none | yes | Run dir folder name. | all |
+| `run_label` | string | none | no | Free text that tells the purpose of the run, for example `prefill rerun`. The runner writes it to `summary.json`. It does not change the run dir. | runner |
 | `server.mode` | `managed` or `external` | `external` | no | Server mode. | runner |
 | `server.command` | list of strings | none | managed mode | Command that starts the server, one argument per item. | runner, FLOP analysis |
 | `server.environment` | map | `{}` | no | Extra environment variables for the server process. | runner (managed) |
@@ -115,7 +116,8 @@ The runner does not validate keys. It ignores an unknown key, so a misspelled ke
 
 Notes:
 
-- `resolved_server.json` replaces the value of each `server.environment` variable whose name contains `TOKEN`, `KEY`, `SECRET`, or `PASSWORD` with `<redacted>`.
+- `resolved_server.json` replaces the value of each secret-like `server.environment` variable with `<redacted>` (`is_secret_name` in `vllm_server.py`). A name is secret-like when it contains `SECRET` or `PASSWORD`. It is also secret-like when it is, or ends in `_` plus, one of `TOKEN`, `KEY`, `APIKEY`, `KEY_ID`, `PASS`, `PASSWD`, `CREDENTIAL`, `CREDENTIALS`. Thus `HF_TOKEN` and `OPENAI_API_KEY` show `<redacted>`, and `VLLM_USE_FASTOKENS` shows its value.
+- WARNING: The rule does not find every secret. Do not put a secret in a variable with another name, because `resolved_server.json` then shows it.
 - The tool-calling benchmark always uses `/v1/chat/completions`. It ignores `endpoint.chat`.
 - Write `speculative_config` as a JSON string in single quotes. The runner passes `str(value)` to vLLM (`step_spec_comparison` in core_runner.py). A YAML mapping becomes a Python repr, which is not JSON.
 - Keep `--speculative-config` out of `server.command` when you use `--compare-spec`. The runner adds the flag for the enabled variant. It does not remove the flag for the disabled variant.

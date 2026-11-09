@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 import signal
 import socket
@@ -12,6 +13,19 @@ import time
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 from urllib.parse import urlparse
+
+
+# A variable name is secret-like when it ends in one of these words, after
+# "_" or at the start, or when it contains SECRET or PASSWORD. Thus HF_TOKEN
+# and OPENAI_API_KEY are redacted, but VLLM_USE_FASTOKENS is not.
+_SECRET_NAME = re.compile(
+    r"(?:^|_)(?:TOKEN|KEY|APIKEY|KEY_ID|PASS|PASSWD|CREDENTIALS?)$|SECRET|PASSWORD"
+)
+
+
+def is_secret_name(name: str) -> bool:
+    """Return True when the environment variable *name* can hold a secret."""
+    return bool(_SECRET_NAME.search(name.upper()))
 
 
 class VllmServerError(RuntimeError):
@@ -136,12 +150,20 @@ class VllmServer:
         content = self.log_path.read_text(encoding="utf-8", errors="replace").splitlines()
         return "\n".join(content[-lines:])
 
-    def metadata(self) -> dict[str, Any]:
-        sensitive = ("TOKEN", "KEY", "SECRET", "PASSWORD")
+    def metadata(self, base_dir: Path | None = None) -> dict[str, Any]:
+        """Return the server record. ``log_path`` is relative to *base_dir*.
+
+        Without *base_dir*, or when the log is outside it, ``log_path`` is
+        the file name only. The record thus holds no home directory path.
+        """
         environment = {
-            key: "<redacted>" if any(word in key.upper() for word in sensitive) else value
+            key: "<redacted>" if is_secret_name(key) else value
             for key, value in self.environment.items()
         }
+        try:
+            log_path = str(self.log_path.relative_to(base_dir)) if base_dir else self.log_path.name
+        except ValueError:
+            log_path = self.log_path.name
         return {
             "command": self.command,
             "command_display": shlex.join(self.command),
@@ -153,11 +175,12 @@ class VllmServer:
             "started_at_unix": self.started_at,
             "stopped_at_unix": self.stopped_at,
             "return_code": self.process.poll() if self.process else None,
-            "log_path": str(self.log_path),
+            "log_path": log_path,
         }
 
     def save_metadata(self, path: Path) -> None:
-        path.write_text(json.dumps(self.metadata(), indent=2), encoding="utf-8")
+        metadata = self.metadata(base_dir=Path(path).parent)
+        path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
     def __enter__(self) -> "VllmServer":
         self.start()

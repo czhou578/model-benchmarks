@@ -17,7 +17,7 @@ The steps below follow `main()` and `run_benchmarks()` in `core_runner.py`.
 ### Set-up
 
 1. **Load the config.** `load_model_config()` reads the YAML file. `make_run_dir()` makes the run dir. The runner prints `[core_runner] writing results to <run dir>`. Output: `model_config.yml`, an exact copy of the config file.
-2. **Record the environment.** `collect_environment()` in `harness/environment.py` reads the GPU name, the driver, the CUDA toolkit, and the torch and vLLM versions. Output: `environment.json`.
+2. **Record the environment and the provenance.** `collect_environment()` in `harness/environment.py` reads the GPU name, the driver, the CUDA toolkit, and the torch and vLLM versions. Output: `environment.json`. `harness_provenance()` in `harness/provenance.py` reads the schema version and the git commit of the harness. Output: the `harness` block of the summary. The runner also copies `run_label` from the config to the summary.
 3. **Start vLLM (managed mode only).** `make_managed_server()` makes a `VllmServer` from `vllm_server.py`. `VllmServer.start()` runs `server.command` with `server.environment` added. It refuses to start when the port is already in use. Output: `resolved_server.json` and `vllm.log`.
    - In external mode, the runner does not start or stop a server. It writes no `resolved_server.json` and no `vllm.log`.
    - `--server-mode` overrides `server.mode`. When neither sets a mode, the mode is `external`.
@@ -27,6 +27,7 @@ The steps below follow `main()` and `run_benchmarks()` in `core_runner.py`.
    - The time limit is `server.startup_timeout_s`, else `ready_timeout_s`, else 600 s. The wait between two probes is `ready_poll_s` (default 3 s).
    - In managed mode, the run stops when the vLLM process exits. The error holds the last 30 lines of `vllm.log`.
    - The `"hi"` request is the only warm-up of the run. Only prefill scaling adds its own warm-up requests.
+   - After readiness, `fetch_server_version()` in `harness/provenance.py` sends `GET /version`. The runner writes the result to `environment.json` as `vllm_server_version`. A failed request gives `null` and does not stop the run.
 5. **Start the GPU monitor.** `GpuMonitor` in `harness/telemetry.py` calls `nvidia-smi` in a background thread every `monitor_interval_s` (default 1 s). The samples thus do not include the first model load.
 
 ### Benchmarks
