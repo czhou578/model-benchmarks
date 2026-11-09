@@ -10,7 +10,8 @@ A run does these steps. docs/methodology.md gives the details.
    --results-dir changes the results/ folder.
 2. Write environment.json.
 3. In managed mode, start vLLM (vllm_server.py). In both modes, wait
-   until the endpoint answers a real generation request.
+   until the endpoint answers a real generation request. Add the vLLM
+   version from GET /version to environment.json.
 4. Start the GPU monitor (harness/telemetry.py).
 5. Run the benchmark steps in the order of run_benchmarks().
 6. Stop the monitor and the server. Write summary.json.
@@ -45,6 +46,7 @@ from benchmarks.ttft_breakdown import run_ttft_breakdown
 from harness.client import ModelClient
 from harness.environment import collect_environment
 from harness.paths import ROOT, repo_relative
+from harness.provenance import fetch_server_version, harness_provenance
 from harness.telemetry import GpuMonitor, decode_energy_summary
 from vllm_server import VllmServer
 
@@ -403,6 +405,8 @@ def main():
     shutil.copy2(model_config_path, run_dir / "model_config.yml")
 
     env = collect_environment()
+    # Set after readiness: the vLLM version that the server reports.
+    env["vllm_server_version"] = None
     save_json(run_dir / "environment.json", env)
     print(f"[core_runner] environment: {env.get('gpu_name')}, torch={env.get('torch_version')}, vllm={env.get('vllm_version')}")
 
@@ -424,7 +428,10 @@ def main():
         "run_dir": repo_relative(run_dir),
         "server_mode": server_mode,
         "status": "running",
+        "harness": harness_provenance(),
     }
+    if cfg.get("run_label"):
+        summary["run_label"] = str(cfg["run_label"])
     run = Run(cfg=cfg, args=args, run_dir=run_dir, summary=summary)
 
     previous_sigterm_handler = signal.getsignal(signal.SIGTERM)
@@ -445,6 +452,11 @@ def main():
         print("[core_runner] waiting for model endpoint to be ready...")
         wait_for_endpoint(run.client, cfg, run.server)
         print("[core_runner] endpoint ready")
+        env["vllm_server_version"] = fetch_server_version(
+            run.client.base_url, getattr(run.client, "headers", None)
+        )
+        save_json(run_dir / "environment.json", env)
+        print(f"[core_runner] server reports vllm={env['vllm_server_version']}")
 
         run.monitor = GpuMonitor(run_dir, interval_s=cfg.get("monitor_interval_s", 1.0))
         run.monitor.start()

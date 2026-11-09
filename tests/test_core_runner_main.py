@@ -82,6 +82,7 @@ def _run_main(tmp_path, monkeypatch, *flags, tool_calling_error=None, extra_cfg=
     monkeypatch.setattr(core_runner, "GpuMonitor", _FakeMonitor)
     monkeypatch.setattr(core_runner, "collect_environment", lambda: {"gpu_name": "fake"})
     monkeypatch.setattr(core_runner, "_get_server_model_config", lambda client: {})
+    monkeypatch.setattr(core_runner, "fetch_server_version", lambda *args: "0.33.0")
     monkeypatch.setattr(core_runner.time, "sleep", lambda s: None)
     _patch(monkeypatch, benchmarks.latency, "run_latency_sweep", fake("latency", {}))
     _patch(monkeypatch, benchmarks.latency, "run_deep_context", fake("deep_context", {}))
@@ -169,3 +170,19 @@ def test_compare_spec_needs_managed_mode(tmp_path, monkeypatch):
     (run_dir,) = (tmp_path / "results" / "fake-model").iterdir()
     summary = json.loads((run_dir / "summary.json").read_text())
     assert summary["status"] == "failed"
+
+
+def test_summary_and_environment_record_the_provenance(tmp_path, monkeypatch):
+    harness = {"schema_version": 3, "git_commit": "abc123", "git_dirty": False}
+    monkeypatch.setattr(core_runner, "harness_provenance", lambda: harness)
+    _, run_dir, summary = _run_main(tmp_path, monkeypatch, extra_cfg={"run_label": "prefill rerun"})
+    assert summary["harness"] == harness
+    assert summary["run_label"] == "prefill rerun"
+    env = json.loads((run_dir / "environment.json").read_text())
+    assert env["gpu_name"] == "fake" and env["vllm_server_version"] == "0.33.0"
+
+
+def test_run_label_is_absent_when_not_set(tmp_path, monkeypatch):
+    _, _, summary = _run_main(tmp_path, monkeypatch)
+    assert "run_label" not in summary
+    assert summary["harness"]["schema_version"] == 3

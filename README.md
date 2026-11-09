@@ -128,7 +128,7 @@ Test system of the published runs, from `environment.json` in the run dirs. All 
 |---|---|
 | `core_runner.py` | The command line, the run state, and the step order of one run. Start here. |
 | `benchmarks/` | One module per benchmark: `latency.py` (latency sweep and deep context), `ttft_breakdown.py`, `decode.py` (decode and the spec comparison), `reasoning.py`, `concurrency.py`, `prefill.py`, `architecture_flops.py`, `tool_calling.py`. |
-| `harness/` | Shared code: `client.py` (HTTP client and stream reader), `prompts.py`, `stats.py`, `telemetry.py` (GPU monitor and energy), `environment.py`, `paths.py`. |
+| `harness/` | Shared code: `client.py` (HTTP client and stream reader), `prompts.py`, `stats.py`, `telemetry.py` (GPU monitor and energy), `environment.py`, `provenance.py` (schema version, git commit, server vLLM version), `paths.py`. |
 | `vllm_server.py` | Starts and stops a managed vLLM server. |
 | `memory_guard.py` | Runs a command and stops it when the free memory falls below a floor. |
 | `batch_run.py` | Runs each model config in `models/`, one at a time. |
