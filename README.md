@@ -9,17 +9,21 @@ A run executes the benchmarks below in sequence. Each benchmark writes one file 
 | Benchmark | Output file | Main metric | Unit |
 |---|---|---|---|
 | Latency sweep | `latency.json` | Median and p99 TTFT, prompts of 32 to 16K tokens | s |
-| Deep context | `deep_context.json` | Median TTFT at 32K and 64K tokens | s |
+| Deep context | `deep_context.json` | Median TTFT at each `context_lengths` value, for example 32K and 64K tokens | s |
 | TTFT breakdown | `ttft_breakdown.json` | Server queue time and post-queue time | ms |
 | Decode speed | `decode.json` | Mean decode rate at 512, 1K, and 2K output tokens | tokens/s |
-| Concurrency | `concurrency.json` | Aggregate throughput at 1 to 16 parallel requests | tokens/s |
 | Reasoning | `reasoning.json` | Thinking tokens and answer tokens per prompt | tokens |
+| Concurrency | `concurrency.json` | Aggregate throughput at 1 to 16 parallel requests | tokens/s |
 | Prefill scaling | `prefill_scaling.json` | Effective and engine prefill throughput per prompt length | tokens/s |
-| FLOP analysis | `flops_analysis.json` | Estimated FLOPs per decode token and per prefill | FLOPs |
+| FLOP analysis | `flops_analysis.json` | Estimated FLOPs per decode token and per prefill (Qwen3.6-35B-A3B only) | FLOPs |
 | Tool calling | `tool_calling.json` | Tasks passed (of 85) and composite score (0 to 6) | count, score |
 | Spec comparison | `spec_comparison.json` | Decode speed with speculative decoding on and off | tokens/s, % |
 
-Deep context runs only when the model config sets `context_lengths`. Spec comparison runs only with `--compare-spec`. A run also writes `environment.json`, `gpu_samples.csv`, `summary.json`, and the vLLM log. See [docs/results-schema.md](docs/results-schema.md) for each file and field.
+Deep context runs only when the model config sets `context_lengths`. Spec comparison runs only with `--compare-spec`.
+
+The FLOP analysis accepts only the dimensions of Qwen3.6-35B-A3B. For other models, for example Qwen3.8-27B, `flops_analysis.json` holds `estimate_status: unsupported`, empty FLOP tables, and `warnings`.
+
+A run also writes `model_config.yml`, `environment.json`, `gpu_samples.csv`, and `summary.json`. In managed mode, it also writes `resolved_server.json` and the vLLM log. The published run dirs in `results/` do not include `gpu_samples.csv` or the vLLM logs. See [docs/results-schema.md](docs/results-schema.md) for each file and field.
 
 ## Requirements
 
@@ -48,9 +52,12 @@ Run these commands from the repo root. In the copy, edit `name:`, the `vllm serv
 
 ```bash
 cp models/qwen3.8_27b_nvidia_nvfp4.yml models/my_model.yml   # copy an example model config
-python3 core_runner.py --model models/my_model.yml           # start vLLM, run, stop vLLM
+python3 memory_guard.py -- \
+    python3 -u core_runner.py --model models/my_model.yml    # start vLLM, run, stop vLLM
 python3 dashboard.py                                         # write reports/dashboard.html
 ```
+
+`memory_guard.py` stops the run when the available host memory stays below 8 GiB. It refuses to start below 40 GiB. Without the guard, run `python3 core_runner.py --model models/my_model.yml`. [docs/dgx-spark.md](docs/dgx-spark.md#memory-guard) explains the guard options.
 
 Open `reports/dashboard.html` in a browser. To see new runs on each reload, run `python3 serve_dashboard.py` and open http://127.0.0.1:8080/dashboard.html.
 
@@ -134,7 +141,7 @@ Test system of the published runs, from `environment.json` in the run dirs:
 | `results/` | The published run dirs. |
 | `tests/` | Unit tests. They need no GPU and no server. |
 
-The modules in `benchmarks/` import only from `harness/`. `core_runner.py` imports from both. [docs/adding-a-benchmark.md](docs/adding-a-benchmark.md) tells how to add a benchmark.
+The modules in `benchmarks/` import from `harness/` and from other modules in `benchmarks/`. They do not import `core_runner.py` at the top level. `core_runner.py` imports from both folders. [docs/adding-a-benchmark.md](docs/adding-a-benchmark.md) tells how to add a benchmark.
 
 ## Documentation
 
@@ -151,7 +158,7 @@ The modules in `benchmarks/` import only from `harness/`. `core_runner.py` impor
 ## Contributing
 
 - Run `ruff check .` and `pytest -q` before you open a pull request.
-- CI runs `ruff check .` and `pytest -q` on each push and pull request.
+- CI runs `ruff check .` and `pytest -q` on each push to `main` and on each pull request.
 - Keep each pull request small, with one topic.
 
 See [LICENSE](LICENSE).

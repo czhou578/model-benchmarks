@@ -25,7 +25,7 @@ An unhandled error in a benchmark stops the run. The runner then writes `summary
 
 ## How the runner wires a benchmark
 
-Each benchmark has one step function in core_runner.py, for example `step_decode(run)`. `run_benchmarks(run)` checks the skip flags and calls the steps in order. The `Run` object holds the state of the run: `cfg`, `args`, `run_dir`, `summary`, `client`, `monitor`, and `server`.
+Each benchmark has one step function in core_runner.py, for example `step_decode(run)`. `run_benchmarks(run)` checks the skip flags and calls the steps in order. The `Run` object holds the state of the run: `cfg`, `args`, `run_dir`, `summary`, `client`, `monitor`, `server`, and `decode_window`.
 
 A step function does these things:
 
@@ -33,7 +33,7 @@ A step function does these things:
 2. It calls the run function of its module with `run.client`, the parameters, and optionally `gpu_monitor=run.monitor`.
 3. It calls `run.record("<name>", result)`. This writes `<name>.json` to the run dir and adds the `<name>` entry to the summary. Use `summary_entry=` to put a short form in the summary.
 
-The modules in `benchmarks/` import only from `harness/`, never from `core_runner`. Keep it so: an import of `core_runner` from a benchmark makes a circular import.
+The modules in `benchmarks/` import from `harness/` and from other modules in `benchmarks/`, for example `concurrency.py` from `prefill.py`. They never import `core_runner` at the top level. Keep it so: a top-level import of `core_runner` from a benchmark makes a circular import. Only the standalone `__main__` block of `architecture_flops.py` imports it.
 
 ## Conventions
 
