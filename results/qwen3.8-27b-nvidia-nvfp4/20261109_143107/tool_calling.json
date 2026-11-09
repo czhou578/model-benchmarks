@@ -1,0 +1,2734 @@
+{
+  "config": {
+    "benchmark_version": "1.0",
+    "task_file": "datasets/tool_calling_tasks.yaml",
+    "task_set": "full",
+    "max_tokens": 4096,
+    "temperature": 0.0,
+    "chat_template_kwargs": null,
+    "request_timeout_s": 600.0,
+    "start_time": "2026-11-09T23:05:17.432645+00:00",
+    "tool_definitions_count": 8,
+    "repeats": 1,
+    "end_time": "2026-11-09T23:42:06.700785+00:00"
+  },
+  "total_tasks": 85,
+  "total_correct": 51,
+  "composite_score": 4.8338,
+  "composite_components": {
+    "tool_accuracy": 0.8571,
+    "param_completeness": 0.8571,
+    "param_correctness": 0.8571,
+    "multi_tool": 0.5625,
+    "schema_compliance": 0.7,
+    "refusal": 1.0
+  },
+  "category_scores": {
+    "ambiguous": {
+      "pass_count": 5,
+      "total": 9,
+      "pass_rate": 0.5556,
+      "tool_accuracy": 0.7778,
+      "param_completeness_avg": 0.8889,
+      "param_correctness_avg": 0.8889,
+      "composite_avg": 0.7778,
+      "correct_refusal_or_default": 0.5556,
+      "no_hallucinated_params": 0.7778,
+      "clarification_rate": 0.2222
+    },
+    "calculate_basic": {
+      "pass_count": 2,
+      "total": 3,
+      "pass_rate": 0.6667,
+      "tool_accuracy": 0.6667,
+      "param_completeness_avg": 0.6667,
+      "param_correctness_avg": 0.6667,
+      "composite_avg": 0.6667
+    },
+    "currency_basic": {
+      "pass_count": 3,
+      "total": 3,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "email_basic": {
+      "pass_count": 1,
+      "total": 2,
+      "pass_rate": 0.5,
+      "tool_accuracy": 0.5,
+      "param_completeness_avg": 0.5,
+      "param_correctness_avg": 0.5,
+      "composite_avg": 0.5
+    },
+    "error_recovery": {
+      "pass_count": 3,
+      "total": 17,
+      "pass_rate": 0.1765,
+      "tool_accuracy": 0.8824,
+      "param_completeness_avg": 0.8824,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 0.8824,
+      "error_recovery": 0.1765,
+      "self_corrected": 1.0,
+      "turns_matched": 0.1765
+    },
+    "meeting_basic": {
+      "pass_count": 1,
+      "total": 2,
+      "pass_rate": 0.5,
+      "tool_accuracy": 0.5,
+      "param_completeness_avg": 0.5,
+      "param_correctness_avg": 0.5,
+      "composite_avg": 0.5
+    },
+    "multi_tool": {
+      "pass_count": 9,
+      "total": 16,
+      "pass_rate": 0.5625,
+      "tool_accuracy": 0.875,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 0.875,
+      "orchestration_accuracy": 0.75,
+      "data_flow_correct": 0.75,
+      "turns_correct": 0.8125,
+      "multi_tool_score_avg": 0.5625,
+      "avg_chain_length": 3.38
+    },
+    "refusal": {
+      "pass_count": 2,
+      "total": 2,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0,
+      "correct_refusal": 1.0
+    },
+    "schema_compliance": {
+      "pass_count": 14,
+      "total": 20,
+      "pass_rate": 0.7,
+      "tool_accuracy": 0.95,
+      "param_completeness_avg": 0.95,
+      "param_correctness_avg": 0.95,
+      "composite_avg": 0.95,
+      "strict_compliance": 0.7,
+      "no_hallucinated_params": 0.75,
+      "required_present": 1.0,
+      "length_valid": 1.0,
+      "enum_valid": 0.9,
+      "pattern_valid": 0.9,
+      "nested_valid": 0.95
+    },
+    "search_basic": {
+      "pass_count": 2,
+      "total": 2,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "search_params": {
+      "pass_count": 1,
+      "total": 1,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "stock_basic": {
+      "pass_count": 2,
+      "total": 2,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "ticket_basic": {
+      "pass_count": 2,
+      "total": 2,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "ticket_complex": {
+      "pass_count": 1,
+      "total": 1,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "weather_basic": {
+      "pass_count": 1,
+      "total": 1,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "weather_enum": {
+      "pass_count": 2,
+      "total": 2,
+      "pass_rate": 1.0,
+      "tool_accuracy": 1.0,
+      "param_completeness_avg": 1.0,
+      "param_correctness_avg": 1.0,
+      "composite_avg": 1.0
+    },
+    "single_tool": {
+      "pass_count": 18,
+      "total": 21,
+      "pass_rate": 0.8571,
+      "tool_accuracy": 0.8571,
+      "param_completeness_avg": 0.8571,
+      "param_correctness_avg": 0.8571,
+      "composite_avg": 0.8571,
+      "source_categories": [
+        "calculate_basic",
+        "currency_basic",
+        "email_basic",
+        "meeting_basic",
+        "search_basic",
+        "search_params",
+        "stock_basic",
+        "ticket_basic",
+        "ticket_complex",
+        "weather_basic",
+        "weather_enum"
+      ]
+    }
+  },
+  "per_task": [
+    {
+      "task_id": "search_tech_news",
+      "category": "search_basic",
+      "prompt": "Find me the latest news about AI chip startups",
+      "expected_tool": "search",
+      "actual_tool": "search",
+      "tool_call_id": "chatcmpl-tool-b133717b472e1206",
+      "actual_params": {
+        "query": "latest news AI chip startups 2025",
+        "max_results": 8
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 70
+    },
+    {
+      "task_id": "search_recipe",
+      "category": "search_basic",
+      "prompt": "Search for a traditional Italian pasta recipe",
+      "expected_tool": "search",
+      "actual_tool": "search",
+      "tool_call_id": "chatcmpl-tool-8636717a73c1e357",
+      "actual_params": {
+        "query": "traditional Italian pasta recipe",
+        "max_results": 5
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 66
+    },
+    {
+      "task_id": "search_specific_params",
+      "category": "search_params",
+      "prompt": "Search for 'quantum computing breakthrough' with only 3 results",
+      "expected_tool": "search",
+      "actual_tool": "search",
+      "tool_call_id": "chatcmpl-tool-b87fb3a811b4118a",
+      "actual_params": {
+        "query": "quantum computing breakthrough",
+        "max_results": 3
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 74
+    },
+    {
+      "task_id": "weather_default_unit",
+      "category": "weather_basic",
+      "prompt": "Tell me the weather in Sydney",
+      "expected_tool": "get_weather",
+      "actual_tool": "get_weather",
+      "tool_call_id": "chatcmpl-tool-a4e9dee4030826ea",
+      "actual_params": {
+        "location": "Sydney"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 55
+    },
+    {
+      "task_id": "weather_tokyo_celsius",
+      "category": "weather_enum",
+      "prompt": "How hot is Tokyo right now?",
+      "expected_tool": "get_weather",
+      "actual_tool": "get_weather",
+      "tool_call_id": "chatcmpl-tool-9de7f72f111e2254",
+      "actual_params": {
+        "location": "Tokyo",
+        "unit": "celsius"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 62
+    },
+    {
+      "task_id": "weather_london_fahrenheit",
+      "category": "weather_enum",
+      "prompt": "What's the weather in London in Fahrenheit?",
+      "expected_tool": "get_weather",
+      "actual_tool": "get_weather",
+      "tool_call_id": "chatcmpl-tool-a9a17055cca01e24",
+      "actual_params": {
+        "location": "London",
+        "unit": "fahrenheit"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 62
+    },
+    {
+      "task_id": "currency_usd_jpy",
+      "category": "currency_basic",
+      "prompt": "Convert 1000 USD to Japanese Yen",
+      "expected_tool": "convert_currency",
+      "actual_tool": "convert_currency",
+      "tool_call_id": "chatcmpl-tool-b11e62c6f59c5e51",
+      "actual_params": {
+        "amount": 1000,
+        "from_currency": "USD",
+        "to_currency": "JPY"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 83
+    },
+    {
+      "task_id": "currency_small_amount",
+      "category": "currency_basic",
+      "prompt": "How much is 0.5 EUR in GBP?",
+      "expected_tool": "convert_currency",
+      "actual_tool": "convert_currency",
+      "tool_call_id": "chatcmpl-tool-bbdc3b7dcb6ec2db",
+      "actual_params": {
+        "amount": 0.5,
+        "from_currency": "EUR",
+        "to_currency": "GBP"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 79
+    },
+    {
+      "task_id": "currency_reverse",
+      "category": "currency_basic",
+      "prompt": "I have 500 British pounds. What is that in US dollars?",
+      "expected_tool": "convert_currency",
+      "actual_tool": "convert_currency",
+      "tool_call_id": "chatcmpl-tool-a81feed801db897f",
+      "actual_params": {
+        "amount": 500,
+        "from_currency": "GBP",
+        "to_currency": "USD"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 81
+    },
+    {
+      "task_id": "stock_nvda",
+      "category": "stock_basic",
+      "prompt": "What's the current price of NVIDIA stock?",
+      "expected_tool": "get_stock_price",
+      "actual_tool": "get_stock_price",
+      "tool_call_id": "chatcmpl-tool-8b4065e6c66fa0cb",
+      "actual_params": {
+        "symbol": "NVDA"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 61
+    },
+    {
+      "task_id": "stock_tesla",
+      "category": "stock_basic",
+      "prompt": "Look up the stock price for Tesla",
+      "expected_tool": "get_stock_price",
+      "actual_tool": "get_stock_price",
+      "tool_call_id": "chatcmpl-tool-9e7d2a56ecdd8fb8",
+      "actual_params": {
+        "symbol": "TSLA"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 61
+    },
+    {
+      "task_id": "calc_simple",
+      "category": "calculate_basic",
+      "prompt": "What is 150 multiplied by 1.2?",
+      "expected_tool": "calculate",
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 0.0,
+      "params_valid": false,
+      "composite_score": 0.0,
+      "details": "Expected tool=calculate, got no tool",
+      "finish_reason": "stop",
+      "completion_tokens": 150
+    },
+    {
+      "task_id": "calc_percentage",
+      "category": "calculate_basic",
+      "prompt": "Calculate 20% of 250",
+      "expected_tool": "calculate",
+      "actual_tool": "calculate",
+      "tool_call_id": "chatcmpl-tool-b4fbf69b924c45af",
+      "actual_params": {
+        "expression": "0.20 * 250"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 101
+    },
+    {
+      "task_id": "calc_complex",
+      "category": "calculate_basic",
+      "prompt": "Evaluate the expression: (100 + 200) * 3 / 4",
+      "expected_tool": "calculate",
+      "actual_tool": "calculate",
+      "tool_call_id": "chatcmpl-tool-8870497b6bdb7a4c",
+      "actual_params": {
+        "expression": "(100 + 200) * 3 / 4"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 78
+    },
+    {
+      "task_id": "ticket_simple",
+      "category": "ticket_basic",
+      "prompt": "Create a P2 bug ticket titled 'Login page broken on mobile'",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-bff57b287513034e",
+      "actual_params": {
+        "title": "Login page broken on mobile",
+        "priority": "p2",
+        "labels": [
+          "bug"
+        ]
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 205
+    },
+    {
+      "task_id": "ticket_high_priority",
+      "category": "ticket_basic",
+      "prompt": "Create a security P0 ticket: 'SQL injection in user profile endpoint'",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-a861cbf32a61ad81",
+      "actual_params": {
+        "title": "SQL injection in user profile endpoint",
+        "priority": "p0",
+        "labels": [
+          "security"
+        ],
+        "description": "SQL injection vulnerability identified in the user profile endpoint. Immediate remediation required."
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 185
+    },
+    {
+      "task_id": "ticket_with_assignee",
+      "category": "ticket_complex",
+      "prompt": "Create a P3 feature ticket titled 'Add dark mode support' for user alice",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-8af92fb2b8934973",
+      "actual_params": {
+        "title": "Add dark mode support",
+        "priority": "p3",
+        "labels": [
+          "feature"
+        ],
+        "assignees": [
+          {
+            "username": "alice",
+            "role": "primary"
+          }
+        ]
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 264
+    },
+    {
+      "task_id": "email_simple",
+      "category": "email_basic",
+      "prompt": "Send an email to bob@example.com with subject 'Meeting Tomorrow' and body 'Hi Bob, just a reminder about our meeting tomorrow at 3pm.'",
+      "expected_tool": "send_email",
+      "actual_tool": "send_email",
+      "tool_call_id": "chatcmpl-tool-815f96aa4da23792",
+      "actual_params": {
+        "to": "bob@example.com",
+        "subject": "Meeting Tomorrow",
+        "body": "Hi Bob, just a reminder about our meeting tomorrow at 3pm."
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 127
+    },
+    {
+      "task_id": "email_subject_only",
+      "category": "email_basic",
+      "prompt": "Email sarah@company.com about the project update",
+      "expected_tool": "send_email",
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 0.0,
+      "params_valid": false,
+      "composite_score": 0.0,
+      "details": "Expected tool=send_email, got no tool",
+      "finish_reason": "stop",
+      "completion_tokens": 262
+    },
+    {
+      "task_id": "meeting_basic",
+      "category": "meeting_basic",
+      "prompt": "Schedule a team standup every Monday at 9am. Title it 'Weekly Standup'.",
+      "expected_tool": "schedule_meeting",
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 0.0,
+      "params_valid": false,
+      "composite_score": 0.0,
+      "details": "Expected tool=schedule_meeting, got no tool",
+      "finish_reason": "stop",
+      "completion_tokens": 495
+    },
+    {
+      "task_id": "meeting_with_attendees",
+      "category": "meeting_basic",
+      "prompt": "Book a 1:1 meeting called 'Sprint Review' for July 30 at 2pm with alice@co.com and bob@co.com",
+      "expected_tool": "schedule_meeting",
+      "actual_tool": "schedule_meeting",
+      "tool_call_id": "chatcmpl-tool-8efbe46eadb90794",
+      "actual_params": {
+        "title": "Sprint Review",
+        "datetime": "2026-07-30T14:00:00",
+        "attendees": [
+          "alice@co.com",
+          "bob@co.com"
+        ]
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 251
+    },
+    {
+      "task_id": "ambiguous_generic",
+      "category": "ambiguous",
+      "prompt": "Find me something about Japan",
+      "expected_tool": "search",
+      "actual_tool": "search",
+      "tool_call_id": "chatcmpl-tool-914855de09d15042",
+      "actual_params": {
+        "query": "Japan interesting facts and recent news",
+        "max_results": 5
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "hallucinated params",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 108,
+      "no_hallucinated_params": false,
+      "ambig_strategy": "assumption",
+      "ambig_details": "hallucinated params"
+    },
+    {
+      "task_id": "refusal_joke",
+      "category": "refusal",
+      "prompt": "Tell me a joke",
+      "expected_tool": null,
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 62
+    },
+    {
+      "task_id": "refusal_identity",
+      "category": "refusal",
+      "prompt": "What is your name?",
+      "expected_tool": null,
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 62
+    },
+    {
+      "task_id": "ambiguous_no_tool_joke",
+      "category": "ambiguous",
+      "prompt": "Tell me a joke",
+      "expected_tool": null,
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 62,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "no_tool",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "ambiguous_no_tool_identity",
+      "category": "ambiguous",
+      "prompt": "What kind of AI are you?",
+      "expected_tool": null,
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 213,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "no_tool",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "ambiguous_no_tool_math",
+      "category": "ambiguous",
+      "prompt": "What is 42 divided by 6?",
+      "expected_tool": null,
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 127,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "no_tool",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "ambiguous_underspecified_email",
+      "category": "ambiguous",
+      "prompt": "Send me an email to remind me about the meeting",
+      "expected_tool": null,
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 186,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "underspecified",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "ambiguous_underspecified_weather",
+      "category": "ambiguous",
+      "prompt": "What's the weather?",
+      "expected_tool": null,
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 78,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "underspecified",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "ambiguous_underspecified_search",
+      "category": "ambiguous",
+      "prompt": "Look up something for me about technology",
+      "expected_tool": null,
+      "actual_tool": "search",
+      "tool_call_id": "chatcmpl-tool-a5295937153644ad",
+      "actual_params": {
+        "query": "latest technology news 2025",
+        "max_results": 5
+      },
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 0.0,
+      "details": "reasonable default",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 231,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "underspecified",
+      "ambig_details": "reasonable default"
+    },
+    {
+      "task_id": "ambiguous_assumption_country",
+      "category": "ambiguous",
+      "prompt": "Tell me about some European country",
+      "expected_tool": "search",
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 0.0,
+      "params_valid": false,
+      "composite_score": 0.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 573,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "assumption",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "ambiguous_assumption_plan",
+      "category": "ambiguous",
+      "prompt": "Plan a vacation for me somewhere",
+      "expected_tool": "search",
+      "actual_tool": "search",
+      "tool_call_id": "chatcmpl-tool-9259f741e63f90b6",
+      "actual_params": {
+        "query": "best vacation destinations 2025 popular travel spots",
+        "max_results": 5
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "hallucinated params",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 552,
+      "no_hallucinated_params": false,
+      "ambig_strategy": "assumption",
+      "ambig_details": "hallucinated params"
+    },
+    {
+      "task_id": "chain_stock_calc",
+      "category": "multi_tool",
+      "prompt": "Look up the current price of NVDA and tell me if a 20% increase would put it above $200.",
+      "expected_tool": "get_stock_price",
+      "actual_tool": "get_stock_price",
+      "tool_call_id": null,
+      "actual_params": {
+        "symbol": "NVDA"
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Tool sequence mismatch. Expected: ['get_stock_price', 'calculate'], Got: ['get_stock_price']",
+      "finish_reason": "stop",
+      "completion_tokens": 193,
+      "orchestration_correct": false,
+      "data_flow_correct": true,
+      "turns_correct": false,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 2,
+      "tool_sequence": [
+        "get_stock_price"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "stop"
+      ]
+    },
+    {
+      "task_id": "chain_stock_calc_different",
+      "category": "multi_tool",
+      "prompt": "Get the price of AAPL stock and tell me what a 10% drop would be.",
+      "expected_tool": "get_stock_price",
+      "actual_tool": "get_stock_price",
+      "tool_call_id": null,
+      "actual_params": {
+        "symbol": "AAPL"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 287,
+      "orchestration_correct": true,
+      "data_flow_correct": true,
+      "turns_correct": true,
+      "parallel_detected": false,
+      "multi_score": 1,
+      "chain_length": 3,
+      "tool_sequence": [
+        "get_stock_price",
+        "calculate"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "tool_calls",
+        "stop"
+      ]
+    },
+    {
+      "task_id": "chain_weather_currency",
+      "category": "multi_tool",
+      "prompt": "What's the weather in Tokyo, and also convert 100 USD to Japanese Yen.",
+      "expected_tool": "get_weather",
+      "actual_tool": "get_weather",
+      "tool_call_id": null,
+      "actual_params": {
+        "location": "Tokyo"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 215,
+      "orchestration_correct": true,
+      "data_flow_correct": true,
+      "turns_correct": true,
+      "parallel_detected": false,
+      "multi_score": 1,
+      "chain_length": 3,
+      "tool_sequence": [
+        "get_weather",
+        "convert_currency"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "stop"
+      ]
+    },
+    {
+      "task_id": "chain_weather_currency_reverse",
+      "category": "multi_tool",
+      "prompt": "How hot is London in Fahrenheit? Also tell me what 250 British pounds is in euros.",
+      "expected_tool": "get_weather",
+      "actual_tool": "get_weather",
+      "tool_call_id": null,
+      "actual_params": {
+        "location": "London",
+        "unit": "fahrenheit"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 244,
+      "orchestration_correct": true,
+      "data_flow_correct": true,
+      "turns_correct": true,
+      "parallel_detected": false,
+      "multi_score": 1,
+      "chain_length": 3,
+      "tool_sequence": [
+        "get_weather",
+        "convert_currency"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "stop"
+      ]
+    },
+    {
+      "task_id": "chain_search_calc",
+      "category": "multi_tool",
+      "prompt": "Search for the current population of Tokyo, then calculate what 10% of that would be.",
+      "expected_tool": "search",
+      "actual_tool": "search",
+      "tool_call_id": null,
+      "actual_params": {
+        "query": "current population of Tokyo 2025"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 205,
+      "orchestration_correct": true,
+      "data_flow_correct": true,
+      "turns_correct": true,
+      "parallel_detected": false,
+      "multi_score": 1,
+      "chain_length": 3,
+      "tool_sequence": [
+        "search",
+        "calculate"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "tool_calls",
+        "stop"
+      ]
+    },
+    {
+      "task_id": "chain_email_meeting",
+      "category": "multi_tool",
+      "prompt": "Send an email to alice@example.com saying 'Let's meet tomorrow at 10am' and also schedule a meeting called 'Design Review' for 2026-08-01T10:00:00 with alice@example.com and bob@example.com.",
+      "expected_tool": "send_email",
+      "actual_tool": "send_email",
+      "tool_call_id": null,
+      "actual_params": {
+        "to": "alice@example.com",
+        "subject": "Let's meet tomorrow at 10am",
+        "body": "Let's meet tomorrow at 10am"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 476,
+      "orchestration_correct": true,
+      "data_flow_correct": true,
+      "turns_correct": true,
+      "parallel_detected": false,
+      "multi_score": 1,
+      "chain_length": 3,
+      "tool_sequence": [
+        "send_email",
+        "schedule_meeting"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "stop"
+      ]
+    },
+    {
+      "task_id": "chain_calc_currency",
+      "category": "multi_tool",
+      "prompt": "First calculate 200 times 1.15, then convert that result to Japanese Yen.",
+      "expected_tool": "calculate",
+      "actual_tool": "calculate",
+      "tool_call_id": null,
+      "actual_params": {
+        "expression": "200 * 1.15"
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Model did not use previous tool output as input",
+      "finish_reason": "stop",
+      "completion_tokens": 592,
+      "orchestration_correct": true,
+      "data_flow_correct": false,
+      "turns_correct": true,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 3,
+      "tool_sequence": [
+        "calculate",
+        "convert_currency"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "tool_calls",
+        "stop"
+      ]
+    },
+    {
+      "task_id": "chain_search_weather",
+      "category": "multi_tool",
+      "prompt": "Search for the capital of Australia, then tell me the weather there in celsius.",
+      "expected_tool": "search",
+      "actual_tool": "search",
+      "tool_call_id": null,
+      "actual_params": {
+        "query": "capital of Australia"
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Model did not use previous tool output as input",
+      "finish_reason": "stop",
+      "completion_tokens": 329,
+      "orchestration_correct": true,
+      "data_flow_correct": false,
+      "turns_correct": true,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 3,
+      "tool_sequence": [
+        "search",
+        "get_weather"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "tool_calls",
+        "stop"
+      ]
+    },
+    {
+      "task_id": "chain_search_weather_fahrenheit",
+      "category": "multi_tool",
+      "prompt": "Look up what the capital of Canada is, then get me the weather in Fahrenheit.",
+      "expected_tool": "search",
+      "actual_tool": "search",
+      "tool_call_id": null,
+      "actual_params": {
+        "query": "capital of Canada"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 323,
+      "orchestration_correct": true,
+      "data_flow_correct": true,
+      "turns_correct": true,
+      "parallel_detected": false,
+      "multi_score": 1,
+      "chain_length": 3,
+      "tool_sequence": [
+        "search",
+        "get_weather"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "stop"
+      ]
+    },
+    {
+      "task_id": "chain_3_tools",
+      "category": "multi_tool",
+      "prompt": "Get NVDA's stock price, multiply it by 1.2 for a 20% gain, then convert that to Japanese Yen.",
+      "expected_tool": "get_stock_price",
+      "actual_tool": "get_stock_price",
+      "tool_call_id": null,
+      "actual_params": {
+        "symbol": "NVDA"
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Model did not use previous tool output as input",
+      "finish_reason": "stop",
+      "completion_tokens": 376,
+      "orchestration_correct": true,
+      "data_flow_correct": false,
+      "turns_correct": true,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 4,
+      "tool_sequence": [
+        "get_stock_price",
+        "calculate",
+        "convert_currency"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "tool_calls",
+        "tool_calls",
+        "stop"
+      ]
+    },
+    {
+      "task_id": "chain_3_tools_weather",
+      "category": "multi_tool",
+      "prompt": "Calculate 1000 / 8, convert that to Euros, then get the weather in Rome in celsius.",
+      "expected_tool": "calculate",
+      "actual_tool": "calculate",
+      "tool_call_id": null,
+      "actual_params": {
+        "expression": "1000 / 8"
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Tool sequence mismatch. Expected: ['calculate', 'convert_currency', 'get_weather'], Got: ['calculate', 'get_weather', 'convert_currency']",
+      "finish_reason": "stop",
+      "completion_tokens": 715,
+      "orchestration_correct": false,
+      "data_flow_correct": false,
+      "turns_correct": true,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 4,
+      "tool_sequence": [
+        "calculate",
+        "get_weather",
+        "convert_currency"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "tool_calls",
+        "stop"
+      ]
+    },
+    {
+      "task_id": "chain_3_mixed",
+      "category": "multi_tool",
+      "prompt": "Get the price of MSFT stock, convert 100 USD to EUR, then calculate 50 + 75.",
+      "expected_tool": "get_stock_price",
+      "actual_tool": "get_stock_price",
+      "tool_call_id": null,
+      "actual_params": {
+        "symbol": "MSFT"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 264,
+      "orchestration_correct": true,
+      "data_flow_correct": true,
+      "turns_correct": true,
+      "parallel_detected": false,
+      "multi_score": 1,
+      "chain_length": 4,
+      "tool_sequence": [
+        "get_stock_price",
+        "convert_currency",
+        "calculate"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "stop"
+      ]
+    },
+    {
+      "task_id": "parallel_stock_weather",
+      "category": "multi_tool",
+      "prompt": "What's the weather in Tokyo in celsius and what's the stock price for AAPL?",
+      "expected_tool": "parallel_get_weather_parallel_get_stock_price",
+      "actual_tool": "get_weather",
+      "tool_call_id": null,
+      "actual_params": {
+        "location": "Tokyo",
+        "unit": "celsius"
+      },
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 0.0,
+      "details": "Tool sequence mismatch. Expected: ['parallel_get_weather_parallel_get_stock_price'], Got: ['get_weather', 'get_stock_price']",
+      "finish_reason": "stop",
+      "completion_tokens": 208,
+      "orchestration_correct": false,
+      "data_flow_correct": true,
+      "turns_correct": false,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 3,
+      "tool_sequence": [
+        "get_weather",
+        "get_stock_price"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "stop"
+      ]
+    },
+    {
+      "task_id": "parallel_currency_calculate",
+      "category": "multi_tool",
+      "prompt": "Convert 50 GBP to USD and also calculate 30% of 1000.",
+      "expected_tool": "parallel_convert_currency_parallel_calculate",
+      "actual_tool": "convert_currency",
+      "tool_call_id": null,
+      "actual_params": {
+        "amount": 50,
+        "from_currency": "GBP",
+        "to_currency": "USD"
+      },
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 0.0,
+      "details": "Tool sequence mismatch. Expected: ['parallel_convert_currency_parallel_calculate'], Got: ['convert_currency', 'calculate', 'calculate', 'calculate', 'calculate', 'calculate']",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 474,
+      "orchestration_correct": false,
+      "data_flow_correct": true,
+      "turns_correct": false,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 6,
+      "tool_sequence": [
+        "convert_currency",
+        "calculate",
+        "calculate",
+        "calculate",
+        "calculate",
+        "calculate"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "tool_calls",
+        "tool_calls",
+        "tool_calls",
+        "tool_calls"
+      ]
+    },
+    {
+      "task_id": "chain_dependency_search_calc",
+      "category": "multi_tool",
+      "prompt": "Search for how many states the US has, then calculate what 25% of that number is.",
+      "expected_tool": "search",
+      "actual_tool": "search",
+      "tool_call_id": null,
+      "actual_params": {
+        "query": "how many states does the United States have"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 184,
+      "orchestration_correct": true,
+      "data_flow_correct": true,
+      "turns_correct": true,
+      "parallel_detected": false,
+      "multi_score": 1,
+      "chain_length": 3,
+      "tool_sequence": [
+        "search",
+        "calculate"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "tool_calls",
+        "stop"
+      ]
+    },
+    {
+      "task_id": "chain_stock_double_calc",
+      "category": "multi_tool",
+      "prompt": "Get the price of TSLA stock. Then calculate a 15% increase and a 10% decrease from that price.",
+      "expected_tool": "get_stock_price",
+      "actual_tool": "get_stock_price",
+      "tool_call_id": null,
+      "actual_params": {
+        "symbol": "TSLA"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 253,
+      "orchestration_correct": true,
+      "data_flow_correct": true,
+      "turns_correct": true,
+      "parallel_detected": false,
+      "multi_score": 1,
+      "chain_length": 4,
+      "tool_sequence": [
+        "get_stock_price",
+        "calculate",
+        "calculate"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "tool_calls",
+        "stop"
+      ]
+    },
+    {
+      "task_id": "schema_title_min_length_fail",
+      "category": "schema_compliance",
+      "prompt": "Create a ticket with title 'Short' and priority p3",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-a621a3e4ea7bc6cf",
+      "actual_params": {
+        "title": "Short",
+        "priority": "p3"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 129,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": true,
+      "schema_pattern_valid": true,
+      "schema_nested_valid": true
+    },
+    {
+      "task_id": "schema_title_max_length_fail",
+      "category": "schema_compliance",
+      "prompt": "Create a ticket with this extremely long title that exceeds 200 chars: This is an extremely long ticket title that exceeds the maximum allowed length of 200 characters and should be rejected by schema validation rules",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-8772ade55c9b5370",
+      "actual_params": {
+        "title": "This is an extremely long ticket title that exceeds the maximum allowed length of 200 characters and should be rejected by schema validation rules",
+        "priority": "p2"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 2345,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": true,
+      "schema_pattern_valid": true,
+      "schema_nested_valid": true
+    },
+    {
+      "task_id": "schema_title_min_length_pass",
+      "category": "schema_compliance",
+      "prompt": "Create a ticket with title 'Valid title here' and priority p3",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-a83e455c3d0e783a",
+      "actual_params": {
+        "title": "Valid title here",
+        "priority": "p3"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 134,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": true,
+      "schema_pattern_valid": true,
+      "schema_nested_valid": true
+    },
+    {
+      "task_id": "schema_nested_valid",
+      "category": "schema_compliance",
+      "prompt": "Create a P3 feature ticket titled 'Add dark mode support' for user alice with primary role",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-8e99ab1479774a86",
+      "actual_params": {
+        "title": "Add dark mode support",
+        "priority": "p3",
+        "labels": [
+          "feature"
+        ],
+        "assignees": [
+          {
+            "username": "alice",
+            "role": "primary"
+          }
+        ]
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 192,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": true,
+      "schema_pattern_valid": true,
+      "schema_nested_valid": true
+    },
+    {
+      "task_id": "schema_nested_invalid_pattern",
+      "category": "schema_compliance",
+      "prompt": "Create a P3 ticket titled 'Bad assignee' for user 'bad@user!' with primary role",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-bae8c5aefa183746",
+      "actual_params": {
+        "title": "Bad assignee",
+        "priority": "p3",
+        "assignees": [
+          {
+            "username": "bad@user!",
+            "role": "primary"
+          }
+        ]
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Schema violations: assignee[0].username: pattern violation",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 432,
+      "no_hallucinated_params": false,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "assignee[0].username: pattern violation",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": true,
+      "schema_pattern_valid": false,
+      "schema_nested_valid": true
+    },
+    {
+      "task_id": "schema_invalid_label_enum",
+      "category": "schema_compliance",
+      "prompt": "Create a ticket with title 'Invalid label test' and priority p2 and label 'critical'",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-8984bc791ceee9ea",
+      "actual_params": {
+        "title": "Invalid label test",
+        "priority": "p2",
+        "labels": [
+          "critical"
+        ]
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Schema violations: label: 'critical' not in enum",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 487,
+      "no_hallucinated_params": false,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "label: 'critical' not in enum",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": false,
+      "schema_pattern_valid": true,
+      "schema_nested_valid": true
+    },
+    {
+      "task_id": "schema_invalid_priority_enum",
+      "category": "schema_compliance",
+      "prompt": "Create a ticket titled 'Bad priority' with priority p99",
+      "expected_tool": "create_ticket",
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 0.0,
+      "params_valid": false,
+      "composite_score": 0.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 218,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "no params, no required fields",
+      "schema_required_present": null,
+      "schema_length_valid": null,
+      "schema_enum_valid": null,
+      "schema_pattern_valid": null,
+      "schema_nested_valid": null
+    },
+    {
+      "task_id": "schema_valid_enums",
+      "category": "schema_compliance",
+      "prompt": "Create a P0 security ticket titled 'SQL injection vulnerability' for user bob with secondary role",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-b416452db3be1547",
+      "actual_params": {
+        "title": "SQL injection vulnerability",
+        "priority": "p0",
+        "labels": [
+          "security"
+        ],
+        "assignees": [
+          {
+            "username": "bob",
+            "role": "secondary"
+          }
+        ]
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 201,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": true,
+      "schema_pattern_valid": true,
+      "schema_nested_valid": true
+    },
+    {
+      "task_id": "schema_missing_priority",
+      "category": "schema_compliance",
+      "prompt": "Create a ticket titled 'Missing priority' with label bug",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-add82a2258e7307e",
+      "actual_params": {
+        "title": "Missing priority",
+        "priority": "p2",
+        "labels": [
+          "bug"
+        ]
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 392,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": true,
+      "schema_pattern_valid": true,
+      "schema_nested_valid": true
+    },
+    {
+      "task_id": "schema_missing_title",
+      "category": "schema_compliance",
+      "prompt": "Create a P2 ticket with label feature for alice",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-a08d0112c2b5c3f4",
+      "actual_params": {
+        "title": "Feature request",
+        "priority": "p2",
+        "labels": [
+          "feature"
+        ],
+        "assignees": [
+          {
+            "username": "alice",
+            "role": "primary"
+          }
+        ]
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 592,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": true,
+      "schema_pattern_valid": true,
+      "schema_nested_valid": true
+    },
+    {
+      "task_id": "schema_multi_labels",
+      "category": "schema_compliance",
+      "prompt": "Create a P2 bug ticket titled 'Mobile login broken' with labels bug and enhancement",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-a8db2097ab2655d9",
+      "actual_params": {
+        "title": "Mobile login broken",
+        "priority": "p2",
+        "labels": [
+          "bug",
+          "enhancement"
+        ]
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 187,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": true,
+      "schema_pattern_valid": true,
+      "schema_nested_valid": true
+    },
+    {
+      "task_id": "schema_mixed_labels",
+      "category": "schema_compliance",
+      "prompt": "Create a ticket titled 'Mixed labels' with labels bug and invalid_label",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-b78c1c238435a517",
+      "actual_params": {
+        "title": "Mixed labels",
+        "priority": "p2",
+        "labels": [
+          "bug",
+          "invalid_label"
+        ]
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Schema violations: label: 'invalid_label' not in enum",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 250,
+      "no_hallucinated_params": false,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "label: 'invalid_label' not in enum",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": false,
+      "schema_pattern_valid": true,
+      "schema_nested_valid": true
+    },
+    {
+      "task_id": "schema_multi_assignees",
+      "category": "schema_compliance",
+      "prompt": "Create a P2 ticket titled 'Team task' for alice primary and bob secondary",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-ab318322aec5a806",
+      "actual_params": {
+        "title": "Team task",
+        "priority": "p2",
+        "assignees": [
+          {
+            "username": "alice",
+            "role": "primary"
+          },
+          {
+            "username": "bob",
+            "role": "secondary"
+          }
+        ]
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 168,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": true,
+      "schema_pattern_valid": true,
+      "schema_nested_valid": true
+    },
+    {
+      "task_id": "schema_multi_assignees_invalid",
+      "category": "schema_compliance",
+      "prompt": "Create a P2 ticket titled 'Bad team' for user 'test@user' primary and alice secondary",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-b98c66b29c8be4d2",
+      "actual_params": {
+        "title": "Bad team",
+        "priority": "p2",
+        "assignees": [
+          {
+            "username": "test@user",
+            "role": "primary"
+          },
+          {
+            "username": "alice",
+            "role": "secondary"
+          }
+        ]
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Schema violations: assignee[0].username: pattern violation",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 506,
+      "no_hallucinated_params": false,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "assignee[0].username: pattern violation",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": true,
+      "schema_pattern_valid": false,
+      "schema_nested_valid": true
+    },
+    {
+      "task_id": "schema_with_description",
+      "category": "schema_compliance",
+      "prompt": "Create a P1 bug ticket titled 'Dashboard not loading' with description 'Users report blank screen on load'",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-935969dd086d5f5c",
+      "actual_params": {
+        "title": "Dashboard not loading",
+        "priority": "p1",
+        "description": "Users report blank screen on load",
+        "labels": [
+          "bug"
+        ]
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 136,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": true,
+      "schema_pattern_valid": true,
+      "schema_nested_valid": true
+    },
+    {
+      "task_id": "schema_invalid_role",
+      "category": "schema_compliance",
+      "prompt": "Create a P2 ticket titled 'Bad role' for alice with role admin",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-a9bac3ce368d1164",
+      "actual_params": {
+        "title": "Bad role",
+        "priority": "p2",
+        "assignees": [
+          {
+            "username": "alice",
+            "role": "primary"
+          }
+        ]
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 903,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": true,
+      "schema_pattern_valid": true,
+      "schema_nested_valid": true
+    },
+    {
+      "task_id": "schema_minimal_valid",
+      "category": "schema_compliance",
+      "prompt": "Create a P4 ticket titled 'Minimal ticket'",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-a6717251d8b2ef87",
+      "actual_params": {
+        "title": "Minimal ticket",
+        "priority": "p4"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 127,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": true,
+      "schema_pattern_valid": true,
+      "schema_nested_valid": true
+    },
+    {
+      "task_id": "schema_missing_nested_user",
+      "category": "schema_compliance",
+      "prompt": "Create a P2 ticket titled 'No username' for assignee with just role primary",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-9618472d497be70b",
+      "actual_params": {
+        "title": "No username",
+        "priority": "p2",
+        "assignees": [
+          {
+            "role": "primary"
+          }
+        ]
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Schema violations: assignee[0]: missing username",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 720,
+      "no_hallucinated_params": false,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "assignee[0]: missing username",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": true,
+      "schema_pattern_valid": true,
+      "schema_nested_valid": false
+    },
+    {
+      "task_id": "schema_all_valid_complex",
+      "category": "schema_compliance",
+      "prompt": "Create a P0 security ticket titled 'Critical XSS vulnerability' with description 'Reflected XSS in search endpoint' for alice primary",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-a7f05fb84a9eb96c",
+      "actual_params": {
+        "title": "Critical XSS vulnerability",
+        "priority": "p0",
+        "description": "Reflected XSS in search endpoint",
+        "labels": [
+          "security"
+        ],
+        "assignees": [
+          {
+            "username": "alice",
+            "role": "primary"
+          }
+        ]
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 165,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": true,
+      "schema_pattern_valid": true,
+      "schema_nested_valid": true
+    },
+    {
+      "task_id": "schema_pattern_valid_edge",
+      "category": "schema_compliance",
+      "prompt": "Create a P2 ticket titled 'Edge case' for user 'a.b-c_d' with role primary",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": "chatcmpl-tool-bf748b008b288dbb",
+      "actual_params": {
+        "title": "Edge case",
+        "priority": "p2",
+        "assignees": [
+          {
+            "username": "a.b-c_d",
+            "role": "primary"
+          }
+        ]
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 207,
+      "no_hallucinated_params": true,
+      "ambig_strategy": "schema_compliance",
+      "ambig_details": "",
+      "schema_required_present": true,
+      "schema_length_valid": true,
+      "schema_enum_valid": true,
+      "schema_pattern_valid": true,
+      "schema_nested_valid": true
+    },
+    {
+      "task_id": "err_search_empty_query",
+      "category": "error_recovery",
+      "prompt": "Search for information about machine learning",
+      "expected_tool": "search",
+      "actual_tool": "search",
+      "tool_call_id": null,
+      "actual_params": {
+        "query": "machine learning",
+        "max_results": 5
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 674,
+      "orchestration_correct": true,
+      "data_flow_correct": true,
+      "turns_correct": true,
+      "parallel_detected": false,
+      "multi_score": 1,
+      "chain_length": 3,
+      "tool_sequence": [
+        "search",
+        "search"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "tool_calls",
+        "stop"
+      ],
+      "no_hallucinated_params": true,
+      "ambig_strategy": "assumption",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "err_weather_unknown_location",
+      "category": "error_recovery",
+      "prompt": "What's the weather like in Paris?",
+      "expected_tool": "get_weather",
+      "actual_tool": "get_weather",
+      "tool_call_id": null,
+      "actual_params": {
+        "location": "Paris"
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Expected 2 turns, got 5",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 270,
+      "orchestration_correct": true,
+      "data_flow_correct": true,
+      "turns_correct": false,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 5,
+      "tool_sequence": [
+        "get_weather",
+        "get_weather",
+        "get_weather",
+        "get_weather",
+        "get_weather"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "tool_calls",
+        "tool_calls",
+        "tool_calls",
+        "tool_calls"
+      ],
+      "no_hallucinated_params": true,
+      "ambig_strategy": "assumption",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "err_stock_unknown_symbol",
+      "category": "error_recovery",
+      "prompt": "What's the price of AAPL stock?",
+      "expected_tool": "get_stock_price",
+      "actual_tool": "get_stock_price",
+      "tool_call_id": null,
+      "actual_params": {
+        "symbol": "AAPL"
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Tool sequence mismatch. Expected: ['get_stock_price', 'get_stock_price'], Got: ['get_stock_price']",
+      "finish_reason": "stop",
+      "completion_tokens": 118,
+      "orchestration_correct": false,
+      "data_flow_correct": true,
+      "turns_correct": false,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 2,
+      "tool_sequence": [
+        "get_stock_price"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "stop"
+      ],
+      "no_hallucinated_params": true,
+      "ambig_strategy": "assumption",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "err_calc_empty_expr",
+      "category": "error_recovery",
+      "prompt": "Calculate 100 times 2",
+      "expected_tool": "calculate",
+      "actual_tool": "calculate",
+      "tool_call_id": null,
+      "actual_params": {
+        "expression": "100 * 2"
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Tool sequence mismatch. Expected: ['calculate', 'calculate'], Got: ['calculate']",
+      "finish_reason": "stop",
+      "completion_tokens": 103,
+      "orchestration_correct": false,
+      "data_flow_correct": true,
+      "turns_correct": false,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 2,
+      "tool_sequence": [
+        "calculate"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "stop"
+      ],
+      "no_hallucinated_params": true,
+      "ambig_strategy": "assumption",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "err_email_missing_fields",
+      "category": "error_recovery",
+      "prompt": "Send an email to alice@example.com about the project update",
+      "expected_tool": "send_email",
+      "actual_tool": "send_email",
+      "tool_call_id": null,
+      "actual_params": {
+        "to": "alice@example.com",
+        "subject": "Project Update",
+        "body": "Hi Alice,\n\nI wanted to share a quick update on the project.\n\nCurrent status:\n- Work is progressing on schedule, and the team has completed the latest milestone.\n- We are currently focused on the next phase of development and finalizing the deliverables.\n\nNext steps:\n- We will continue with the planned tasks over the coming week.\n- A follow-up review will be scheduled to confirm progress and address any open items.\n\nPlease let me know if you have any questions or if there is anything you would like to discuss.\n\nBest regards"
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Tool sequence mismatch. Expected: ['send_email', 'send_email'], Got: ['send_email']",
+      "finish_reason": "stop",
+      "completion_tokens": 496,
+      "orchestration_correct": false,
+      "data_flow_correct": true,
+      "turns_correct": false,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 2,
+      "tool_sequence": [
+        "send_email"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "stop"
+      ],
+      "no_hallucinated_params": true,
+      "ambig_strategy": "assumption",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "err_weather_bad_unit",
+      "category": "error_recovery",
+      "prompt": "Get the weather in Tokyo in kelvin",
+      "expected_tool": "get_weather",
+      "actual_tool": "get_weather",
+      "tool_call_id": null,
+      "actual_params": {
+        "location": "Tokyo",
+        "unit": "celsius"
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Tool sequence mismatch. Expected: ['get_weather', 'get_weather'], Got: ['get_weather']",
+      "finish_reason": "stop",
+      "completion_tokens": 193,
+      "orchestration_correct": false,
+      "data_flow_correct": true,
+      "turns_correct": false,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 2,
+      "tool_sequence": [
+        "get_weather"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "stop"
+      ],
+      "no_hallucinated_params": true,
+      "ambig_strategy": "assumption",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "err_search_generic_query",
+      "category": "error_recovery",
+      "prompt": "Find me something interesting",
+      "expected_tool": "search",
+      "actual_tool": "search",
+      "tool_call_id": null,
+      "actual_params": {
+        "query": "most interesting scientific discovery this week",
+        "max_results": 5
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Expected 2 turns, got 6",
+      "finish_reason": "stop",
+      "completion_tokens": 940,
+      "orchestration_correct": true,
+      "data_flow_correct": true,
+      "turns_correct": false,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 7,
+      "tool_sequence": [
+        "search",
+        "search",
+        "search",
+        "search",
+        "search",
+        "search"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "tool_calls",
+        "tool_calls",
+        "stop"
+      ],
+      "no_hallucinated_params": true,
+      "ambig_strategy": "assumption",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "err_email_bad_format",
+      "category": "error_recovery",
+      "prompt": "Send an email to invalid-email about the project",
+      "expected_tool": "send_email",
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 0.0,
+      "params_valid": true,
+      "composite_score": 0.0,
+      "details": "Tool sequence mismatch. Expected: ['send_email', 'send_email'], Got: []",
+      "finish_reason": "stop",
+      "completion_tokens": 190,
+      "orchestration_correct": false,
+      "data_flow_correct": true,
+      "turns_correct": false,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 1,
+      "tool_sequence": [],
+      "turn_finish_reasons": [
+        "stop"
+      ],
+      "no_hallucinated_params": true,
+      "ambig_strategy": "assumption",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "err_ticket_short_title",
+      "category": "error_recovery",
+      "prompt": "Create a ticket titled 'X' and priority p2",
+      "expected_tool": "create_ticket",
+      "actual_tool": null,
+      "tool_call_id": null,
+      "actual_params": null,
+      "correct": false,
+      "tool_correct": false,
+      "params_complete": 0.0,
+      "params_valid": true,
+      "composite_score": 0.0,
+      "details": "Tool sequence mismatch. Expected: ['create_ticket', 'create_ticket'], Got: []",
+      "finish_reason": "stop",
+      "completion_tokens": 254,
+      "orchestration_correct": false,
+      "data_flow_correct": true,
+      "turns_correct": false,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 1,
+      "tool_sequence": [],
+      "turn_finish_reasons": [
+        "stop"
+      ],
+      "no_hallucinated_params": true,
+      "ambig_strategy": "assumption",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "err_ticket_invalid_label",
+      "category": "error_recovery",
+      "prompt": "Create a ticket titled 'Label test' priority p1 with label urgent",
+      "expected_tool": "create_ticket",
+      "actual_tool": "create_ticket",
+      "tool_call_id": null,
+      "actual_params": {
+        "title": "Label test",
+        "priority": "p1"
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Expected 2 turns, got 5",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 1026,
+      "orchestration_correct": true,
+      "data_flow_correct": true,
+      "turns_correct": false,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 5,
+      "tool_sequence": [
+        "create_ticket",
+        "create_ticket",
+        "create_ticket",
+        "create_ticket",
+        "create_ticket"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "tool_calls",
+        "tool_calls",
+        "tool_calls",
+        "tool_calls"
+      ],
+      "no_hallucinated_params": true,
+      "ambig_strategy": "assumption",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "err_stock_calc_chain",
+      "category": "error_recovery",
+      "prompt": "Get MSFT price, then calculate a 10% increase",
+      "expected_tool": "get_stock_price",
+      "actual_tool": "get_stock_price",
+      "tool_call_id": null,
+      "actual_params": {
+        "symbol": "MSFT"
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Expected 2 turns, got 4",
+      "finish_reason": "stop",
+      "completion_tokens": 384,
+      "orchestration_correct": true,
+      "data_flow_correct": true,
+      "turns_correct": false,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 5,
+      "tool_sequence": [
+        "get_stock_price",
+        "calculate",
+        "calculate",
+        "calculate"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "tool_calls",
+        "tool_calls",
+        "tool_calls",
+        "stop"
+      ],
+      "no_hallucinated_params": true,
+      "ambig_strategy": "assumption",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "err_weather_stock_chain",
+      "category": "error_recovery",
+      "prompt": "Check weather in Sydney and NVDA stock price",
+      "expected_tool": "get_weather",
+      "actual_tool": "get_weather",
+      "tool_call_id": null,
+      "actual_params": {
+        "location": "Sydney"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 178,
+      "orchestration_correct": true,
+      "data_flow_correct": true,
+      "turns_correct": true,
+      "parallel_detected": false,
+      "multi_score": 1,
+      "chain_length": 3,
+      "tool_sequence": [
+        "get_weather",
+        "get_stock_price"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "stop"
+      ],
+      "no_hallucinated_params": true,
+      "ambig_strategy": "assumption",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "err_search_stock_chain",
+      "category": "error_recovery",
+      "prompt": "Search for climate change news and get Google stock price",
+      "expected_tool": "search",
+      "actual_tool": "search",
+      "tool_call_id": null,
+      "actual_params": {
+        "query": "climate change news"
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Expected 2 turns, got 7",
+      "finish_reason": "tool_calls",
+      "completion_tokens": 505,
+      "orchestration_correct": true,
+      "data_flow_correct": true,
+      "turns_correct": false,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 7,
+      "tool_sequence": [
+        "search",
+        "get_stock_price",
+        "get_stock_price",
+        "search",
+        "get_stock_price",
+        "search",
+        "get_stock_price"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "tool_calls",
+        "tool_calls",
+        "tool_calls",
+        "tool_calls"
+      ],
+      "no_hallucinated_params": true,
+      "ambig_strategy": "assumption",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "err_weather_multi_location",
+      "category": "error_recovery",
+      "prompt": "Get the weather in three cities: Tokyo, London, and Paris",
+      "expected_tool": "get_weather",
+      "actual_tool": "get_weather",
+      "tool_call_id": null,
+      "actual_params": {
+        "location": "Tokyo"
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Expected 3 turns, got 5",
+      "finish_reason": "stop",
+      "completion_tokens": 381,
+      "orchestration_correct": true,
+      "data_flow_correct": true,
+      "turns_correct": false,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 6,
+      "tool_sequence": [
+        "get_weather",
+        "get_weather",
+        "get_weather",
+        "get_weather",
+        "get_weather"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "tool_calls",
+        "tool_calls",
+        "stop"
+      ],
+      "no_hallucinated_params": true,
+      "ambig_strategy": "assumption",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "err_meeting_missing_attendees",
+      "category": "error_recovery",
+      "prompt": "Schedule a meeting called 'Sprint Review' for 2026-08-01 at 10am",
+      "expected_tool": "schedule_meeting",
+      "actual_tool": "schedule_meeting",
+      "tool_call_id": null,
+      "actual_params": {
+        "title": "Sprint Review",
+        "datetime": "2026-08-01T10:00:00",
+        "attendees": []
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Tool sequence mismatch. Expected: ['schedule_meeting', 'schedule_meeting'], Got: ['schedule_meeting']",
+      "finish_reason": "stop",
+      "completion_tokens": 671,
+      "orchestration_correct": false,
+      "data_flow_correct": true,
+      "turns_correct": false,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 2,
+      "tool_sequence": [
+        "schedule_meeting"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "stop"
+      ],
+      "no_hallucinated_params": true,
+      "ambig_strategy": "assumption",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "err_calc_chain",
+      "category": "error_recovery",
+      "prompt": "Calculate 100 + 200, then multiply by 3",
+      "expected_tool": "calculate",
+      "actual_tool": "calculate",
+      "tool_call_id": null,
+      "actual_params": {
+        "expression": "(100 + 200) * 3"
+      },
+      "correct": false,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "Tool sequence mismatch. Expected: ['calculate', 'calculate'], Got: ['calculate']",
+      "finish_reason": "stop",
+      "completion_tokens": 199,
+      "orchestration_correct": false,
+      "data_flow_correct": true,
+      "turns_correct": false,
+      "parallel_detected": false,
+      "multi_score": 0,
+      "chain_length": 2,
+      "tool_sequence": [
+        "calculate"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "stop"
+      ],
+      "no_hallucinated_params": true,
+      "ambig_strategy": "assumption",
+      "ambig_details": ""
+    },
+    {
+      "task_id": "err_stock_currency_chain",
+      "category": "error_recovery",
+      "prompt": "Get NVDA price and convert 100 USD to EUR",
+      "expected_tool": "get_stock_price",
+      "actual_tool": "get_stock_price",
+      "tool_call_id": null,
+      "actual_params": {
+        "symbol": "NVDA"
+      },
+      "correct": true,
+      "tool_correct": true,
+      "params_complete": 1.0,
+      "params_valid": true,
+      "composite_score": 1.0,
+      "details": "",
+      "finish_reason": "stop",
+      "completion_tokens": 195,
+      "orchestration_correct": true,
+      "data_flow_correct": true,
+      "turns_correct": true,
+      "parallel_detected": false,
+      "multi_score": 1,
+      "chain_length": 3,
+      "tool_sequence": [
+        "get_stock_price",
+        "convert_currency"
+      ],
+      "turn_finish_reasons": [
+        "tool_calls",
+        "stop"
+      ],
+      "no_hallucinated_params": true,
+      "ambig_strategy": "assumption",
+      "ambig_details": ""
+    }
+  ],
+  "failure_modes": {
+    "wrong_tool_selected": 2,
+    "no_tool_call": 7,
+    "truncated_output": 0,
+    "missing_required_param": 0,
+    "invalid_enum_value": 0,
+    "wrong_param_type": 0,
+    "incorrect_refusal": 0,
+    "unnecessary_tool_call": 1,
+    "request_failed": 0,
+    "request_timeout": 0,
+    "wrong_tool_sequence": 12,
+    "data_flow_error": 4,
+    "wrong_turn_count": 17,
+    "hallucinated_param_value": 7,
+    "schema_constraint_violation": 5,
+    "error_no_retry": 14,
+    "error_retry_invalid": 0
+  }
+}
