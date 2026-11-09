@@ -106,9 +106,9 @@ The published run dirs do not hold `*.log` files or `gpu_samples.csv`. `.gitigno
 
 1. The guard reads `MemAvailable` from `/proc/meminfo`. It refuses to start below `--min-start-gib`.
 2. It starts the command and prints its output. It finds the run dir in the line `writing results to <run dir>`.
-3. It writes one memory sample every `--interval-s` seconds to the `--csv` file. The default file is `memory_samples.csv` in the current directory.
+3. It writes one memory sample every `--interval-s` seconds to a CSV file. Without `--csv`, the file is a temporary file.
 4. When `MemAvailable` stays below `--floor-gib` for `--grace-samples` samples in a row, it sends SIGTERM to the command. It waits up to 180 s, then kills the command.
-5. At the end, it copies the samples to `memory_samples.csv` in the run dir. It also writes `memory_guard.json` there, with `stopped_for_memory` and `min_available_gib`.
+5. At the end, it moves the temporary file to `memory_samples.csv` in the run dir. With `--csv`, it copies the file and keeps the original. It also writes `memory_guard.json` there, with `stopped_for_memory` and `min_available_gib`.
 6. It exits with code 3 when it refuses to start or when it stops the run.
 
 `batch_run.py` runs `core_runner.py` without the memory guard.

@@ -62,9 +62,11 @@ CAUTION: A run that fills the unified memory can make the host unresponsive. Sta
 2. It samples the memory every `--interval-s` seconds (default 5) into a CSV file.
 3. It logs a warning when `MemAvailable` is below `--warn-gib` (default 16).
 4. It sends SIGTERM to the command when `MemAvailable` stays below `--floor-gib` (default 8). The limit is `--grace-samples` low samples in a row (default 3).
-5. It copies the CSV into the run dir as `memory_samples.csv`. It also writes `memory_guard.json` there.
+5. It puts the CSV into the run dir as `memory_samples.csv`. It also writes `memory_guard.json` there.
 
-The guard first writes the CSV to the `--csv` path, which is `memory_samples.csv` in the current folder by default. That file stays there after the copy.
+Without `--csv`, the guard writes the CSV to a temporary file. At the end, it moves that file into the run dir. No file stays in the current folder. When the guard finds no run dir, the temporary file stays, and the guard logs its path.
+
+With `--csv <path>`, the guard writes the CSV to that path. At the end, it copies the file into the run dir, and the file at `<path>` stays.
 
 `core_runner.py` handles SIGTERM and stops its managed vLLM server. The guard exits with code 3 when it refuses to start or when it stops the run.
 
