@@ -4,7 +4,7 @@ The tool-calling benchmark sends tasks with tool definitions to the model and sc
 
 ## Run the benchmark
 
-`core_runner.py` runs it in every run, after the FLOP analysis. It has no skip flag. When the benchmark raises an error, the runner prints a warning and continues.
+`core_runner.py` runs it in every run, after the FLOP analysis. It has no skip flag. When the benchmark raises an error, the runner prints a warning and continues. `summary.json` then records `tool_calling.status: failed` and the `error`.
 
 To run it alone against a running server:
 
@@ -13,14 +13,15 @@ python -m benchmarks.tool_calling --base-url http://127.0.0.1:8000 \
     --model nvidia/Qwen3.8-27B-NVFP4 --task-set lite
 ```
 
-The other options are `--tasks`, `--max-tokens` (default 4096), `--disable-thinking`, and `--output` (default `tool_calling.json` in the current directory).
+The other options are `--tasks`, `--max-tokens` (default 4096), `--request-timeout` (default 600 s), `--disable-thinking`, and `--output` (default `results/tool_calling.json` in the repo root).
 
 ## Requests
 
 - Each request goes to `/v1/chat/completions`, also when `endpoint.chat` is `false`.
-- The request holds one user message with the task prompt, `tool_choice: auto`, temperature 0, `stream: false`, and a new `cache_salt`.
+- The request holds one user message with the task prompt, `tool_choice: auto`, the `temperature` argument (default 0), `stream: false`, and a new `cache_salt`.
 - The `tools` list is the union of the `tools` of all selected tasks. Every task sees all tools, not only its own. When two tasks define a tool with the same name, the first definition wins.
-- The request timeout is 120 s. The benchmark waits 0.5 s between tasks.
+- The read timeout of each request is `tool_calling_request_timeout_s` (default 600 s). The benchmark waits 0.5 s between tasks.
+- A relative task path that does not exist in the current directory resolves against the repo root.
 
 ## Config keys
 
@@ -30,15 +31,20 @@ The other options are `--tasks`, `--max-tokens` (default 4096), `--disable-think
 | `tool_calling_task_set` | `full` | `full` runs all tasks. `lite` runs a subset. |
 | `tool_calling_max_tokens` | 4096 | `max_tokens` of each request. In a multi-turn task, it applies to each turn. |
 | `tool_calling_chat_template_kwargs` | none | Copied into each request as `chat_template_kwargs`. `config.chat_template_kwargs` in `tool_calling.json` records it. |
+| `tool_calling_request_timeout_s` | 600 | Read timeout of each request, in seconds. In a multi-turn task, it applies to each turn. `config.request_timeout_s` records it. |
 
 A thinking model writes its reasoning before the first tool call. vLLM parses tool calls only after the reasoning ends. A low `tool_calling_max_tokens` cuts the output before any tool call. The task then records `finish_reason: length`, and `failure_modes.truncated_output` counts it.
+
+A full 4096-token answer takes about 330 s at 12.3 tok/s (Qwen3.8-27B). The old 120 s timeout cut off such answers. The 600 s default covers 4096 tokens down to about 7 tok/s. Increase the timeout for a slower model or a higher `tool_calling_max_tokens`.
+
+When a request times out, the task fails. Its `details` starts with `Request timed out after <N> s`, and `failure_modes.request_timeout` counts it. Other request errors give `Request failed: <error>` and count in `failure_modes.request_failed`. A multi-turn task stops at the failed turn and records the same `details`.
 
 `{enable_thinking: false}` in `tool_calling_chat_template_kwargs` turns off thinking in chat templates that read this flag, for example Qwen3.
 
 ## Task sets
 
 - `full` runs all 85 tasks in the file.
-- `lite` runs the first task of each category, up to 8 tasks. A code comment says "2 per category", but the code takes one. With the current file, `lite` holds 8 single-tool tasks only. Three composite components are then 0, so the composite is at most 3.
+- `lite` runs the first task of each category, up to 8 tasks. With the current file, `lite` holds 8 single-tool tasks only. Three composite components are then 0, so the composite is at most 3.
 
 | Category | Tasks | Runner | Scored as |
 |---|---|---|---|
@@ -108,7 +114,7 @@ The loop runs at most `max(expected_turns, 5)` turns. Each turn sends the full h
 
 For `error_recovery`, `correct` has two more conditions. The call count must equal `expected_turns`. The last call must have no blank string parameter.
 
-The mock returns an error only for an unknown tool or an unknown input. An unknown input is a symbol, location, currency pair, or expression that is not in its table.
+The mock returns an error only for an unknown tool or an unknown input. An unknown input is a symbol, location, currency pair, or expression that is not in its table. For `convert_currency`, the table holds one rate for each currency pair. The mock returns `amount` × rate, with the `amount` from the call arguments. A non-numeric `amount` gives an error.
 
 ### Category scores and composite
 

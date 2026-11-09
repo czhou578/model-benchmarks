@@ -57,7 +57,7 @@ Read these points before you compare numbers.
 | `latency`, `deep_context`, `ttft_breakdown`, `decode`, `reasoning`, `concurrency`, `spec_comparison` | | Full copy of the file with the same name. |
 | `prefill_scaling` | | `status` and `n_success` for each length. |
 | `flops_analysis` | | `status` (from `estimate_status`) and `model` (from `architecture.model`). |
-| `tool_calling` | | `composite_score`, `composite_components`, `total_tasks`, `total_correct`, `categories` (names only), `failure_modes`. |
+| `tool_calling` | | `status` (`completed` or `failed`). When `completed`: `composite_score`, `composite_components`, `total_tasks`, `total_correct`, `categories` (names only), `failure_modes`. When `failed`: `error` (exception type and message) only. Runs before this field have no `status`. |
 | `gpu` | | GPU data of the whole run. See the next table. |
 | `decode_energy` | | GPU energy of the decode benchmark. See the next table. Present when the decode benchmark and the GPU monitor ran. |
 | `energy_per_token_wh` | Wh/token | Old runs only. Whole-run energy / decode output tokens. Do not use it. |

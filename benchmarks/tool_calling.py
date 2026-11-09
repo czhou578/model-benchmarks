@@ -492,13 +492,14 @@ _MOCK_TOOL_RESPONSES: dict[str, Any] = {
         "Ottawa": {"temp": -2, "condition": "snowy", "location": "Ottawa"},
         "Rome": {"temp": 25, "condition": "sunny", "location": "Rome"},
     },
+    # Rates keyed by (from, to). The mock computes amount * rate from the
+    # call arguments, so every amount gets a consistent result.
     "convert_currency": {
-        ("USD", "JPY"): {"amount": 100, "rate": 149.50, "result": 14950.0},
-        ("EUR", "GBP"): {"amount": 50, "rate": 0.85, "result": 42.5},
-        ("GBP", "EUR"): {"amount": 250, "rate": 1.18, "result": 295.0},
-        ("GBP", "USD"): {"amount": 50, "rate": 1.27, "result": 63.5},
-        ("USD", "EUR"): {"amount": 100, "rate": 0.92, "result": 92.0},
-        ("USD", "JPY"): {"amount": 230, "rate": 149.50, "result": 34385.0},
+        ("USD", "JPY"): 149.50,
+        ("EUR", "GBP"): 0.85,
+        ("GBP", "EUR"): 1.18,
+        ("GBP", "USD"): 1.27,
+        ("USD", "EUR"): 0.92,
     },
     "calculate": {
         "150 * 1.2": {"expression": "150 * 1.2", "result": 180.0},
@@ -546,7 +547,14 @@ def _mock_tool_response(tool_name: str, params: dict[str, Any]) -> dict[str, Any
         return registry.get(params["location"], {"error": f"Unknown location: {params.get('location')}"})
     if tool_name == "convert_currency":
         key = (params.get("from_currency", ""), params.get("to_currency", ""))
-        return registry.get(key, {"error": f"Unknown conversion: {key}"})
+        if key not in registry:
+            return {"error": f"Unknown conversion: {key}"}
+        try:
+            amount = float(params.get("amount"))
+        except (TypeError, ValueError):
+            return {"error": f"Invalid amount: {params.get('amount')!r}"}
+        rate = registry[key]
+        return {"amount": amount, "rate": rate, "result": round(amount * rate, 2)}
     if tool_name == "calculate":
         expr = params.get("expression", "")
         return registry.get(expr, {"expression": expr, "result": "unknown", "error": "Expression not mocked"})
@@ -588,6 +596,14 @@ def _build_tools_definition(tools_yaml: list[dict]) -> list[dict]:
 # --------------------------------------------------------------------------- #
 # Load tasks
 # --------------------------------------------------------------------------- #
+
+
+def resolve_tasks_path(path: str | Path) -> Path:
+    """Return *path*, or the repo-root path when a relative path is missing in the cwd."""
+    path = Path(path)
+    if not path.is_absolute() and not path.exists() and (ROOT / path).exists():
+        return ROOT / path
+    return path
 
 
 def load_tasks(path: str | Path) -> tuple[Any, list[dict[str, Any]]]:
@@ -718,6 +734,18 @@ def _attach_overlay_defaults(result: TaskResult, task: dict, reason: str) -> Non
 # Run a single task
 # --------------------------------------------------------------------------- #
 
+# Seconds to wait for one chat completion. The default 4096-token answer
+# takes about 330 s at 12.3 tok/s (Qwen3.8-27B), so 120 s cut off real answers.
+DEFAULT_REQUEST_TIMEOUT_S = 600.0
+
+
+def _request_error_details(exc: Exception, timeout_s: float) -> str:
+    """Describe a failed request, with a timeout kept distinct from other errors."""
+    if isinstance(exc, requests.exceptions.Timeout):
+        return f"Request timed out after {timeout_s:g} s: {exc}"
+    return f"Request failed: {exc}"
+
+
 
 def _run_task(
     client: ModelClient,
@@ -725,6 +753,8 @@ def _run_task(
     tools_def: list[dict],
     max_tokens: int = 4096,
     chat_template_kwargs: dict[str, Any] | None = None,
+    temperature: float = 0.0,
+    timeout_s: float = DEFAULT_REQUEST_TIMEOUT_S,
 ) -> TaskResult:
     """Send one task to the model and score the response."""
 
@@ -739,7 +769,7 @@ def _run_task(
         "tools": tools_def,
         "tool_choice": "auto",
         "max_tokens": max_tokens,
-        "temperature": 0.0,
+        "temperature": temperature,
         "stream": False,
     }
 
@@ -750,11 +780,12 @@ def _run_task(
 
     try:
         resp = requests.post(
-            url, headers=client.headers, json=payload, timeout=120
+            url, headers=client.headers, json=payload, timeout=timeout_s
         )
         resp.raise_for_status()
         response = resp.json()
     except Exception as exc:
+        error_details = _request_error_details(exc, timeout_s)
         result = TaskResult(
             task_id=task["id"],
             category=task.get("category", "unknown"),
@@ -768,10 +799,10 @@ def _run_task(
             params_complete=0.0,
             params_valid=False,
             composite_score=0.0,
-            details=f"Request failed: {exc}",
-            raw_response={"error": str(exc)},
+            details=error_details,
+            raw_response={"error": error_details},
         )
-        _attach_overlay_defaults(result, task, f"request failed: {exc}")
+        _attach_overlay_defaults(result, task, error_details.lower())
         return result
 
     finish_reason, completion_tokens = _response_metadata(response)
@@ -849,6 +880,8 @@ def _run_multi_turn_task(
     tools_def: list[dict],
     max_tokens: int = 4096,
     chat_template_kwargs: dict[str, Any] | None = None,
+    temperature: float = 0.0,
+    timeout_s: float = DEFAULT_REQUEST_TIMEOUT_S,
 ) -> MultiTurnTaskResult:
     """Execute a multi-tool chain task.
 
@@ -885,6 +918,7 @@ def _run_multi_turn_task(
     intermediate_results: dict[str, Any] = {}
     turn_finish_reasons: list[str | None] = []
     completion_tokens_total: int | None = None
+    request_error: str | None = None
 
     for turn_idx in range(1, max_turns + 1):
         cache_salt = uuid.uuid4().hex
@@ -894,7 +928,7 @@ def _run_multi_turn_task(
             "tools": tools_def,
             "tool_choice": "auto",
             "max_tokens": max_tokens,
-            "temperature": 0.0,
+            "temperature": temperature,
             "stream": False,
         }
         payload["cache_salt"] = cache_salt
@@ -903,7 +937,7 @@ def _run_multi_turn_task(
 
         try:
             resp = requests.post(
-                url, headers=client.headers, json=payload, timeout=120
+                url, headers=client.headers, json=payload, timeout=timeout_s
             )
             resp.raise_for_status()
             response = resp.json()
@@ -911,7 +945,8 @@ def _run_multi_turn_task(
             turn_finish_reasons.append(finish_reason)
             if completion_tokens is not None:
                 completion_tokens_total = (completion_tokens_total or 0) + completion_tokens
-        except Exception:
+        except Exception as exc:
+            request_error = _request_error_details(exc, timeout_s)
             trace.append(ToolCallTrace(
                 step=turn_idx,
                 tool_name=None,
@@ -1043,6 +1078,9 @@ def _run_multi_turn_task(
         details = "Model did not use previous tool output as input"
     elif not turns_correct:
         details = f"Expected {expected_turns} turns, got {len(actual_sequence)}"
+    if request_error:
+        # A failed request ends the loop early; never score it as an answer.
+        details = request_error
 
     # For single-tool tasks within multi-tool category, also compute the
     # legacy fields so that old scoring logic still works.
@@ -1077,6 +1115,9 @@ def _run_multi_turn_task(
 
         if not recovery_ok or not self_corrected:
             correct = False
+
+    if request_error:
+        correct = False
 
     result = MultiTurnTaskResult(
         task_id=task_id,
@@ -1373,6 +1414,7 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
         "incorrect_refusal": 0,
         "unnecessary_tool_call": 0,
         "request_failed": 0,
+        "request_timeout": 0,
         "wrong_tool_sequence": 0,
         "data_flow_error": 0,
         "wrong_turn_count": 0,
@@ -1385,7 +1427,9 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
         if not r.correct:
             if r.finish_reason == "length":
                 failure_modes["truncated_output"] += 1
-            if "failed:" in r.details:
+            if r.details.startswith("Request timed out"):
+                failure_modes["request_timeout"] += 1
+            elif "failed:" in r.details:
                 failure_modes["request_failed"] += 1
             elif r.expected_tool is None and r.actual_tool is not None:
                 failure_modes["unnecessary_tool_call"] += 1
@@ -1519,6 +1563,7 @@ def run_tool_calling_benchmark(
     max_tokens: int = 4096,
     temperature: float = 0.0,
     chat_template_kwargs: dict[str, Any] | None = None,
+    request_timeout_s: float = DEFAULT_REQUEST_TIMEOUT_S,
 ) -> dict[str, Any]:
     """Run tool-calling benchmark suite.
 
@@ -1532,6 +1577,8 @@ def run_tool_calling_benchmark(
         temperature: Sampling temperature (default 0 for deterministic eval).
         chat_template_kwargs: Optional ``chat_template_kwargs`` for every
             request, for example ``{"enable_thinking": False}``.
+        request_timeout_s: HTTP read timeout in seconds for each request.
+            A timeout counts as a ``request_timeout`` failure.
 
     Returns:
         Dict with ``config``, ``total_tasks``, ``composite_score``,
@@ -1539,9 +1586,9 @@ def run_tool_calling_benchmark(
         ``failure_modes``.
     """
 
-    _, tasks = load_tasks(tasks_path)
+    _, tasks = load_tasks(resolve_tasks_path(tasks_path))
 
-    # Lite mode: take first 8 tasks (2 per category)
+    # Lite mode: take the first task of each category, at most 8 tasks
     if task_set == "lite":
         categories_seen = set()
         lite_tasks: list[dict] = []
@@ -1561,6 +1608,7 @@ def run_tool_calling_benchmark(
         "max_tokens": max_tokens,
         "temperature": temperature,
         "chat_template_kwargs": chat_template_kwargs,
+        "request_timeout_s": request_timeout_s,
         "start_time": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -1597,11 +1645,13 @@ def run_tool_calling_benchmark(
                 r = _run_multi_turn_task(
                     client, task, tools_definition, max_tokens=max_tokens,
                     chat_template_kwargs=chat_template_kwargs,
+                    temperature=temperature, timeout_s=request_timeout_s,
                 )
             else:
                 r = _run_task(
                     client, task, tools_definition, max_tokens=max_tokens,
                     chat_template_kwargs=chat_template_kwargs,
+                    temperature=temperature, timeout_s=request_timeout_s,
                 )
         except Exception as exc:
             exc_details = f"exception: {exc}"
@@ -1674,6 +1724,10 @@ def main() -> None:
         help="Maximum output tokens per request (thinking models need room)",
     )
     parser.add_argument(
+        "--request-timeout", type=float, default=DEFAULT_REQUEST_TIMEOUT_S,
+        help="HTTP read timeout in seconds for each request",
+    )
+    parser.add_argument(
         "--disable-thinking", action="store_true",
         help="Send chat_template_kwargs={'enable_thinking': false} with every request",
     )
@@ -1695,6 +1749,7 @@ def main() -> None:
         task_set=args.task_set,
         max_tokens=args.max_tokens,
         chat_template_kwargs={"enable_thinking": False} if args.disable_thinking else None,
+        request_timeout_s=args.request_timeout,
     )
 
     output_path = Path(args.output) if args.output else ROOT / "results" / "tool_calling.json"
