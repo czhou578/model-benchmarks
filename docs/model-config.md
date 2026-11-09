@@ -86,10 +86,12 @@ The runner does not validate keys. It ignores an unknown key, so a misspelled ke
 | `ready_timeout_s` | number, s | 600 | no | Time limit for readiness when `server.startup_timeout_s` is not set. | runner |
 | `ready_poll_s` | number, s | 3.0 | no | Wait between two readiness probes. | runner |
 | `monitor_interval_s` | number, s | 1.0 | no | GPU sample interval. Use a value above 0. | GPU monitor, prefill idle baseline |
+| `idle_baseline_s` | number, s | 5.0 | no | Length of the GPU idle baseline before prefill scaling. | prefill idle baseline |
 | `prompt_lengths` | list of int, tokens | `[32, 128, 512, 2048, 8192, 16384]` | no | Prompt lengths. | latency |
 | `latency_repeats` | int | 10 | no | Requests per prompt length. | latency |
 | `context_lengths` | list of int, tokens | none | no | Long prompt lengths. The benchmark runs only when this key is set. | deep context |
 | `context_repeats` | int | 5 | no | Requests per context length. | deep context |
+| `deep_context_output_tokens` | int | 64 | no | `max_tokens` of each deep context request. | deep context |
 | `ttft_prompt_lengths` | list of int, tokens | `[128, 512, 2048, 8192, 32768]` | no | Approximate prompt lengths. | TTFT breakdown |
 | `ttft_repetitions` | int | 10 | no | Requests per prompt length. | TTFT breakdown |
 | `decode_lengths` | list of int, tokens | `[512, 1024, 2048]` | no | `max_tokens` values. | decode, `--compare-spec` |

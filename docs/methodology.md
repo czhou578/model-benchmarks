@@ -26,12 +26,12 @@ The readiness request in step 3 is the only warm-up before the first benchmark. 
 
 ## Fixed values of each benchmark
 
-These values have no model config key.
+Most of these values have no model config key. The table names the key where one exists.
 
 | Benchmark | Prompt | `max_tokens` | Requests per setting | Cache salt | Warm-up and pauses |
 |---|---|---|---|---|---|
 | Latency | `build_prompt_of_length(n)` | 8 | `latency_repeats` | new UUID per request | none |
-| Deep context | `build_prompt_of_length(n)` | 64 | `context_repeats` | new UUID per request | none |
+| Deep context | `build_prompt_of_length(n)` | `deep_context_output_tokens` (default 64) | `context_repeats` | new UUID per request | none |
 | TTFT breakdown | `"hello world "` × `n // 2` | 1 | `ttft_repetitions` | new UUID per request | 0.5 s pause between requests |
 | Decode | `build_prompt_of_length(128)` | each `decode_lengths` value | 1 | none | none |
 | Reasoning | `reasoning_prompts` | 1024 | 1 | none | none |
@@ -79,7 +79,7 @@ All requests use temperature 0, except the concurrency requests, which use `conc
 - Effective prefill rate is `prompt_tokens / client TTFT`.
 - Engine prefill rate uses the server prefill time when the server reports one. vLLM does not, so the rate is `prompt_tokens / server TTFT`. The vLLM server TTFT does not include the queue time. It includes the first decode step.
 - After an out-of-memory error or a lost connection, the benchmark skips all later lengths in the list.
-- Before this benchmark, the runner records an idle GPU baseline of `int(5 / monitor_interval_s)` samples. Only the prefill windows use it.
+- Before this benchmark, the runner records an idle GPU baseline of `int(idle_baseline_s / monitor_interval_s)` samples. `idle_baseline_s` defaults to 5. Only the prefill windows use it.
 - `window_energy_per_input_token_wh` divides the window energy by the input tokens of the warm-up request and of all successful repetitions.
 - The GPU window of a length opens before `prepare_exact_prompt`. So the window energy and `duration_s` also include the prompt calibration, which sends many `/tokenize` requests. `window_input_tokens` does not count the calibration.
 

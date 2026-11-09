@@ -9,14 +9,14 @@ The runner runs the benchmarks in the order of this table. The function `run_ben
 | Benchmark | Code | Output file in the run dir | `summary.json` key | Control |
 |---|---|---|---|---|
 | Latency | `run_latency_sweep` in `benchmarks/latency.py` | `latency.json` | `latency`, full copy | `--skip-latency` |
-| Deep context | `run_deep_context` in `benchmarks/latency.py` | `deep_context.json` | `deep_context`, full copy | runs only when `context_lengths` is set |
+| Deep context | `run_deep_context` in `benchmarks/latency.py` | `deep_context.json` | `deep_context`, full copy | `--skip-deep-context`; runs only when `context_lengths` is set |
 | TTFT breakdown | `benchmarks/ttft_breakdown.py` | `ttft_breakdown.json` | `ttft_breakdown`, full copy | `--skip-ttft` |
 | Decode | `run_decode_speed` in `benchmarks/decode.py` | `decode.json` | `decode`, full copy | `--skip-decode` |
 | Reasoning | `run_reasoning_benchmark` in `benchmarks/reasoning.py` | `reasoning.json` | `reasoning`, full copy | `--skip-reasoning` |
 | Concurrency | `benchmarks/concurrency.py` | `concurrency.json` | `concurrency`, full copy | `--skip-concurrency` |
 | Prefill scaling | `benchmarks/prefill.py` | `prefill_scaling.json` | `prefill_scaling`, status and `n_success` per length | `--skip-prefill` |
-| FLOP analysis | `benchmarks/architecture_flops.py` | `flops_analysis.json` | `flops_analysis`, status and model label | always runs |
-| Tool calling | `benchmarks/tool_calling.py` | `tool_calling.json` | `tool_calling`, scores only | always runs |
+| FLOP analysis | `benchmarks/architecture_flops.py` | `flops_analysis.json` | `flops_analysis`, status and model label | `--skip-flops` |
+| Tool calling | `benchmarks/tool_calling.py` | `tool_calling.json` | `tool_calling`, scores only | `--skip-tool-calling` |
 | Speculative decoding comparison | `compare_spec_decode_results` in `benchmarks/decode.py` | `spec_enabled.json`, `spec_disabled.json`, `spec_comparison.json` | `spec_comparison`, full copy | runs only with `--compare-spec` |
 
 Other command-line options: `--model` (required), `--server-mode`, `--results-dir`, and `--compare-spec`. [model-config.md](model-config.md) and [methodology.md](methodology.md) describe them.
