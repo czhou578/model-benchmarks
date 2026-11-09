@@ -37,7 +37,7 @@ These values have no model config key.
 | Reasoning | `reasoning_prompts` | 1024 | 1 | none | none |
 | Concurrency | `build_distinct_prompts`: a distinct prompt per request, calibrated to 256 tokens | `concurrency_max_tokens` | `concurrency_requests_per_level` | new UUID per request, when the server accepts `cache_salt` | none |
 | Prefill scaling | document text, calibrated to the exact length | 1 | `prefill_repetitions` | new UUID per measured request, `warmup_<n>` for the warm-up | one warm-up request per length, then 0.5 s pauses |
-| Tool calling | the task prompts | `tool_calling_max_tokens` | 1 | new UUID per request | 0.5 s pause between tasks |
+| Tool calling | the task prompts | `tool_calling_max_tokens` | `tool_calling_repeats` (default 1) | new UUID per request | 0.5 s pause between tasks |
 
 All requests use temperature 0, except the concurrency requests, which use `concurrency_temperature`.
 

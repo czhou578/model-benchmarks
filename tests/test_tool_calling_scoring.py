@@ -184,3 +184,60 @@ def test_single_tool_rollup_feeds_composite_and_failure_modes():
     assert agg.failure_modes["missing_required_param"] == 1
     assert agg.per_task[1]["finish_reason"] == "length"
     assert agg.per_task[1]["completion_tokens"] is None
+
+
+def _refusal(task_id: str, actual_tool: str | None, finish: str | None = "stop") -> tc.TaskResult:
+    tool_correct = actual_tool is None
+    return tc.TaskResult(
+        task_id=task_id, category="refusal", prompt="p", expected_tool=None,
+        actual_tool=actual_tool, tool_call_id=None, actual_params=None,
+        correct=tool_correct, tool_correct=tool_correct, params_complete=1.0,
+        params_valid=tool_correct, composite_score=float(tool_correct), finish_reason=finish,
+    )
+
+
+def test_refusal_component_excludes_truncated_replies():
+    # A truncated reply has no tool call, so it passes the task, but it is
+    # no refusal. The component must not fall back to the pass rate.
+    results = [
+        _refusal("joke", None),
+        _refusal("name", None, finish="length"),
+        _refusal("call", "search"),
+        _refusal("ok", None),
+    ]
+
+    agg = tc._aggregate(results, config={})
+
+    refusal = agg.category_scores["refusal"]
+    assert refusal["pass_rate"] == pytest.approx(0.75)
+    assert refusal["correct_refusal"] == pytest.approx(0.5)
+    assert agg.composite_components["refusal"] == pytest.approx(0.5)
+
+
+def test_repeats_report_mean_and_spread(monkeypatch):
+    passes = iter([
+        [_refusal("a", None), _refusal("b", None)],
+        [_refusal("a", None), _refusal("b", "search")],
+        [_refusal("a", "search"), _refusal("b", "search")],
+    ])
+    monkeypatch.setattr(tc, "_run_task_list", lambda *a, **k: next(passes))
+
+    out = tc.run_tool_calling_benchmark(_client(), task_set="lite", repeats=3)
+
+    assert out["config"]["repeats"] == 3
+    assert out["total_correct"] == 2  # The top-level fields hold the first pass.
+    assert out["repeats"]["n"] == 3
+    assert out["repeats"]["total_correct"]["values"] == [2, 1, 0]
+    assert out["repeats"]["total_correct"]["mean"] == pytest.approx(1.0)
+    assert out["repeats"]["total_correct"]["stdev"] == pytest.approx(1.0)
+    assert out["repeats"]["composite_score"]["values"] == [1.0, 0.5, 0.0]
+
+
+def test_single_repeat_adds_no_repeat_summary(monkeypatch):
+    monkeypatch.setattr(tc, "_run_task_list", lambda *a, **k: [_refusal("a", None)])
+
+    out = tc.run_tool_calling_benchmark(_client(), task_set="lite")
+
+    assert "repeats" not in out
+    with pytest.raises(ValueError):
+        tc.run_tool_calling_benchmark(_client(), task_set="lite", repeats=0)
