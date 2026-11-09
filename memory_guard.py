@@ -10,8 +10,10 @@ reports its GPU memory as [N/A]. This guard reads /proc/meminfo:
 - It sends SIGTERM to the command when MemAvailable stays below
   --floor-gib for --grace-samples samples in a row. core_runner.py
   handles SIGTERM and stops its managed vLLM server.
-- It copies the CSV and a memory_guard.json summary into the run
-  directory that core_runner.py prints.
+- It puts the CSV and a memory_guard.json summary into the run
+  directory that core_runner.py prints. Without --csv, it writes the
+  samples to a temporary file and moves that file into the run directory.
+  With --csv, it keeps the file at that path and copies it.
 
 Usage:
     python memory_guard.py --floor-gib 8 -- \\
@@ -23,11 +25,13 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import re
 import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from datetime import datetime, timezone
@@ -89,9 +93,10 @@ def main() -> int:
                         help="Low samples in a row before the guard stops the command (default 3)")
     parser.add_argument("--report-every-s", type=float, default=300.0,
                         help="Log the memory state at this interval (default 300)")
-    parser.add_argument("--csv", default="memory_samples.csv",
-                        help="CSV file for all samples. At the end, the guard copies it "
-                             "into the run directory (default memory_samples.csv)")
+    parser.add_argument("--csv", default=None,
+                        help="Also keep all samples in this CSV file. Without it, the "
+                             "guard writes a temporary file and moves it into the run "
+                             "directory as memory_samples.csv")
     parser.add_argument("command", nargs=argparse.REMAINDER,
                         help="The command to run, after --")
     args = parser.parse_args()
@@ -108,8 +113,13 @@ def main() -> int:
     log(f"start: {start_mem['mem_available_gib']} of {start_mem['mem_total_gib']} GiB "
         f"available; floor {args.floor_gib} GiB, warning {args.warn_gib} GiB")
 
-    csv_path = Path(args.csv)
-    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    if args.csv:
+        csv_path = Path(args.csv)
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        fd, temp_name = tempfile.mkstemp(prefix="memory_samples_", suffix=".csv")
+        os.close(fd)
+        csv_path = Path(temp_name)
     run_dir: list[Path] = []
 
     proc = subprocess.Popen(
@@ -191,7 +201,10 @@ def main() -> int:
 
     if run_dir and run_dir[0].is_dir():
         target = run_dir[0] / "memory_samples.csv"
-        shutil.copy2(csv_path, target)
+        if args.csv:
+            shutil.copy2(csv_path, target)
+        else:
+            shutil.move(csv_path, target)
         (run_dir[0] / "memory_guard.json").write_text(json.dumps({
             "floor_gib": args.floor_gib,
             "warn_gib": args.warn_gib,
@@ -201,7 +214,10 @@ def main() -> int:
             "stopped_for_memory": stopped_for_memory,
             "return_code": proc.returncode,
         }, indent=2) + "\n")
-        log(f"memory samples copied to {target}")
+        log(f"memory samples written to {target}")
+    elif not args.csv:
+        # Keep the samples: without a run dir, the temporary file is the only copy.
+        log(f"no run directory found; memory samples stay in {csv_path}")
 
     if stopped_for_memory:
         return EXIT_LOW_MEMORY
