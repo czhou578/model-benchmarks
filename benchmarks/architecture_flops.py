@@ -398,17 +398,31 @@ def _load_local(path: Path) -> dict[str, Any]:
     return value
 
 
+def _load_auto_config(model_reference: str, trust_remote_code: bool) -> Any:
+    try:
+        from transformers import AutoConfig
+    except ImportError as exc:
+        raise RuntimeError(
+            "transformers is not installed; install it or set "
+            "architecture_config_path to a local config.json"
+        ) from exc
+    return AutoConfig.from_pretrained(
+        model_reference, trust_remote_code=trust_remote_code
+    )
+
+
 def load_architecture_config(
     benchmark_config: Mapping[str, Any],
     *,
-    server_config: Mapping[str, Any] | None = None,
     auto_config_loader: Callable[[str], Any] | None = None,
 ) -> ConfigLoadResult:
     """Load the full architecture config from the first source that fits.
 
-    The sources, in order: a local config file, Hugging Face (only when the
-    local config is not complete), and the server config. The first complete
-    config wins. Without one, the result has the status ``unsupported``.
+    The sources, in order: a local config file, then Hugging Face (only
+    when the local config is not complete). The first complete config wins.
+    Without one, the result has the status ``unsupported``. The Hugging Face
+    lookup runs remote code only when the benchmark config sets
+    ``architecture_trust_remote_code: true``.
     """
     warnings: list[str] = []
     candidates: list[tuple[str, dict[str, Any]]] = []
@@ -426,13 +440,10 @@ def load_architecture_config(
         first_norm = normalize_config(candidates[0][1], config_source=candidates[0][0])
         local_complete = not missing_required_fields(first_norm)
     if model_reference and not local_complete:
+        trust_remote_code = benchmark_config.get("architecture_trust_remote_code") is True
         try:
             if auto_config_loader is None:
-                from transformers import AutoConfig
-
-                loaded = AutoConfig.from_pretrained(
-                    model_reference, trust_remote_code=True
-                )
+                loaded = _load_auto_config(model_reference, trust_remote_code)
             else:
                 loaded = auto_config_loader(model_reference)
             candidates.append(("huggingface", _as_dict(loaded)))
@@ -440,12 +451,6 @@ def load_architecture_config(
             warnings.append(
                 f"could not load Hugging Face config for {model_reference}: {exc}"
             )
-
-    if server_config is not None:
-        try:
-            candidates.append(("server", _as_dict(server_config)))
-        except TypeError as exc:
-            warnings.append(f"server config was invalid: {exc}")
 
     for source, raw in candidates:
         normalized = normalize_config(raw, config_source=source)
@@ -1243,7 +1248,6 @@ def _model_label(raw: Mapping[str, Any]) -> str:
 def run_flops_analysis(
     model_config: dict[str, Any],
     *,
-    server_config: dict[str, Any] | None = None,
     auto_config_loader: Callable[[str], Any] | None = None,
     context_lengths: list[int] | None = None,
     prefill_lengths: list[int] | None = None,
@@ -1251,13 +1255,12 @@ def run_flops_analysis(
     """Return a complete FLOPs analysis document for the model config.
 
     If the config is already complete (has all required fields) it is used
-    directly.  Otherwise the function resolves the config from local files,
-    HuggingFace, or the vLLM server via ``load_architecture_config``. All
-    dimensions come from the config.
+    directly.  Otherwise the function resolves the config from a local file
+    or from Hugging Face via ``load_architecture_config``. All dimensions
+    come from the config.
 
     Args:
         model_config: the benchmark YAML config dict or a complete model config.
-        server_config: optional complete model config from the vLLM server.
         auto_config_loader: optional callable(str) -> config for HF resolution.
         context_lengths: decode context lengths to analyze.
         prefill_lengths: prefill prompt lengths to analyze.
@@ -1298,7 +1301,6 @@ def run_flops_analysis(
     else:
         config_result = load_architecture_config(
             model_config,
-            server_config=server_config,
             auto_config_loader=auto_config_loader,
         )
 

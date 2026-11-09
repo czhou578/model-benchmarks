@@ -81,7 +81,6 @@ def _run_main(tmp_path, monkeypatch, *flags, tool_calling_error=None, extra_cfg=
     monkeypatch.setattr(core_runner, "make_client", lambda cfg: _FakeClient())
     monkeypatch.setattr(core_runner, "GpuMonitor", _FakeMonitor)
     monkeypatch.setattr(core_runner, "collect_environment", lambda: {"gpu_name": "fake"})
-    monkeypatch.setattr(core_runner, "_get_server_model_config", lambda client: {})
     monkeypatch.setattr(core_runner, "fetch_server_version", lambda *args: "0.33.0")
     monkeypatch.setattr(core_runner.time, "sleep", lambda s: None)
     _patch(monkeypatch, benchmarks.latency, "run_latency_sweep", fake("latency", {}))

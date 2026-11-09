@@ -144,16 +144,16 @@ The FLOP analysis is an estimate from the model architecture. It sends no timed 
 `load_architecture_config` tries these config sources in order. The first complete config wins.
 
 1. A local file: `architecture_config_path`, or a local path in the model reference.
-2. Hugging Face `AutoConfig.from_pretrained`. It runs only when no complete local config exists.
-3. The `config` field of the first model in the server `/v1/models` response, if the server sends one.
+2. Hugging Face `AutoConfig.from_pretrained`. It runs only when no complete local config exists. It needs the `transformers` package, which is not a dependency of this repo. Without the package, `warnings` tells you to install it or to set `architecture_config_path`.
 
-Caution: the Hugging Face lookup passes `trust_remote_code=True`. It can run Python code from the model repository.
+Caution: `architecture_trust_remote_code: true` lets the Hugging Face lookup run Python code from the model repository. The default is `false`.
 
 The estimator reads all dimensions from the config. It supports full attention, Gated DeltaNet linear attention, a MoE FFN, and a dense FFN. A config without these fields gets `estimate_status: unsupported` and a list of `warnings`. `estimate_status` is `exact_from_config` when the text `model_type` starts with `qwen3_5` or `qwen3_6`, else `approximate`.
 
 - `architecture.model` is the text `model_type` without the `_text` suffix, for example `qwen3_5_moe` (Qwen3.6-35B-A3B) or `qwen3_5` (Qwen3.8-27B).
 - The dense FFN has 3 matrices (gate, up, down) for a gated model, else 2. Its key is `dense_ffn`.
 - Old runs labeled every `qwen3_5*` model `qwen3.5-35b-a3b`. They accepted only the Qwen3.6-35B-A3B dimensions, so Qwen3.8-27B got `unsupported`.
+- Old runs also tried the server `/v1/models` response as a third source. vLLM sends no config there, so that source never worked. Old runs passed `trust_remote_code=True` without an opt-in.
 
 ## Limits
 
