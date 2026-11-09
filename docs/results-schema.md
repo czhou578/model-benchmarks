@@ -127,7 +127,8 @@ Each file maps the requested length, as a string, to one entry.
 | `ttft_avg_s`, `ttft_median_s`, `ttft_p95_s` | s | Client TTFT statistics. |
 | `ttft_p99_s` | s | Latency only. |
 | `prefill_tps_avg` | tokens/s | Mean of `prompt_tokens / client TTFT`. |
-| `status` | | Deep context only. `success` or `oom`. The code sets `oom` on a connection error, or on an HTTP error whose text contains `memory` or `oom`. |
+| `status` | | Deep context only. `success`, `oom`, or `request_error`. The code sets `oom` on a connection error, or on an HTTP error whose text contains `memory` or `oom`. It sets `request_error` on any other error. After an error, the benchmark stops the requests for that length and goes on to the next length. The statistics use only the requests before the error. |
+| `error` | | Deep context only. Exception type and message. For an HTTP error, the message holds the status code and the server body. Present only when `status` is not `success`. |
 
 ## ttft_breakdown.json
 

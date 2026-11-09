@@ -114,7 +114,6 @@ Notes:
 
 - `resolved_server.json` replaces the value of each `server.environment` variable whose name contains `TOKEN`, `KEY`, `SECRET`, or `PASSWORD` with `<redacted>`.
 - The tool-calling benchmark always uses `/v1/chat/completions`. It ignores `endpoint.chat`.
-- Caution: with `endpoint.chat: false`, the readiness probe still sends a chat `messages` body to `/v1/completions` (`wait_until_ready`). A server that rejects this body never becomes ready.
 - Write `speculative_config` as a JSON string in single quotes. The runner passes `str(value)` to vLLM (the `--compare-spec` block in `main`). A YAML mapping becomes a Python repr, which is not JSON.
 - Keep `--speculative-config` out of `server.command` when you use `--compare-spec`. The runner adds the flag for the enabled variant. It does not remove the flag for the disabled variant.
 - The FLOP analysis looks for a model reference in this order: `local_model_path`, `model_path`, `model_id`, `endpoint.model_name`, then the argument after `serve` in `server.command` (`_model_reference`).
