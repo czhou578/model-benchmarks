@@ -145,6 +145,7 @@ The modules in `benchmarks/` import from `harness/` and from other modules in `b
 
 ## Documentation
 
+- [docs/overview.md](docs/overview.md): start here. How a run works, step by step, and a glossary.
 - [docs/model-config.md](docs/model-config.md): the keys of a model config.
 - [docs/results-schema.md](docs/results-schema.md): the files and fields in a run dir.
 - [docs/methodology.md](docs/methodology.md): how each benchmark measures.
