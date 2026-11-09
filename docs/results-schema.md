@@ -106,7 +106,7 @@ GPU data (`GpuMonitor.stop` for the whole run, `_window_summary` for one window)
 | `idle_base_power_w` | W | Window only, after an idle baseline. Mean power of the idle samples. |
 | `energy_above_idle_wh` | Wh | Window only. `energy_wh` − `idle_base_power_w` × `duration_s`. It can be negative. |
 | `window_input_tokens` | tokens | Prefill windows only. Input tokens of the warm-up request and of all successful repetitions. |
-| `window_energy_per_input_token_wh` | Wh/token | Prefill windows only. `energy_wh` / `window_input_tokens`. The energy also includes the pauses between the requests and the prompt calibration (`/tokenize` requests) before them. |
+| `window_energy_per_input_token_wh` | Wh/token | Prefill windows only. `energy_wh` / `window_input_tokens`. The energy also includes the pauses between the requests. Runs before the `fix/ttft-prefill-prompts` change also include the prompt calibration (`/tokenize` requests). |
 | `energy_per_input_token_wh` | Wh/token | Old runs only. See the ambiguities above. |
 
 ## environment.json
@@ -152,15 +152,15 @@ Each file maps the requested length, as a string, to one entry.
 
 ## ttft_breakdown.json
 
-`config`: `benchmark_version`, `definition`, `server_requirement`, `prompt_lengths`, `repetitions`, `cache_isolation_method` (`cache_salt` or `text_salt`), `max_tokens` (1), `temperature`, `start_time`, `end_time`.
+`config`: `benchmark_version`, `definition`, `server_requirement`, `prompt_lengths`, `repetitions`, `cache_isolation_method` (`cache_salt` or `text_salt`), `max_tokens` (1), `temperature`, `prompt_workload`, `start_time`, `end_time`.
 
 `per_length.<length>`:
 
 | Field | Unit | Meaning |
 |---|---|---|
-| `status` | | `success`, `oom`, or `skipped_after_oom`. |
-| `requested_tokens` | tokens | Target length. The prompt is `"hello world "` repeated `length // 2` times, so the length is approximate. |
-| `actual_tokens` | tokens | `prompt_tokens` of the first successful request. |
+| `status` | | `success`, `oom`, `request_error`, or `skipped_after_oom`. A `request_error` entry holds only `status` and `error`. The prompt calibration failed. |
+| `requested_tokens`, `actual_tokens` | tokens | Target length, and the length after calibration with the server `/tokenize` endpoint, chat template included. Old runs used `"hello world "` × `length // 2` and wrote the `prompt_tokens` of the first successful request. |
+| `prompt_length_tolerance` | tokens | `requested_tokens − actual_tokens`. |
 | `n_requests`, `n_success`, `n_failed` | count | Request counts. |
 | `per_request[].ttft_ms`, `per_request[].total_time_ms` | ms | Client TTFT and total request time. |
 | `per_request[].server_ttft_s`, `per_request[].queue_time_s` | s | vLLM `time_to_first_token_ms` and `queue_time_ms`, in seconds. The server TTFT starts when the scheduler first schedules the request. It does not include the queue time. |
@@ -240,7 +240,11 @@ Each request uses `max_tokens` from `reasoning_max_tokens` (default 4096). Old r
 
 ## prefill_scaling.json
 
-`config`: `benchmark_version`, `definition`, `target_lengths`, `cache_isolation_method`, `cache_preflight_supported`, `repetitions`, `max_tokens` (1), `max_output_tokens` (1), `temperature`, `prompt_workload`, `server_cache_settings`, `start_time`, `end_time`. The code writes `server_cache_settings.prefix_caching` as the constant `true`. It does not read the server flag. So the value is wrong for a run whose config turns prefix caching off, for example the Qwen3.8-27B config with `--no-enable-prefix-caching`.
+`config`: `benchmark_version`, `definition`, `target_lengths`, `cache_isolation_method`, `cache_preflight_supported`, `repetitions`, `max_tokens` (1), `max_output_tokens` (1), `temperature`, `prompt_workload`, `server_cache_settings`, `start_time`, `end_time`.
+
+- `server_cache_settings.prefix_caching` comes from the managed server command. It is `true` for `--enable-prefix-caching` and `false` for `--no-enable-prefix-caching`. It is `null` when the command has no flag (the server default applies) or in external mode.
+- Old runs wrote the constant `true`, also for a server with `--no-enable-prefix-caching`.
+- `start_time` and `end_time` are UTC with a `+00:00` offset. Old runs used a `Z` suffix.
 
 `per_length.<length>`:
 

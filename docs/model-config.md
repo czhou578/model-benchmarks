@@ -93,7 +93,7 @@ The runner does not validate keys. It ignores an unknown key, so a misspelled ke
 | `context_lengths` | list of int, tokens | none | no | Long prompt lengths. The benchmark runs only when this key is set. | deep context |
 | `context_repeats` | int | 5 | no | Requests per context length. | deep context |
 | `deep_context_output_tokens` | int | 64 | no | `max_tokens` of each deep context request. | deep context |
-| `ttft_prompt_lengths` | list of int, tokens | `[128, 512, 2048, 8192, 32768]` | no | Approximate prompt lengths. | TTFT breakdown |
+| `ttft_prompt_lengths` | list of int, tokens | `[128, 512, 2048, 8192, 32768]` | no | Exact prompt lengths. | TTFT breakdown |
 | `ttft_repetitions` | int | 10 | no | Requests per prompt length. | TTFT breakdown |
 | `decode_lengths` | list of int, tokens | `[512, 1024, 2048]` | no | `max_tokens` values. | decode, `--compare-spec` |
 | `reasoning_prompts` | list of strings | two built-in prompts | no | Prompts. | reasoning |

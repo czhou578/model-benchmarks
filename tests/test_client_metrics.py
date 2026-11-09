@@ -124,6 +124,9 @@ def test_ttft_breakdown_post_queue_equals_server_ttft(monkeypatch):
         def preflight_cache_salt(self) -> bool:
             return True
 
+        def tokenize_prompt(self, prompt: str) -> Any:
+            return harness.client.TokenizedPrompt(count=len(prompt) // 4, tokens=[])
+
         def generate(self, *args: Any, **kwargs: Any) -> GenerationResult:
             return gen
 

@@ -229,6 +229,21 @@ def step_concurrency(run: Run) -> None:
     run.record("concurrency", results)
 
 
+def prefix_caching_flag(command: list[str]) -> bool | None:
+    """Return the prefix-caching flag of a server command.
+
+    The last flag wins. None means that the command sets no flag, so the
+    server default applies.
+    """
+    value = None
+    for arg in command:
+        if arg == "--enable-prefix-caching":
+            value = True
+        elif arg == "--no-enable-prefix-caching":
+            value = False
+    return value
+
+
 def step_prefill(run: Run) -> None:
     target_lengths = run.cfg.get("prefill_target_lengths", [512, 2048, 8192])
     repetitions = run.cfg.get("prefill_repetitions", 5)
@@ -246,7 +261,10 @@ def step_prefill(run: Run) -> None:
     print("[core_runner] idle baseline captured, starting prefill benchmark")
 
     print(f"[core_runner] prefill scaling benchmark over {target_lengths} ({repetitions} reps)")
-    results = run_prefill_scaling(run.client, target_lengths, repetitions=repetitions, gpu_monitor=run.monitor)
+    results = run_prefill_scaling(
+        run.client, target_lengths, repetitions=repetitions, gpu_monitor=run.monitor,
+        prefix_caching=prefix_caching_flag(run.server.command) if run.server else None,
+    )
     run.record("prefill_scaling", results, summary_entry={
         k: {"status": v.get("status"), "n_success": v.get("n_success")}
         for k, v in results.get("per_length", {}).items()

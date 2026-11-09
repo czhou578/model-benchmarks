@@ -33,7 +33,7 @@ Most of these values have no model config key. The table names the key where one
 |---|---|---|---|---|---|
 | Latency | `build_prompt_of_length(n)` | 8 | `latency_repeats` | new UUID per request | none |
 | Deep context | `build_prompt_of_length(n)` | `deep_context_output_tokens` (default 64) | `context_repeats` | new UUID per request | none |
-| TTFT breakdown | `"hello world "` × `n // 2` | 1 | `ttft_repetitions` | new UUID per request | 0.5 s pause between requests |
+| TTFT breakdown | document text, calibrated to the exact length | 1 | `ttft_repetitions` | new UUID per request | 0.5 s pause between requests |
 | Decode | `build_prompt_of_length(128)` | each `decode_lengths` value | 1 | new UUID per request | none |
 | Reasoning | `reasoning_prompts` | `reasoning_max_tokens` (4096) | 1 | new UUID per request | none |
 | Concurrency | `build_distinct_prompts`: a distinct prompt per request, calibrated to 256 tokens | `concurrency_max_tokens` | `concurrency_requests_per_level` | new UUID per request, when the server accepts `cache_salt` | none |
@@ -69,7 +69,9 @@ All requests use temperature 0, except the concurrency requests, which use `conc
 - Post-queue time is the server TTFT (`time_to_first_token_ms`). vLLM measures it from the time the scheduler first schedules the request to the first token. It does not include the queue time, so the benchmark does not subtract the queue time from it. It covers the prefill and the first decode step.
 - vLLM 0.25.1 and 0.33.0 use the same definitions for both fields.
 - vLLM does not report a prefill time, so `prefill_ms` and `first_decode_ms` stay `null`.
-- The prompt is `"hello world "` repeated, so the token count is approximate. `actual_tokens` holds the server count.
+- `prepare_exact_prompt` builds the prompt, as in the prefill benchmark. `actual_tokens` holds the server `/tokenize` count, chat template included.
+- The calibration runs before the GPU window of the length opens. When the calibration fails, the length gets `status: request_error` and no window.
+- Old runs used `"hello world "` × `n // 2`, so the length was approximate. In run 20261108_132808, the server count was 52 tokens above `n` at each length.
 - After an error whose text contains `memory` or `oom`, the benchmark skips all later lengths in the list.
 
 ## Prefill scaling
@@ -81,7 +83,8 @@ All requests use temperature 0, except the concurrency requests, which use `conc
 - After an out-of-memory error or a lost connection, the benchmark skips all later lengths in the list.
 - Before this benchmark, the runner records an idle GPU baseline of `int(idle_baseline_s / monitor_interval_s)` samples. `idle_baseline_s` defaults to 5. Only the prefill windows use it.
 - `window_energy_per_input_token_wh` divides the window energy by the input tokens of the warm-up request and of all successful repetitions.
-- The GPU window of a length opens before `prepare_exact_prompt`. So the window energy and `duration_s` also include the prompt calibration, which sends many `/tokenize` requests. `window_input_tokens` does not count the calibration.
+- The GPU window of a length opens after `prepare_exact_prompt`. So the window energy and `duration_s` do not include the `/tokenize` requests of the calibration. In old runs, the window opened before the calibration.
+- `server_cache_settings.prefix_caching` records the prefix-caching flag of the managed server command. The value is `null` when the command has no flag or the server is external.
 
 ## Concurrency
 
