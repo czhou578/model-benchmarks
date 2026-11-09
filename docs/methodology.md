@@ -106,13 +106,13 @@ Each request sends its own prompt (`prompt_mode: "distinct"`):
 The comparison needs managed mode and `speculative_config`. It runs after all other benchmarks:
 
 1. The runner stops the main server.
-2. It starts the server with `server.command` plus `--speculative-config <speculative_config>`. It waits for readiness, runs the decode benchmark over `decode_lengths`, and stops the server.
-3. It starts the server with `server.command` only, and runs the decode benchmark again.
+2. It removes the speculative decoding flags from `server.command` (`strip_spec_flags`). It starts the server with that command plus `--speculative-config <speculative_config>`. It waits for readiness, runs the decode benchmark over `decode_lengths`, and stops the server.
+3. It starts the server with the command without speculative decoding flags, and runs the decode benchmark again.
 4. It compares `tok_per_sec_avg` and `ttft_s` of the two variants for each length.
 
 - Each variant sends one request per length.
 - The GPU monitor runs during both variants. Their samples are part of the run totals.
-- Caution: the runner does not remove a `--speculative-config` flag that `server.command` already contains. Both variants then use speculative decoding.
+- The runner removes a `--speculative-config` flag that `server.command` already contains. So the disabled variant does not use speculative decoding. Runs before this change used speculative decoding in both variants when `server.command` had the flag.
 - With speculative decoding, one stream event can carry several tokens. The decode benchmark asks vLLM for per-chunk usage, so `tok_per_sec_peak`, `tok_per_sec_min`, and `tok_per_sec_median` count all tokens of an event. Read `rate_method` before you compare these fields.
 
 ## GPU samples

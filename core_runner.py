@@ -312,8 +312,40 @@ def step_tool_calling(run: Run) -> None:
         print(f"[core_runner] warning: tool-calling benchmark failed: {exc}")
 
 
+# vLLM 0.33.0 flags that turn on speculative decoding. Each takes one value,
+# as the next argument or after "=". "--speculative-config.<key>" also counts.
+SPEC_FLAGS = ("--speculative-config", "-sc", "--spec-method", "--spec-model", "--spec-tokens")
+
+
+def strip_spec_flags(command: list[str]) -> tuple[list[str], list[str]]:
+    """Return *command* without the speculative decoding flags, and the removed arguments."""
+    kept: list[str] = []
+    removed: list[str] = []
+    i = 0
+    while i < len(command):
+        arg = command[i]
+        name = arg.split("=", 1)[0]
+        if name in SPEC_FLAGS or name.startswith("--speculative-config."):
+            n = 1 if "=" in arg else 2
+            removed.extend(command[i:i + n])
+            i += n
+        else:
+            kept.append(arg)
+            i += 1
+    return kept, removed
+
+
+def speculative_config_arg(value: Any) -> str:
+    """Return the ``--speculative-config`` value: JSON for a mapping, a string as is."""
+    return json.dumps(value) if isinstance(value, dict) else str(value)
+
+
 def step_spec_comparison(run: Run) -> None:
-    """Restart vLLM with and without speculative decoding, and compare decode speed."""
+    """Restart vLLM with and without speculative decoding, and compare decode speed.
+
+    The runner removes the speculative decoding flags of ``server.command``
+    from both variants. The enabled variant then adds ``speculative_config``.
+    """
     if run.summary["server_mode"] != "managed" or run.server is None:
         raise ValueError("--compare-spec requires managed server mode")
     spec_config = run.cfg.get("speculative_config")
@@ -321,7 +353,9 @@ def step_spec_comparison(run: Run) -> None:
         raise ValueError("--compare-spec requires speculative_config in the model YAML")
 
     output_lengths = run.cfg.get("decode_lengths", [512, 1024, 2048])
-    base_command = list(run.server.command)
+    base_command, removed_flags = strip_spec_flags(list(run.server.command))
+    if removed_flags:
+        print(f"[core_runner] warning: removed {removed_flags} from server.command for the spec comparison")
     run.server.stop()
     run.server.save_metadata(run.run_dir / "resolved_server.json")
     run.server = None
@@ -340,11 +374,15 @@ def step_spec_comparison(run: Run) -> None:
             variant_server.stop()
             variant_server.save_metadata(run.run_dir / f"resolved_server_{label}.json")
 
-    spec_results = run_variant("spec_enabled", base_command + ["--speculative-config", str(spec_config)])
+    spec_results = run_variant(
+        "spec_enabled", base_command + ["--speculative-config", speculative_config_arg(spec_config)]
+    )
     save_json(run.run_dir / "spec_enabled.json", spec_results)
     non_spec_results = run_variant("spec_disabled", base_command)
     save_json(run.run_dir / "spec_disabled.json", non_spec_results)
-    run.record("spec_comparison", compare_spec_decode_results(spec_results, non_spec_results, output_lengths))
+    comparison = compare_spec_decode_results(spec_results, non_spec_results, output_lengths)
+    comparison["config"]["removed_server_flags"] = removed_flags
+    run.record("spec_comparison", comparison)
 
 
 def run_benchmarks(run: Run) -> None:
