@@ -23,8 +23,9 @@ import uuid
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from typing import Any
-from core_runner import ModelClient, GpuMonitor
+from core_runner import ModelClient
 from harness.stats import stat_summary
+from harness.telemetry import GpuMonitor
 
 
 # --------------------------------------------------------------------------- #
