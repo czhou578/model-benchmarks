@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from core_runner import _window_summary, decode_energy_summary, gpu_energy_wh
+from harness.telemetry import _window_summary, decode_energy_summary, gpu_energy_wh
 
 # Uneven gaps: 1 s, 2 s, 0.5 s. Trapezoids: 15 J + 40 J + 15 J = 70 J.
 SAMPLES = [
