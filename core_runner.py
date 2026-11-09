@@ -176,8 +176,11 @@ def step_latency(run: Run) -> None:
 def step_deep_context(run: Run) -> None:
     context_lengths = run.cfg["context_lengths"]
     context_repeats = run.cfg.get("context_repeats", 5)
+    output_tokens = int(run.cfg.get("deep_context_output_tokens", 64))
     print(f"[core_runner] deep context benchmark over {context_lengths} ({context_repeats} reps each)")
-    results = run_deep_context(run.client, context_lengths, output_tokens=64, repeats=context_repeats)
+    results = run_deep_context(
+        run.client, context_lengths, output_tokens=output_tokens, repeats=context_repeats
+    )
     run.record("deep_context", results)
 
 
@@ -224,12 +227,15 @@ def step_concurrency(run: Run) -> None:
 def step_prefill(run: Run) -> None:
     target_lengths = run.cfg.get("prefill_target_lengths", [512, 2048, 8192])
     repetitions = run.cfg.get("prefill_repetitions", 5)
-    # Record a 5 s GPU idle baseline before the prefill requests.
-    gpu_interval = run.cfg.get("monitor_interval_s", 1.0)
+    # Record a GPU idle baseline (default 5 s) before the prefill requests.
+    gpu_interval = float(run.cfg.get("monitor_interval_s", 1.0))
+    if gpu_interval <= 0:
+        raise ValueError(f"monitor_interval_s must be above 0, got {gpu_interval}")
+    idle_baseline_s = float(run.cfg.get("idle_baseline_s", 5.0))
     if gpu_interval > 0.2:
         print("[core_runner] capturing GPU idle baseline...")
     run.monitor.start_idle()
-    for _ in range(int(5.0 / gpu_interval)):
+    for _ in range(int(idle_baseline_s / gpu_interval)):
         run.monitor.record_idle()
         time.sleep(gpu_interval)
     print("[core_runner] idle baseline captured, starting prefill benchmark")
@@ -341,7 +347,7 @@ def run_benchmarks(run: Run) -> None:
     args, cfg = run.args, run.cfg
     if not args.skip_latency:
         step_latency(run)
-    if cfg.get("context_lengths"):
+    if not args.skip_deep_context and cfg.get("context_lengths"):
         step_deep_context(run)
     if not args.skip_ttft:
         step_ttft_breakdown(run)
@@ -353,8 +359,10 @@ def run_benchmarks(run: Run) -> None:
         step_concurrency(run)
     if not args.skip_prefill:
         step_prefill(run)
-    step_flops(run)
-    step_tool_calling(run)
+    if not args.skip_flops:
+        step_flops(run)
+    if not args.skip_tool_calling:
+        step_tool_calling(run)
     if args.compare_spec:
         step_spec_comparison(run)
 
@@ -368,6 +376,9 @@ def main():
     parser.add_argument("--skip-concurrency", action="store_true", help="Skip the concurrency benchmark")
     parser.add_argument("--skip-prefill", action="store_true", help="Skip the prefill scaling benchmark")
     parser.add_argument("--skip-ttft", action="store_true", help="Skip the TTFT breakdown")
+    parser.add_argument("--skip-deep-context", action="store_true", help="Skip the deep context benchmark")
+    parser.add_argument("--skip-flops", action="store_true", help="Skip the FLOP analysis")
+    parser.add_argument("--skip-tool-calling", action="store_true", help="Skip the tool-calling benchmark")
     parser.add_argument("--compare-spec", action="store_true",
                         help="Run decode benchmark with spec-dec enabled and disabled, then compare")
     parser.add_argument(

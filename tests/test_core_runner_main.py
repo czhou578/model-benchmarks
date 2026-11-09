@@ -28,6 +28,8 @@ ALL_STEPS = [
 
 
 class _FakeMonitor:
+    idle_records = 0
+
     def __init__(self, run_dir, interval_s=1.0):
         self.samples = []
 
@@ -38,7 +40,7 @@ class _FakeMonitor:
         pass
 
     def record_idle(self):
-        pass
+        _FakeMonitor.idle_records += 1
 
     def stop(self):
         return {"samples": 0}
@@ -58,12 +60,15 @@ def _patch(monkeypatch, module, name, fn):
         monkeypatch.setattr(core_runner, name, fn)
 
 
-def _run_main(tmp_path, monkeypatch, *flags, tool_calling_error=None):
+def _run_main(tmp_path, monkeypatch, *flags, tool_calling_error=None, extra_cfg=None, seen=None):
     calls: list[str] = []
+    _FakeMonitor.idle_records = 0
 
     def fake(step, result):
         def run(*args, **kwargs):
             calls.append(step)
+            if seen is not None:
+                seen[step] = kwargs
             return result
         return run
 
@@ -95,6 +100,7 @@ def _run_main(tmp_path, monkeypatch, *flags, tool_calling_error=None):
         "server": {"mode": "external"},
         "endpoint": {"base_url": "http://127.0.0.1:1"},
         "context_lengths": [32],
+        **(extra_cfg or {}),
     }))
     results = tmp_path / "results"
     argv = ["core_runner.py", "--model", str(config), "--results-dir", str(results), *flags]
@@ -122,6 +128,33 @@ def test_skip_flags_leave_out_their_steps(tmp_path, monkeypatch):
     calls, _, summary = _run_main(tmp_path, monkeypatch, *flags)
     assert calls == ["deep_context", "flops_analysis", "tool_calling"]
     assert "latency" not in summary and "decode" not in summary
+
+
+def test_new_skip_flags_leave_out_their_steps(tmp_path, monkeypatch):
+    flags = ["--skip-deep-context", "--skip-flops", "--skip-tool-calling"]
+    calls, run_dir, summary = _run_main(tmp_path, monkeypatch, *flags)
+    assert calls == [s for s in ALL_STEPS if s not in ("deep_context", "flops_analysis", "tool_calling")]
+    for step in ("deep_context", "flops_analysis", "tool_calling"):
+        assert step not in summary
+        assert not (run_dir / f"{step}.json").exists()
+
+
+def test_config_keys_set_deep_context_tokens_and_idle_baseline(tmp_path, monkeypatch):
+    seen: dict = {}
+    _run_main(tmp_path, monkeypatch, seen=seen)
+    assert seen["deep_context"]["output_tokens"] == 64
+    assert _FakeMonitor.idle_records == 5
+
+    extra = {"deep_context_output_tokens": 16, "idle_baseline_s": 2.0, "monitor_interval_s": 0.5}
+    (tmp_path / "custom").mkdir()
+    _run_main(tmp_path / "custom", monkeypatch, extra_cfg=extra, seen=seen)
+    assert seen["deep_context"]["output_tokens"] == 16
+    assert _FakeMonitor.idle_records == 4
+
+
+def test_zero_monitor_interval_fails_before_the_idle_baseline(tmp_path, monkeypatch):
+    with pytest.raises(ValueError, match="monitor_interval_s"):
+        _run_main(tmp_path, monkeypatch, extra_cfg={"monitor_interval_s": 0})
 
 
 def test_tool_calling_failure_is_recorded_and_the_run_completes(tmp_path, monkeypatch):

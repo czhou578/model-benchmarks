@@ -93,11 +93,10 @@ The harness sends vLLM request fields such as `cache_salt`. Another server can i
 | `--model PATH` | Run this model config. Required. |
 | `--skip-latency`, `--skip-ttft`, `--skip-decode` | Skip the latency sweep, the TTFT breakdown, or decode speed. |
 | `--skip-reasoning`, `--skip-concurrency`, `--skip-prefill` | Skip reasoning, concurrency, or prefill scaling. |
+| `--skip-deep-context`, `--skip-flops`, `--skip-tool-calling` | Skip deep context, the FLOP analysis, or tool calling. |
 | `--server-mode {managed,external}` | Override `server.mode` from the model config. |
 | `--compare-spec` | Restart vLLM with and without `speculative_config`, then compare decode speed. |
 | `--results-dir DIR` | Write run dirs under `DIR`. The default is `results/` in the repo root. |
-
-FLOP analysis and tool calling have no skip flag.
 
 `batch_run.py`:
 

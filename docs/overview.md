@@ -36,14 +36,14 @@ The steps below follow `main()` and `run_benchmarks()` in `core_runner.py`.
 | # | Benchmark | Step function | Module in `benchmarks/` | Runs when | Output file |
 |---|---|---|---|---|---|
 | 1 | Latency sweep | `step_latency` | `latency.py` | no `--skip-latency` | `latency.json` |
-| 2 | Deep context | `step_deep_context` | `latency.py` | `context_lengths` is set | `deep_context.json` |
+| 2 | Deep context | `step_deep_context` | `latency.py` | `context_lengths` is set and no `--skip-deep-context` | `deep_context.json` |
 | 3 | TTFT breakdown | `step_ttft_breakdown` | `ttft_breakdown.py` | no `--skip-ttft` | `ttft_breakdown.json` |
 | 4 | Decode | `step_decode` | `decode.py` | no `--skip-decode` | `decode.json` |
 | 5 | Reasoning | `step_reasoning` | `reasoning.py` | no `--skip-reasoning` | `reasoning.json` |
 | 6 | Concurrency | `step_concurrency` | `concurrency.py` | no `--skip-concurrency` | `concurrency.json` |
 | 7 | Prefill scaling | `step_prefill` | `prefill.py` | no `--skip-prefill` | `prefill_scaling.json` |
-| 8 | FLOP analysis | `step_flops` | `architecture_flops.py` | always | `flops_analysis.json` |
-| 9 | Tool calling | `step_tool_calling` | `tool_calling.py` | always | `tool_calling.json` |
+| 8 | FLOP analysis | `step_flops` | `architecture_flops.py` | no `--skip-flops` | `flops_analysis.json` |
+| 9 | Tool calling | `step_tool_calling` | `tool_calling.py` | no `--skip-tool-calling` | `tool_calling.json` |
 | 10 | Spec comparison | `step_spec_comparison` | `decode.py` | `--compare-spec` | `spec_comparison.json` and five more files |
 
 The next table gives the default parameters in the code. A model config can change most of them. [model-config.md](model-config.md) lists the keys. Prompt lengths are in tokens.
@@ -51,12 +51,12 @@ The next table gives the default parameters in the code. A model config can chan
 | # | Prompt | `max_tokens` | Requests | Cache salt | Pauses |
 |---|---|---|---|---|---|
 | 1 | Creative text, 32, 128, 512, 2048, 8192, 16384 tokens | 8 | 10 per length | new for each request | none |
-| 2 | Creative text, the `context_lengths` values (no default) | 64 | 5 per length | new for each request | none |
+| 2 | Creative text, the `context_lengths` values (no default) | 64 (`deep_context_output_tokens`) | 5 per length | new for each request | none |
 | 3 | `"hello world "` repeated, about 128, 512, 2048, 8192, 32768 tokens | 1 | 10 per length | new for each request | 0.5 s between requests |
 | 4 | Creative text, 128 tokens | 512, 1024, 2048 | 1 per `max_tokens` value | none | none |
 | 5 | Two built-in prompts | 1024 | 1 per prompt | none | none |
 | 6 | A distinct prompt of 256 tokens for each request | 256 | 5 per level, at 1, 2, 4, 8, and 16 workers | new for each request, when the server accepts `cache_salt` | none |
-| 7 | Document text, exactly 512, 2048, 8192 tokens | 1 | 1 warm-up, then 5 per length | new for each request | 5 s idle baseline before the step, 0.5 s between requests |
+| 7 | Document text, exactly 512, 2048, 8192 tokens | 1 | 1 warm-up, then 5 per length | new for each request | 5 s idle baseline (`idle_baseline_s`) before the step, 0.5 s between requests |
 | 8 | No timed requests. Estimates at 512, 2048, 8192, 32768 tokens | – | – | – | – |
 | 9 | The task prompts of `datasets/tool_calling_tasks.yaml` (85 tasks) | 4096 | 1 per task | new for each request | 0.5 s between tasks |
 | 10 | As decode (4) | As decode (4) | 1 per length, for each of two servers | none | none |
@@ -67,7 +67,7 @@ The next table gives the default parameters in the code. A model config can chan
 
 #### Idle baseline before prefill scaling
 
-`step_prefill` records `int(5 / monitor_interval_s)` idle samples, one each `monitor_interval_s`. At the default interval, this is 5 samples in about 5 s. The prefill GPU windows use this baseline for `energy_above_idle_wh`. `--skip-prefill` also skips the baseline.
+`step_prefill` records `int(idle_baseline_s / monitor_interval_s)` idle samples, one each `monitor_interval_s`. At the defaults (5 s and 1 s), this is 5 samples in about 5 s. When `monitor_interval_s` is 0 or less, the step stops with a `ValueError`. The prefill GPU windows use this baseline for `energy_above_idle_wh`. `--skip-prefill` also skips the baseline.
 
 #### Errors in a step
 

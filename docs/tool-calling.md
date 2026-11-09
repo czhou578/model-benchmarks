@@ -4,7 +4,7 @@ The tool-calling benchmark sends tasks with tool definitions to the model and sc
 
 ## Run the benchmark
 
-`core_runner.py` runs it in every run, after the FLOP analysis. It has no skip flag. When the benchmark raises an error, the runner prints a warning and continues. `summary.json` then records `tool_calling.status: failed` and the `error`.
+`core_runner.py` runs it after the FLOP analysis. `--skip-tool-calling` skips it. When the benchmark raises an error, the runner prints a warning and continues. `summary.json` then records `tool_calling.status: failed` and the `error`.
 
 To run it alone against a running server:
 

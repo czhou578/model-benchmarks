@@ -1,8 +1,0 @@
-# Runtime dependencies of the benchmark harness.
-# pyproject.toml lists the same packages. This file does not list vLLM.
-# Install vLLM in its own venv, because its build depends on the GPU.
-requests>=2.31
-PyYAML>=6.0
-# core_runner.py uses tiktoken to count reasoning and answer tokens and to
-# size prompts. Without tiktoken, the counts fall back to a word estimate.
-tiktoken>=0.7
