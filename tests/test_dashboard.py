@@ -184,3 +184,10 @@ def test_tool_calling_task_set_comes_from_the_detail_file(tmp_path: Path) -> Non
     assert runs["lite-model"]["tool_calling"]["categories"]["weather_basic"]["total"] == 1
     assert runs["bare-model"]["tool_calling"]["task_set"] == "full"
     assert runs["bare-model"]["tool_calling"]["categories"] is None
+
+
+def test_prefix_caching_flag_reads_the_explicit_flag_only():
+    base = ["vllm", "serve", "m"]
+    assert dashboard.prefix_caching_flag(base + ["--enable-prefix-caching"]) is True
+    assert dashboard.prefix_caching_flag(base + ["--no-enable-prefix-caching"]) is False
+    assert dashboard.prefix_caching_flag(base) is None

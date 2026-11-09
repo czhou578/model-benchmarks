@@ -93,7 +93,7 @@
           var tc = r.tool_calling;
           return { run: r, cells: [
             fmtDate(r.started), r.status || "–", r.env.vllm || "–",
-            r.server.speculative ? "MTP" : "off", r.server.prefix_caching ? "on" : "off",
+            r.server.speculative ? "MTP" : "off", r.server.prefix_caching == null ? "default" : (r.server.prefix_caching ? "on" : "off"),
             r.server.gpu_memory_utilization || "–",
             isNum(decodeMean(r)) ? fmt(decodeMean(r), 1) + " tok/s" : "–",
             fmtMs(at(r.latency, 2048, "ttft_median_ms")),
@@ -209,7 +209,7 @@
     if (pre.length) {
       document.getElementById("callout-text").textContent =
         pre.length + " shown run" + (pre.length > 1 ? "s were" : " was") + " made before the " + fmtDate(B.scoring_fix_date + "T00:00").split(",")[0] +
-        " fix to the cache salt and the tool-calling scorer. Their TTFT, long-context, and tool-calling numbers are not comparable with newer runs. Decode, concurrency, and reasoning numbers are not affected.";
+        " fix to the cache salt and the tool-calling scorer. Only their decode and reasoning numbers are comparable with newer runs. docs/comparability.md gives the details.";
     }
   }
   RENDERERS.push({ order: 10, fn: drawFilters }, { order: 30, fn: drawCallout });

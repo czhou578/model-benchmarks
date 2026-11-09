@@ -50,7 +50,7 @@ VS Code forwards the port and opens the page in your browser. Reload the page af
 - The card numbers: decode speed, TTFT at 2K tokens, peak throughput, tool tasks passed, lowest free memory, and mean GPU power.
 - Charts for decode speed, TTFT, throughput under load, long-context TTFT, thinking tokens, and the MTP speed-up.
 - Charts for tool-calling scores, the tool-calling pass rate by category, and memory headroom.
-- Two tables: "All runs" with the key numbers and server settings, and "Server-side TTFT split".
+- Two tables: "All runs" with the key numbers and server settings, and "Server-side TTFT split". The "Prefix cache" column shows the flag in the server command, or "default" when the command has no flag.
 - A Table toggle on each chart. The toggle shows the chart values as a table.
 - Run filter chips above the charts. Each chip shows or hides one run.
 
