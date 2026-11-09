@@ -45,8 +45,8 @@ All requests use temperature 0, except the concurrency requests, which use `conc
 
 ## Repeats and percentiles
 
-- `_percentile(data, pct)` sorts the values. It interpolates in a straight line between the two nearest ranks, at rank `(n − 1) × pct / 100`.
-- `_stat_summary` uses the same rule for p95. It also gives the mean, the median, the minimum, and the maximum.
+- `percentile(data, pct)` in `harness/stats.py` sorts the values. It interpolates in a straight line between the two nearest ranks, at rank `(n − 1) × pct / 100`.
+- `stat_summary` calls `percentile` for p95. It also gives the mean, the median, the minimum, and the maximum.
 - With 10 requests, p95 lies between the 9th and the 10th sorted value, and p99 is near the maximum. With 5 requests, p95 lies between the 4th and the 5th value.
 - The runner takes one sample set per setting in each run. It does not repeat a whole run, and it reports no confidence intervals.
 

@@ -43,7 +43,7 @@ The docstring of core_runner.py mentions `register_benchmark()`. The code does n
 - Name the output file `<name>.json`, in lowercase with underscores. Use the same `<name>` as the `summary.json` key.
 - Return a dict. Put the parameters, `benchmark_version`, `start_time`, and `end_time` in a `config` block, as `ttft_breakdown.py` and `prefill.py` do.
 - Key a per-length map by the length as a string, for example `"2048"`. The dashboard sorts these keys as integers (`by_int_key`).
-- Use `_stat_summary(values, suffix)` from core_runner.py for avg, median, p95, min, and max. Set `suffix` to the unit of the values, for example `"s"` or `"ms"`.
+- Use `stat_summary(values, suffix)` from `harness/stats.py` for avg, median, p95, min, and max. Set `suffix` to the unit of the values, for example `"s"` or `"ms"`.
 - Send `cache_salt=uuid.uuid4().hex` to `client.generate` when each request must miss the prefix cache.
 - Put a short summary in `summary.json` when the full result is large. `prefill_scaling` and `tool_calling` do this.
 - For GPU data per step, call `gpu_monitor.start_window(name)` and `gpu_monitor.stop_window(name)`. The second call returns the window summary.

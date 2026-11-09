@@ -20,9 +20,11 @@ from typing import Any
 
 import requests
 
-import core_runner
 from benchmarks.prefill import PromptTokenizer, calibrate_prompt
-from core_runner import ModelClient, _stat_summary, count_tokens
+from core_runner import ModelClient
+from harness import prompts
+from harness.prompts import count_tokens
+from harness.stats import stat_summary
 
 PROMPT_TOKENS = 256
 
@@ -86,7 +88,7 @@ def build_source_text(prompt_index: int, min_chars: int) -> str:
 
 def _truncate_client(text: str, target_tokens: int) -> str:
     """Cut *text* to *target_tokens* tokens of the client count (``count_tokens``)."""
-    enc = core_runner._ENC
+    enc = prompts._ENC
     if enc is not None:
         return enc.decode(enc.encode(text)[:target_tokens])
     # Without tiktoken, count_tokens estimates from the word count.
@@ -239,8 +241,8 @@ def run_concurrency_test(
             "n_success": len(successes),
             "n_failed": len(failures),
             "success_rate": round(len(successes) / len(request_results), 3) if request_results else 0.0,
-            "ttft": _stat_summary(ttfts),
-            "total_time_s": _stat_summary(latencies),
+            "ttft": stat_summary(ttfts),
+            "total_time_s": stat_summary(latencies),
             "individual_requests": [
                 {
                     "index": r["index"],

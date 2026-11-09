@@ -14,7 +14,8 @@ from typing import Any, Protocol
 
 import requests
 
-from core_runner import ModelClient, _stat_summary
+from core_runner import ModelClient
+from harness.stats import stat_summary
 
 
 class TokenCount(Protocol):
@@ -461,9 +462,9 @@ def run_prefill_scaling(
                 for r in length_results
             ],
             "aggregated": {
-                "ttft": _stat_summary(ttfts),
-                "effective_prefill_tps": _stat_summary(tps) if tps else _empty_stats(),
-                "engine_prefill_tps": _stat_summary(engine_tps) if engine_tps else _empty_stats(),
+                "ttft": stat_summary(ttfts),
+                "effective_prefill_tps": stat_summary(tps) if tps else _empty_stats(),
+                "engine_prefill_tps": stat_summary(engine_tps) if engine_tps else _empty_stats(),
                 "gpu": gpu_summary if gpu_summary else {},
             },
         }

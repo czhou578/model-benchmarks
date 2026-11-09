@@ -23,7 +23,8 @@ import uuid
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from typing import Any
-from core_runner import ModelClient, GpuMonitor, _stat_summary
+from core_runner import ModelClient, GpuMonitor
+from harness.stats import stat_summary
 
 
 # --------------------------------------------------------------------------- #
@@ -243,11 +244,11 @@ def run_ttft_breakdown(
             "n_failed": n_failed,
             "per_request": per_request_serialized,
             "aggregated": {
-                "ttft": _stat_summary(ttfts, suffix="ms"),
-                "scheduler_delay": _stat_summary(sched_delays, suffix="ms"),
-                "post_queue": _stat_summary(post_queues, suffix="ms"),
-                "prefill_time": _stat_summary(prefills, suffix="ms"),
-                "first_decode": _stat_summary(first_decs, suffix="ms"),
+                "ttft": stat_summary(ttfts, suffix="ms"),
+                "scheduler_delay": stat_summary(sched_delays, suffix="ms"),
+                "post_queue": stat_summary(post_queues, suffix="ms"),
+                "prefill_time": stat_summary(prefills, suffix="ms"),
+                "first_decode": stat_summary(first_decs, suffix="ms"),
                 "gpu": gpu_summary or {},
             },
         }

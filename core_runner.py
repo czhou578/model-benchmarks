@@ -53,87 +53,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+from harness.paths import ROOT, repo_relative
+from harness.prompts import build_prompt_of_length, count_tokens
+from harness.stats import percentile
 from vllm_server import VllmServer
-
-ROOT = Path(__file__).resolve().parent
-
-
-def repo_relative(path: Path) -> str:
-    """Return the path relative to the repo root when the path is inside it.
-
-    The results JSON then holds no absolute home directory paths.
-    """
-    try:
-        return str(path.resolve().relative_to(ROOT))
-    except ValueError:
-        return str(path)
-
-
-try:
-    import tiktoken
-except ImportError:
-    _ENC = None
-else:
-    _ENC = tiktoken.get_encoding("cl100k_base")
-
-
-# --------------------------------------------------------------------------- #
-# Token counting helper (used only as a fallback when the server doesn't
-# return usage.prompt_tokens / usage.completion_tokens)
-# --------------------------------------------------------------------------- #
-
-def count_tokens(text: str) -> int:
-    if _ENC is not None:
-        return len(_ENC.encode(text))
-    return max(1, int(len(text.split()) * 0.75))
-
-
-def build_prompt_of_length(target_tokens: int) -> str:
-    """Build a substantive, non-repetitive prompt that forces creative generation.
-
-    The old approach (repeat a pangram) caused the model to comment on the
-    repetitive structure rather than generating independent content, hitting
-    a ~500-token wall of meta-commentary before EOS killed the stream.
-    """
-    # A single rich prompt — long enough to cover most test cases.
-    # When target is larger, pad with additional creative-direction blocks
-    # that are distinct enough to prevent repetition loops.
-    blocks = [
-        "You are a creative writer. Write a detailed, multi-paragraph story about "
-        "the discovery of an ancient underwater civilization. Describe the ocean "
-        "environment, the architecture of their cities, their technology, their "
-        "beliefs and customs, and what happened to them.",
-
-        "Now add more details about this civilization. Describe how they interacted "
-        "with marine life, their conflicts with surface dwellers, and their "
-        "relationship with deep sea creatures. Be creative and specific.",
-
-        "Continue with more details about this civilization. Describe their "
-        "underground cities, their trade routes through the ocean trenches, "
-        "and how they communicated across vast distances using bioluminescent "
-        "signals and whale songs.",
-
-        "Describe the eventual fall of this civilization. What natural disasters "
-        "or environmental changes led to their decline? How did their final "
-        "generations respond? What artifacts or evidence survived for modern "
-        "archaeologists to find?",
-
-        "Finally, describe the modern scientists who first encountered these "
-        "artifacts. What puzzles remain unsolved? What mysteries does this "
-        "civilization still hold? End with a reflective note about what their "
-        "existence means for our understanding of human history.",
-    ]
-
-    text = blocks[0]
-    idx = 1
-    while count_tokens(text) < target_tokens:
-        text += " " + blocks[idx % len(blocks)]
-        idx += 1
-
-    if _ENC is not None:
-        ids = _ENC.encode(text)[:target_tokens]
-        text = _ENC.decode(ids)
-    return text
 
 
 # --------------------------------------------------------------------------- #
@@ -895,7 +818,7 @@ def run_deep_context(client: ModelClient, context_lengths: list[int],
             "n": len(ttfts),
             "ttft_avg_s": round(statistics.mean(ttfts), 4) if ttfts else None,
             "ttft_median_s": round(statistics.median(ttfts), 4) if ttfts else None,
-            "ttft_p95_s": round(_percentile(ttfts, 95), 4) if ttfts else None,
+            "ttft_p95_s": round(percentile(ttfts, 95), 4) if ttfts else None,
             "prefill_tps_avg": round(statistics.mean(prefill_tps), 1) if prefill_tps else None,
             "status": status,
         }
@@ -934,45 +857,11 @@ def run_latency_sweep(client: ModelClient, prompt_lengths: list[int],
             "n": len(ttfts),
             "ttft_avg_s": round(statistics.mean(ttfts), 4) if ttfts else None,
             "ttft_median_s": round(statistics.median(ttfts), 4) if ttfts else None,
-            "ttft_p95_s": round(_percentile(ttfts, 95), 4) if ttfts else None,
-            "ttft_p99_s": round(_percentile(ttfts, 99), 4) if ttfts else None,
+            "ttft_p95_s": round(percentile(ttfts, 95), 4) if ttfts else None,
+            "ttft_p99_s": round(percentile(ttfts, 99), 4) if ttfts else None,
             "prefill_tps_avg": round(statistics.mean(prefill_tps), 1) if prefill_tps else None,
         }
     return results
-
-
-def _percentile(data: list[float], pct: float) -> float:
-    if not data:
-        return float("nan")
-    s = sorted(data)
-    k = (len(s) - 1) * (pct / 100.0)
-    f, c = int(k), min(int(k) + 1, len(s) - 1)
-    if f == c:
-        return s[f]
-    return s[f] + (s[c] - s[f]) * (k - f)
-
-
-def _stat_summary(values: list[float], suffix: str = "s") -> dict[str, float | None]:
-    """Compute avg / median / p95 / min / max for a list of floats."""
-    if not values:
-        return {
-            f"avg_{suffix}": None,
-            f"median_{suffix}": None,
-            f"p95_{suffix}": None,
-            f"min_{suffix}": None,
-            f"max_{suffix}": None,
-        }
-    s = sorted(values)
-    k = (len(s) - 1) * 0.95
-    f, c = int(k), min(int(k) + 1, len(s) - 1)
-    p95 = s[f] + (s[c] - s[f]) * (k - f) if f != c else s[f]
-    return {
-        f"avg_{suffix}": round(statistics.mean(values), 4),
-        f"median_{suffix}": round(statistics.median(values), 4),
-        f"p95_{suffix}": round(p95, 4),
-        f"min_{suffix}": round(min(values), 4),
-        f"max_{suffix}": round(max(values), 4),
-    }
 
 
 # --------------------------------------------------------------------------- #
