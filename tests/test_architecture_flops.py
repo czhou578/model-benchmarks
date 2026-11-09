@@ -35,10 +35,37 @@ def test_qwen36_35b_matches_the_july_run():
 
     assert result["estimate_status"] == golden["estimate_status"] == "exact_from_config"
     assert result["flops"]["decode"] == golden["flops"]["decode"]
-    assert result["flops"]["prefill"] == golden["flops"]["prefill"]
     for key in ("layer_counts", "ffn", "token_mixers", "is_hybrid"):
         assert result["architecture"][key] == golden["architecture"][key]
     assert result["architecture"]["model"] == "qwen3_5_moe"
+
+
+# The July runs multiplied these prefill terms by the prompt length two times.
+_MIXER_TERMS = (
+    "attention_qkv_projection_flops", "attention_output_projection_flops",
+    "attention_query_gate_projection_flops", "attention_score_flops",
+    "linear_projection_flops", "short_conv_flops", "linear_output_projection_flops",
+    "recurrent_state_flops",
+)
+
+
+def test_qwen36_35b_prefill_counts_the_length_once():
+    golden = json.loads(GOLDEN_35B.read_text())["flops"]["prefill"]
+    result = _analyze(CONFIG_35B)["flops"]["prefill"]
+
+    for length in LENGTHS:
+        old, new = golden[str(length)], result[str(length)]
+        for name in ("moe_routed", "moe_shared", "moe_router", "moe_shared_gate", "lm_head_flops"):
+            assert new[name] == old[name], name
+        for name in _MIXER_TERMS:
+            assert new[name] == pytest.approx(old[name] / length, rel=1e-12), name
+        for name, value in old["non_matmul_breakdown"].items():
+            scale = 1 if name.startswith("moe_") else length
+            assert new["non_matmul_breakdown"][name] == pytest.approx(value / scale, rel=1e-12)
+    # A prefill costs about S decode steps without their lm_head (one logits token).
+    decode = json.loads(GOLDEN_35B.read_text())["flops"]["decode"]["512"]
+    per_token = decode["total"] - decode["lm_head_flops"]
+    assert result["512"]["total"] == pytest.approx(512 * per_token, rel=0.05)
 
 
 def test_qwen38_27b_decode_by_hand():
@@ -73,10 +100,17 @@ def test_qwen38_27b_decode_by_hand():
     assert decode["matmul_flops"] == sum(expected.values()) == 51_600_162_816
 
 
-def test_qwen38_27b_prefill_dense_ffn_scales_with_length():
-    prefill = _analyze(CONFIG_27B, [2048])["flops"]["prefill"]["2048"]
-    assert prefill["dense_ffn"] == 2048 * 64 * 3 * 2 * 5120 * 17408
-    assert prefill["lm_head_flops"] == 2 * 5120 * 248320
+def test_qwen38_27b_prefill_by_hand():
+    S, d = 2048, 5120
+    prefill = _analyze(CONFIG_27B, [S])["flops"]["prefill"][str(S)]
+    assert prefill["dense_ffn"] == S * 64 * 3 * 2 * d * 17408
+    assert prefill["lm_head_flops"] == 2 * d * 248320
+    # 16 full-attention layers, each over all S tokens.
+    assert prefill["attention_qkv_projection_flops"] == 16 * S * 2 * d * (6144 + 2 * 1024)
+    assert prefill["attention_score_flops"] == 16 * 2 * 24 * 256 * S * (S + 1)
+    # 48 linear-attention layers, each over all S tokens.
+    assert prefill["linear_projection_flops"] == 48 * S * 2 * d * (10240 + 6144 + 96)
+    assert prefill["linear_output_projection_flops"] == 48 * S * 2 * 6144 * d
 
 
 def _fake_transformers(monkeypatch, calls: list[dict]) -> None:

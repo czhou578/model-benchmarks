@@ -153,6 +153,7 @@ The estimator reads all dimensions from the config. It supports full attention, 
 - `architecture.model` is the text `model_type` without the `_text` suffix, for example `qwen3_5_moe` (Qwen3.6-35B-A3B) or `qwen3_5` (Qwen3.8-27B).
 - The dense FFN has 3 matrices (gate, up, down) for a gated model, else 2. Its key is `dense_ffn`.
 - Old runs labeled every `qwen3_5*` model `qwen3.5-35b-a3b`. They accepted only the Qwen3.6-35B-A3B dimensions, so Qwen3.8-27B got `unsupported`.
+- Old runs counted the attention and linear-attention prefill terms one time per prompt token, but each term already covers all prompt tokens. So their prefill values were too high by a factor of the prompt length. Their MoE, lm_head, and decode values are correct.
 - Old runs also tried the server `/v1/models` response as a third source. vLLM sends no config there, so that source never worked. Old runs passed `trust_remote_code=True` without an opt-in.
 
 ## Limits

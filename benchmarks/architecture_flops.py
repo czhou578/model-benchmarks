@@ -1152,19 +1152,22 @@ class ModelFlopsEstimator:
         if S <= 0:
             raise ValueError("sequence length must be positive")
 
+        # The FFN result covers one token. The attention and linear-attention
+        # prefill results already cover all S tokens of one layer, so they
+        # scale by the layer count only.
         components: list[dict[str, Any]] = [self._ffn_component(S)]
         if self._full_attn:
             components.append({
                 "result": self._full_attn.prefill_flops(S),
-                "matmul_m": S * self.full_attention_layers,
-                "non_matmul_m": S * self.full_attention_layers,
+                "matmul_m": self.full_attention_layers,
+                "non_matmul_m": self.full_attention_layers,
             })
         if self._delta:
             delta_result = self._delta.prefill_flops(S)
             components.append({
                 "result": delta_result,
-                "matmul_m": S * self.linear_attention_layers,
-                "non_matmul_m": S * self.linear_attention_layers,
+                "matmul_m": self.linear_attention_layers,
+                "non_matmul_m": self.linear_attention_layers,
             })
         components.append({
             "result": self._lm.prefill_flops(logits_tokens=logits_tokens),
