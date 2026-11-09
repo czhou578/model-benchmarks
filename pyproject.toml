@@ -34,4 +34,3 @@ ignore = ["E501"]
 # Known findings. Each one needs a code change outside the packaging work.
 [tool.ruff.lint.per-file-ignores]
 "benchmarks/architecture_flops.py" = ["E741"]  # `l` is the layer count.
-"benchmarks/ttft_breakdown.py" = ["F811"]  # The error() classmethod shadows the error field.

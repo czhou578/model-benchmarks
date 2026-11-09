@@ -2,7 +2,7 @@
 
 The approximate tokenizer in harness/prompts.py is useful for fallback accounting, but
 benchmark lengths must use the tokenizer and chat template of the running model.
-concurrency.py also uses calibrate_prompt.
+concurrency.py also uses calibrate_prompt. ttft_breakdown.py uses prepare_exact_prompt.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from __future__ import annotations
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Protocol
 
 import requests
@@ -282,14 +282,15 @@ def run_prefill_scaling(
     target_lengths: list[int] | None = None,
     repetitions: int = 5,
     gpu_monitor=None,
+    prefix_caching: bool | None = None,
 ) -> dict[str, Any]:
     """Measure cold-prefill throughput across a range of prompt lengths.
 
     Each request uses ``max_tokens=1`` to minimize decode contamination.
     Each measured request carries a new ``cache_salt``, so it misses the
     prefix cache. The warm-up request of a length uses ``warmup_<length>``.
-    The GPU window of a length opens before the prompt calibration, so the
-    window energy includes the ``/tokenize`` requests of the calibration.
+    The GPU window of a length opens after the prompt calibration, so the
+    window energy does not include the ``/tokenize`` requests.
 
     Args:
         client: ModelClient connected to a running vLLM endpoint.
@@ -298,6 +299,8 @@ def run_prefill_scaling(
             ``prefill_target_lengths`` (default 512, 2K, and 8K).
         repetitions: Measured requests per length, after one warm-up request.
         gpu_monitor: Optional ``GpuMonitor`` for per-length GPU telemetry.
+        prefix_caching: The prefix-caching flag of the server command, or
+            None when the caller does not know it.
 
     Returns:
         Dict with ``config`` metadata and per-length ``per_length`` results.
@@ -321,8 +324,8 @@ def run_prefill_scaling(
             "temperature": 0.0,
             "max_output_tokens": 1,
             "prompt_workload": "document-like passages with field-record headers (deterministic)",
-            "server_cache_settings": {"prefix_caching": True, "cache_salt_enabled": is_header},
-            "start_time": datetime.utcnow().isoformat() + "Z",
+            "server_cache_settings": {"prefix_caching": prefix_caching, "cache_salt_enabled": is_header},
+            "start_time": datetime.now(timezone.utc).isoformat(),
         },
         "per_length": {},
     }
@@ -335,11 +338,7 @@ def run_prefill_scaling(
             results["per_length"][length_key] = {"status": "skipped_after_oom"}
             continue
 
-        # Start GPU telemetry window for this length
-        if gpu_monitor is not None:
-            gpu_monitor.start_window(f"length_{length_key}")
-
-        # Calibrate prompt to exact length
+        # Calibrate prompt to exact length, before the GPU window opens.
         try:
             calibrated = prepare_exact_prompt(client, length)
         except Exception as exc:
@@ -348,6 +347,10 @@ def run_prefill_scaling(
                 "error": str(exc),
             }
             continue
+
+        # Start GPU telemetry window for this length
+        if gpu_monitor is not None:
+            gpu_monitor.start_window(f"length_{length_key}")
 
         # Warmup
         warmup_salt = f"warmup_{length}"
@@ -475,5 +478,5 @@ def run_prefill_scaling(
             },
         }
 
-    results["config"]["end_time"] = datetime.utcnow().isoformat() + "Z"
+    results["config"]["end_time"] = datetime.now(timezone.utc).isoformat()
     return results

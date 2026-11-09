@@ -13,6 +13,9 @@ time, so the post-queue time covers prefill plus the first decode step. The
 ``prefill_ms`` and ``first_decode_ms`` fields stay None until a server
 reports a prefill time.
 
+The prompt of each length comes from ``prepare_exact_prompt`` (prefill.py).
+It has exactly the requested number of server tokens, chat template included.
+
 Output file: ttft_breakdown.json
 """
 
@@ -23,6 +26,7 @@ import uuid
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from typing import Any
+from benchmarks.prefill import prepare_exact_prompt
 from harness.client import ModelClient
 from harness.stats import stat_summary
 from harness.telemetry import GpuMonitor
@@ -58,7 +62,7 @@ class TtftRequestResult:
     error: str = ""
 
     @classmethod
-    def error(cls, *, index: int, exc: BaseException) -> TtftRequestResult:
+    def failed(cls, *, index: int, exc: BaseException) -> TtftRequestResult:
         """Return a failed request result."""
         return cls(
             index=index,
@@ -113,16 +117,6 @@ def run_ttft_breakdown(
     # Detect cache isolation
     is_header = client.preflight_cache_salt()
 
-    # Build a simple text-based prompt for each length.
-    # We use a simple repetition so the prompt is guaranteed to be at least
-    # the target token count.  The prefill.py module uses a proper tokenizer
-    # to hit exact lengths — that would be a future enhancement.
-    prompts: dict[str, str] = {}
-    for length in prompt_lengths:
-        # "hello world" ≈ 2 tokens; pad to reach target
-        words = "hello world " * max(1, length // 2)
-        prompts[str(length)] = words
-
     # Struct result
     result: dict[str, Any] = {
         "config": {
@@ -134,6 +128,7 @@ def run_ttft_breakdown(
             "cache_isolation_method": "cache_salt" if is_header else "text_salt",
             "max_tokens": 1,
             "temperature": 0.0,
+            "prompt_workload": "document-like passages calibrated with the server /tokenize endpoint",
             "start_time": datetime.now(timezone.utc).isoformat(),
         },
         "per_length": {},
@@ -147,11 +142,21 @@ def run_ttft_breakdown(
             result["per_length"][length_key] = {"status": "skipped_after_oom"}
             continue
 
+        # Calibrate the prompt before the GPU window opens, so the window
+        # does not include the /tokenize requests.
+        try:
+            calibrated = prepare_exact_prompt(client, length)
+        except Exception as exc:
+            result["per_length"][length_key] = {
+                "status": "request_error",
+                "error": str(exc),
+            }
+            continue
+        prompt_text = calibrated.text
+
         # GPU telemetry window for this length
         if gpu_monitor is not None:
             gpu_monitor.start_window(f"ttft_length_{length_key}")
-
-        prompt_text = prompts.get(length_key, "x " * length)
 
         length_results: list[TtftRequestResult] = []
         length_status = "success"
@@ -168,7 +173,7 @@ def run_ttft_breakdown(
                     length_status = "oom"
                     stopped = True
 
-                length_results.append(TtftRequestResult.error(
+                length_results.append(TtftRequestResult.failed(
                     index=req_idx, exc=exc,
                 ))
                 continue
@@ -233,13 +238,11 @@ def run_ttft_breakdown(
         # Serialize per-request data for JSON output
         per_request_serialized = [asdict(r) for r in length_results]
 
-        # Use first success's prompt_tokens as actual_tokens
-        actual_tokens = successes[0].prompt_tokens if successes else length
-
         result["per_length"][length_key] = {
             "status": length_status,
             "requested_tokens": length,
-            "actual_tokens": actual_tokens,
+            "actual_tokens": calibrated.actual_tokens,
+            "prompt_length_tolerance": length - calibrated.actual_tokens,
             "n_requests": len(length_results),
             "n_success": n_success,
             "n_failed": n_failed,

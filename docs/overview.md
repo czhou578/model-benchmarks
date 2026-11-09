@@ -53,7 +53,7 @@ The next table gives the default parameters in the code. A model config can chan
 |---|---|---|---|---|---|
 | 1 | Creative text, 32, 128, 512, 2048, 8192, 16384 tokens | 8 | 10 per length | new for each request | none |
 | 2 | Creative text, the `context_lengths` values (no default) | 64 (`deep_context_output_tokens`) | 5 per length | new for each request | none |
-| 3 | `"hello world "` repeated, about 128, 512, 2048, 8192, 32768 tokens | 1 | 10 per length | new for each request | 0.5 s between requests |
+| 3 | Document text, exactly 128, 512, 2048, 8192, 32768 tokens | 1 | 10 per length | new for each request | 0.5 s between requests |
 | 4 | Creative text, 128 tokens | 512, 1024, 2048 | 1 per `max_tokens` value | new for each request | none |
 | 5 | Two built-in prompts | 4096 | 1 per prompt | new for each request | none |
 | 6 | A distinct prompt of 256 tokens for each request | 256 | 5 per level, at 1, 2, 4, 8, and 16 workers | new for each request, when the server accepts `cache_salt` | none |
