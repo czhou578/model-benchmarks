@@ -118,6 +118,24 @@ Test system of the published runs, from `environment.json` in the run dirs:
 | PyTorch | 2.11.0+cu130 |
 | vLLM | 0.25.1 |
 
+## Code layout
+
+| Path | Role |
+|---|---|
+| `core_runner.py` | The command line, the run state, and the step order of one run. Start here. |
+| `benchmarks/` | One module per benchmark: `latency.py` (latency sweep and deep context), `ttft_breakdown.py`, `decode.py` (decode and the spec comparison), `reasoning.py`, `concurrency.py`, `prefill.py`, `architecture_flops.py`, `tool_calling.py`. |
+| `harness/` | Shared code: `client.py` (HTTP client and stream reader), `prompts.py`, `stats.py`, `telemetry.py` (GPU monitor and energy), `environment.py`, `paths.py`. |
+| `vllm_server.py` | Starts and stops a managed vLLM server. |
+| `memory_guard.py` | Runs a command and stops it when the free memory falls below a floor. |
+| `batch_run.py` | Runs each model config in `models/`, one at a time. |
+| `dashboard.py`, `serve_dashboard.py`, `reports/dashboard/` | Build and serve the HTML dashboard. |
+| `models/` | Model configs. `models/legacy/` holds the July 2026 configs. |
+| `datasets/tool_calling_tasks.yaml` | The 85 tool-calling tasks. |
+| `results/` | The published run dirs. |
+| `tests/` | Unit tests. They need no GPU and no server. |
+
+The modules in `benchmarks/` import only from `harness/`. `core_runner.py` imports from both. [docs/adding-a-benchmark.md](docs/adding-a-benchmark.md) tells how to add a benchmark.
+
 ## Documentation
 
 - [docs/model-config.md](docs/model-config.md): the keys of a model config.
