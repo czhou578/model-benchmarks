@@ -1,6 +1,6 @@
 # Model config reference
 
-A model config is a YAML file in `models/`. It tells `core_runner.py` how to reach the model server. It also sets the parameters of each benchmark.
+A model config is a YAML file in `models/`. It tells `core_runner.py` how to reach the model server. It also sets the parameters of each benchmark. The folder `models/legacy/` holds the configs of the July 2026 runs. [models/legacy/README.md](../models/legacy/README.md) gives their status.
 
 Run one model config:
 

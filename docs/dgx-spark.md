@@ -34,7 +34,7 @@ The published runs use vLLM 0.25.1 in `~/venvs/vllm025`. A gate run of the Qwen3
 
 vLLM 0.33.0 turns on prefix caching by default, also for hybrid models. In the vLLM 0.25.1 runs, the Qwen3.8-27B server had prefix caching off. A model config without a prefix caching flag can thus change its behaviour on 0.33.0.
 
-Add `--no-enable-prefix-caching` to `server.command` to keep prefix caching off. The Qwen3.8-27B config and the two `no_spec` Qwen3.6 configs have this flag. The other Qwen3.6 configs set `--enable-prefix-caching`.
+Add `--no-enable-prefix-caching` to `server.command` to keep prefix caching off. The Qwen3.8-27B config has this flag. In `models/legacy/`, the two `no_spec` Qwen3.6 configs have this flag, and the other three Qwen3.6 configs set `--enable-prefix-caching`.
 
 ## Environment variables
 

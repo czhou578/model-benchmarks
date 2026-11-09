@@ -1382,7 +1382,7 @@ if __name__ == "__main__":
     from core_runner import load_model_config as _load_model_config
 
     cfg_path = (
-        Path(sys.argv[1]) if len(sys.argv) > 1 else Path("models/qwen3.6_35b_redhat_nvfp4.yml")
+        Path(sys.argv[1]) if len(sys.argv) > 1 else Path("models/legacy/qwen3.6_35b_redhat_nvfp4.yml")
     )
     cfg = _load_model_config(cfg_path)
     result = run_flops_analysis(cfg)

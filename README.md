@@ -54,7 +54,7 @@ python3 dashboard.py                                         # write reports/das
 
 Open `reports/dashboard.html` in a browser. To see new runs on each reload, run `python3 serve_dashboard.py` and open http://127.0.0.1:8080/dashboard.html.
 
-`python3 batch_run.py` runs every model config in `models/` in sequence. A full batch takes hours. See [docs/model-config.md](docs/model-config.md) for all model config keys.
+`python3 batch_run.py` runs every model config in `models/` in sequence. It skips the July 2026 configs in [models/legacy/](models/legacy/README.md). A full batch takes hours. See [docs/model-config.md](docs/model-config.md) for all model config keys.
 
 ## External mode
 
