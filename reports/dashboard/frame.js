@@ -87,12 +87,12 @@
     draw: function (plot, runs) {
       return {
         ok: true, runs: runs,
-        cols: ["Run", "Started", "Status", "vLLM", "Spec", "Prefix cache", "GPU mem", "Decode", "TTFT 2K", "Peak tok/s", "Tool score", "Power avg", "Run energy", "Min free mem"],
+        cols: ["Run", "Started", "Era", "Status", "vLLM", "Spec", "Prefix cache", "GPU mem", "Decode", "TTFT 2K", "Peak tok/s", "Tool score", "Power avg", "Run energy", "Min free mem"],
         rows: runs.map(function (r) {
           var best = bestConcurrency(r);
           var tc = r.tool_calling;
           return { run: r, cells: [
-            fmtDate(r.started), r.status || "–", r.env.vllm || "–",
+            fmtDate(r.started), r.era || "–", r.status || "–", r.env.vllm || "–",
             r.server.speculative ? "MTP" : "off", r.server.prefix_caching == null ? "default" : (r.server.prefix_caching ? "on" : "off"),
             r.server.gpu_memory_utilization || "–",
             isNum(decodeMean(r)) ? fmt(decodeMean(r), 1) + " tok/s" : "–",
@@ -208,7 +208,7 @@
     box.hidden = !pre.length;
     if (pre.length) {
       document.getElementById("callout-text").textContent =
-        pre.length + " shown run" + (pre.length > 1 ? "s were" : " was") + " made before the " + fmtDate(B.scoring_fix_date + "T00:00").split(",")[0] +
+        pre.length + " shown run" + (pre.length > 1 ? "s are" : " is") + " from era E0, before the " + fmtDate(B.scoring_fix_date + "T00:00").split(",")[0] +
         " fix to the cache salt and the tool-calling scorer. Only their decode and reasoning numbers are comparable with newer runs. docs/comparability.md gives the details.";
     }
   }

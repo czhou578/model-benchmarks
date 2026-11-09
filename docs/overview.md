@@ -116,7 +116,7 @@ The published run dirs do not hold `*.log` files or `gpu_samples.csv`. `.gitigno
 
 ### The dashboard
 
-`dashboard.py` reads every `results/*/*/summary.json` and writes `reports/dashboard.html`. It also reads `environment.json`, `resolved_server.json`, `tool_calling.json`, `memory_samples.csv`, and `memory_guard.json`. [dashboard.md](dashboard.md) tells how to build and read the page.
+`dashboard.py` reads every `results/*/*/summary.json` and writes `reports/dashboard.html`. It also reads `environment.json`, `resolved_server.json`, `tool_calling.json`, `provenance.json`, `memory_samples.csv`, and `memory_guard.json`. [dashboard.md](dashboard.md) tells how to build and read the page.
 
 ## Cache isolation
 

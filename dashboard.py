@@ -48,7 +48,8 @@ JS_MODULES = [
 
 # PR #42 and PR #44 (merged 2026-11-07) fixed the cache-salt placement and
 # the tool-calling scorer. Latency, deep-context, and tool-calling numbers
-# from earlier runs are not comparable with later runs.
+# from earlier runs (era E0) are not comparable with later runs. The date is
+# the last fallback of run_era(), for a run dir without a schema version.
 SCORING_FIX_DATE = datetime(2026, 11, 7)
 MAX_MEMORY_POINTS = 500
 
@@ -316,6 +317,22 @@ def memory_info(run_dir: Path) -> dict[str, Any] | None:
     }
 
 
+def run_era(summary: dict[str, Any], run_dir: Path,
+            started: datetime) -> tuple[int | None, str]:
+    """Return the schema version of a run (N for era EN) and its source.
+
+    The sources in order: ``harness.schema_version`` in summary.json (E3 and
+    later), ``schema_version`` in provenance.json (published E0 to E2 runs),
+    else the run dir date: before SCORING_FIX_DATE gives 0, after it None.
+    """
+    for source, record in (("summary", summary.get("harness")),
+                           ("provenance", load_json(run_dir / "provenance.json"))):
+        version = record.get("schema_version") if isinstance(record, dict) else None
+        if isinstance(version, int) and not isinstance(version, bool):
+            return version, source
+    return (0 if started < SCORING_FIX_DATE else None), "date"
+
+
 def collect_run(run_dir: Path) -> dict[str, Any] | None:
     summary = load_json(run_dir / "summary.json")
     if not isinstance(summary, dict):
@@ -326,18 +343,25 @@ def collect_run(run_dir: Path) -> dict[str, Any] | None:
         return None
     env = load_json(run_dir / "environment.json") or {}
     gpu = summary.get("gpu") or {}
+    schema_version, era_source = run_era(summary, run_dir, started)
+    # The server version wins: the local import can differ from the server.
+    vllm = env.get("vllm_server_version") or env.get("vllm_version")
     return {
         "id": f"{run_dir.parent.name}/{run_dir.name}",
         "model": summary.get("model") or run_dir.parent.name,
+        "run_label": summary.get("run_label"),
         "run_dir": str(run_dir.relative_to(ROOT)) if run_dir.is_relative_to(ROOT) else str(run_dir),
         "started": started.isoformat(timespec="minutes"),
         "status": summary.get("status"),
         "error": summary.get("error"),
-        "pre_fix": started < SCORING_FIX_DATE,
+        "schema_version": schema_version,
+        "era": None if schema_version is None else f"E{schema_version}",
+        "era_source": era_source,
+        "pre_fix": schema_version == 0,
         "env": {
             "gpu": env.get("gpu_name"),
-            "vllm": env.get("vllm_version"),
-            "vllm_key": version_key(env.get("vllm_version")),
+            "vllm": vllm,
+            "vllm_key": version_key(vllm),
             "torch": env.get("torch_version"),
             "driver": env.get("driver_version"),
         },

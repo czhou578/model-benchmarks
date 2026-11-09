@@ -1,0 +1,6 @@
+{
+  "schema_version": 0,
+  "era": "E0",
+  "note": "July 2026 harness: cache_salt ignored by vLLM, old tool-calling scorer, shared concurrency prompt, old energy method.",
+  "added": "2026-11-10"
+}

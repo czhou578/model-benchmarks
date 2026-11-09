@@ -66,13 +66,21 @@ The PR merge times are in PST.
 
 ## How the dashboard marks the eras
 
+`run_era()` in `dashboard.py` finds the era of each run. It reads the schema version from these sources, in this order:
+
+1. `harness.schema_version` in `summary.json`. E3 and later runs have it.
+2. `schema_version` in `provenance.json`. Each published E0 to E2 run dir has this file.
+3. The run dir name. A name before 2026-11-07 (`SCORING_FIX_DATE`) gives E0. A later name gives no era.
+
+Schema version N is era EN. The run card shows the era as a badge, for example "Era E2". The "All runs" table has an "Era" column.
+
 `dashboard.py` and `reports/dashboard/runs.js` give a run card these badges:
 
 | Badge | Rule in the code | Boundary |
 |---|---|---|
-| Pre-fix scoring | The run dir name is before 2026-11-07 (`SCORING_FIX_DATE`). | E0 and E1 |
+| Pre-fix scoring | The era is E0. | E0 and E1 |
 | Shared concurrency prompt | `concurrency.json` has no `prompt_mode`. | E1 and E2 |
-| Older vLLM | `vllm_version` is older than the newest vLLM of the shown runs. | E1 and E2 |
+| Older vLLM | The vLLM version is older than the newest vLLM of the shown runs. The page uses `vllm_server_version`, else `vllm_version`. | E1 and E2 |
 
 The dashboard also corrects two old values:
 
@@ -81,9 +89,10 @@ The dashboard also corrects two old values:
 
 Known limits:
 
-- "Pre-fix scoring" uses a date, not a schema version. A run from an old checkout after that date gets no badge.
+- An unpublished run from before E3 has no schema version and no `provenance.json`. The page uses the date rule for it. Such a run after 2026-11-07 shows no era, and a run from an old checkout gets no "Pre-fix scoring" badge. To fix this, add a `provenance.json` to its run dir.
+- The runner writes `SCHEMA_VERSION` from `harness/provenance.py`. A new era needs a new number there. Otherwise the new runs show the old era.
 - "Older vLLM" compares only the shown runs. When you hide the newer run, the badge goes away.
-- No badge marks the E2 and E3 boundary or the old whole-run energy. "Run energy" in the "All runs" table is about 6% low for E0 and E1.
+- The era badge is plain. Only "Pre-fix scoring" marks an era as a warning. No warning badge marks the E1 and E2 or E2 and E3 boundaries, or the old whole-run energy. "Run energy" in the "All runs" table is about 6% low for E0 and E1.
 - The "Prefix cache" column shows the flag in the server command. Without a flag, it shows "default", because the vLLM default differs between versions. Read `vllm.log` for the real value.
 
 ## Noise

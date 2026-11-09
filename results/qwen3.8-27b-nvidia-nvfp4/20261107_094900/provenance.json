@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "era": "E1",
+  "note": "Harness after #42 and #44 on vLLM 0.25.1: old TTFT split, shared concurrency prompt, old energy method.",
+  "added": "2026-11-10"
+}
