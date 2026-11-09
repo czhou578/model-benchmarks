@@ -1,35 +1,23 @@
 #!/usr/bin/env python3
-"""
-core_runner.py — Phase 1 core benchmark runner (simplified).
-
-Trimmed to the metrics that actually matter for GPU-bound single-node
-inference tuning (e.g. vLLM on a DGX Spark). Dropped relative to the full
-version: host CPU%/RAM/swap tracking, GPU clock sampling, and verbose
-platform/kernel metadata. Kept: GPU identity, TTFT, prefill throughput,
-decode speed, GPU memory + power + energy/token, and reasoning-token ratio.
-
-Captures:
-  - environment: GPU name/driver/CUDA/torch/vLLM versions (just enough to
-    know what you ran against)
-  - deep context (32K/64K): TTFT and prefill throughput at extended contexts
-  - first-token latency + prefill throughput, swept across prompt lengths
-  - decode speed (avg/peak/min/median tok/sec) at several output lengths
-  - GPU memory + power sampled at 1 Hz -> avg/peak + energy (Wh) + decode
-    energy per output token
-  - reasoning token count (<think>...</think> vs answer) for Qwen3-style
-    reasoning-parser output
-
-Not implemented here (plug in later via register_benchmark()):
-  code correctness (HumanEval/MBPP), Deep-SWE, HLE.
+"""Run the benchmark suite against one model and write one run dir.
 
 Usage:
     python core_runner.py --model models/qwen3.8_27b_nvidia_nvfp4.yml
 
-Every run gets its own timestamped directory under results/<model>/<ts>/.
-The results/ directory sits next to this script. --results-dir changes it.
+A run does these steps. docs/methodology.md gives the details.
 
-Dependencies:
-    pip install -r requirements.txt    # requests, PyYAML, tiktoken
+1. Load the model config. Make the run dir results/<name>/<timestamp>/.
+   --results-dir changes the results/ folder.
+2. Write environment.json.
+3. In managed mode, start vLLM (vllm_server.py). Wait until the endpoint
+   answers a real generation request.
+4. Start the GPU monitor (harness/telemetry.py).
+5. Run the benchmark steps in the order of run_benchmarks().
+6. Stop the monitor and the server. Write summary.json.
+
+benchmarks/ holds one module per benchmark. harness/ holds the shared
+client, prompts, statistics, telemetry, and environment code. This file
+holds the command line, the run state (Run), and the step order.
 """
 
 from __future__ import annotations
