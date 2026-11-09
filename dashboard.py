@@ -93,6 +93,15 @@ def ms(seconds: float | None) -> float | None:
     return None if seconds is None else round(seconds * 1000, 1)
 
 
+def prefix_caching_flag(command: list[str]) -> bool | None:
+    """Return the prefix caching flag of a vLLM command, or None when the command has none."""
+    if "--no-enable-prefix-caching" in command:
+        return False
+    if "--enable-prefix-caching" in command:
+        return True
+    return None
+
+
 def server_info(run_dir: Path) -> dict[str, Any]:
     server = load_json(run_dir / "resolved_server.json") or {}
     command = [str(arg) for arg in server.get("command") or []]
@@ -102,7 +111,9 @@ def server_info(run_dir: Path) -> dict[str, Any]:
         "served_model": served,
         "speculative": spec is not None,
         "speculative_config": spec,
-        "prefix_caching": "--enable-prefix-caching" in command,
+        # True or False when the command sets the flag. None: the vLLM default,
+        # which differs between versions (0.33.0 turns it on for hybrid models).
+        "prefix_caching": prefix_caching_flag(command),
         "gpu_memory_utilization": option_value(command, "--gpu-memory-utilization"),
         "kv_cache_dtype": option_value(command, "--kv-cache-dtype"),
         "max_model_len": option_value(command, "--max-model-len"),

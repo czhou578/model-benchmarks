@@ -84,8 +84,7 @@ Known limits:
 - "Pre-fix scoring" uses a date, not a schema version. A run from an old checkout after that date gets no badge.
 - "Older vLLM" compares only the shown runs. When you hide the newer run, the badge goes away.
 - No badge marks the E2 and E3 boundary or the old whole-run energy. "Run energy" in the "All runs" table is about 6% low for E0 and E1.
-- The note above the charts says that the pre-fix concurrency numbers are not affected. This is not correct. Every E0 run sent one shared prompt. Use the "Shared concurrency prompt" badge.
-- The "Prefix cache" column reads only the `--enable-prefix-caching` flag. vLLM 0.33.0 turns prefix caching on by default. A vLLM 0.33.0 run with no flag thus shows "off", which is not correct.
+- The "Prefix cache" column shows the flag in the server command. Without a flag, it shows "default", because the vLLM default differs between versions. Read `vllm.log` for the real value.
 
 ## Noise
 
