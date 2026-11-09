@@ -121,6 +121,7 @@ Test system of the published runs, from `environment.json` in the run dirs. All 
 | E0 | 2026-07-29, five Qwen3.6-35B-A3B runs | 580.159.03 | 2.11.0+cu130 | 0.25.1 |
 | E1 | 2026-11-07, two Qwen3.8-27B runs | 580.173.02 | 2.11.0+cu130 | 0.25.1 |
 | E2 | 2026-11-08, one Qwen3.8-27B run | 580.173.02 | 2.14.0+cu130 | 0.33.0 |
+| E4 | 2026-11-09, one Qwen3.8-27B run (the current baseline) | 580.173.02 | 2.14.0+cu130 | 0.33.0 |
 
 ## Code layout
 
