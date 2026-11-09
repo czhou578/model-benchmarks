@@ -1,0 +1,104 @@
+# Qwen3.8-27B (dense hybrid: Gated DeltaNet + full attention every 4th layer)
+# with NVIDIA ModelOpt mixed precision: NVFP4 MLP weights, FP8 attention.
+# Baseline for the planned Qwen4-27B comparison.
+#
+# Memory budget on the DGX Spark (121 GB unified memory, shared with the CPU):
+#   - weights: about 21 GB on disk (language model plus the bf16 vision encoder)
+#   - KV cache: only 16 of 64 layers use full attention, with 4 KV heads of
+#     dim 256, so FP8 KV costs about 32 KB per token (64K context = 2 GB)
+#   - On the GB10, vLLM 0.25.1 estimates CUDA graph memory as a negative
+#     number (-18 GiB), so gpu-memory-utilization alone gave a 47.5 GiB KV pool
+#     and left only 35 GiB free. --kv-cache-memory-bytes 16G fixes the pool at
+#     about 512K tokens (459K with MTP K=3), which still holds the 262K max
+#     length. vLLM 0.33.0 keeps the same pin, so the pool size does not change.
+# vLLM 0.33.0 turns on prefix caching for hybrid models by default.
+# --no-enable-prefix-caching keeps it off, as in the vLLM 0.25.1 runs.
+# Activate the venv that holds vLLM 0.33.0 (see docs/dgx-spark.md). Then run
+# the config through memory_guard.py, which stops the run if MemAvailable
+# drops low:
+#   python memory_guard.py --min-start-gib 60 -- python -u core_runner.py \
+#     --model models/qwen3.8_27b_nvidia_nvfp4.yml --compare-spec
+name: qwen3.8-27b-nvidia-nvfp4
+server:
+  mode: managed
+  command:
+    - vllm
+    - serve
+    - nvidia/Qwen3.8-27B-NVFP4
+    - --host
+    - "127.0.0.1"
+    - --port
+    - "8000"
+    - --tensor-parallel-size
+    - "1"
+    - --gpu-memory-utilization
+    - "0.45"
+    - --kv-cache-memory-bytes
+    - 16G
+    - --max-model-len
+    - "262144"
+    - --max-num-seqs
+    - "16"
+    - --max-num-batched-tokens
+    - "8192"
+    - --kv-cache-dtype
+    - fp8_e4m3
+    - --attention-backend
+    - flashinfer
+    - --enable-chunked-prefill
+    - --no-enable-prefix-caching
+    - --async-scheduling
+    - --reasoning-parser
+    - qwen3
+    - --tool-call-parser
+    - qwen3_coder
+    - --enable-auto-tool-choice
+    - --enable-per-request-metrics
+    - --generation-config
+    - vllm
+    - --load-format
+    - fastsafetensors
+  # vLLM fails at startup when the shell turns on a tokenizer package that
+  # the venv does not hold. This setting turns it off. See docs/dgx-spark.md.
+  environment:
+    VLLM_USE_FASTOKENS: "0"
+  startup_timeout_s: 900
+  shutdown_timeout_s: 60
+
+endpoint:
+  base_url: "http://127.0.0.1:8000"
+  model_name: "nvidia/Qwen3.8-27B-NVFP4"
+  chat: true
+ready_timeout_s: 900
+monitor_interval_s: 1.0
+prompt_lengths: [32, 128, 512, 2048, 8192, 16384]
+latency_repeats: 10
+decode_lengths: [512, 1024, 2048]
+# The same six tasks as the Qwen3.6 configs. Prompts 3 to 6 had an
+# <antThinking> block, which Qwen3 does not use, so they are now plain text.
+# Qwen3 thinks by default, and the qwen3 reasoning parser splits its <think>
+# output. With 1024 tokens, the palindrome prompt thought for the whole budget
+# and gave 0 answer tokens in both runs. 4096 matches tool_calling_max_tokens.
+reasoning_max_tokens: 4096
+reasoning_prompts:
+  - "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show your reasoning."
+  - "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning step by step."
+  - "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph?"
+  - "A farmer has 17 sheep, all but 9 die. How many are left?"
+  - >-
+    A bag contains 3 red marbles and 5 blue marbles. If you draw two marbles without replacement, what is the probability that both are blue? Show each step of your calculation.
+  - >-
+    Write a Python function that finds the longest palindromic substring in a given string. Explain your algorithm choice and trace through an example like "babad" or "cbbd".
+
+concurrency_levels: [1, 2, 4, 8, 16]
+concurrency_requests_per_level: 16
+concurrency_max_tokens: 256
+concurrency_temperature: 0.0
+context_lengths: [32768, 65536]
+context_repeats: 5
+
+# A thinking model spends hundreds of tokens before its first tool call.
+tool_calling_max_tokens: 4096
+
+# The checkpoint ships one MTP layer. --compare-spec appends this config.
+speculative_config: '{"method":"mtp","num_speculative_tokens":3}'

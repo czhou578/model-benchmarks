@@ -1,0 +1,403 @@
+{
+  "estimate_status": "exact_from_config",
+  "architecture": {
+    "model": "qwen3_5",
+    "layer_counts": {
+      "linear_attention": 48,
+      "full_attention": 16
+    },
+    "ffn": "dense",
+    "token_mixers": [
+      "full_attention",
+      "linear_attention"
+    ],
+    "is_hybrid": true
+  },
+  "flops": {
+    "decode": {
+      "512": {
+        "dense_ffn": 34225520640.0,
+        "attention_qkv_projection_flops": 1342177280.0,
+        "attention_output_projection_flops": 1006632960.0,
+        "attention_query_gate_projection_flops": 1006632960.0,
+        "attention_score_flops": 201326592.0,
+        "linear_projection_flops": 8100249600.0,
+        "short_conv_flops": 3932160.0,
+        "linear_output_projection_flops": 3019898880.0,
+        "recurrent_state_flops": 150994944.0,
+        "lm_head_flops": 2542796800.0,
+        "mode": "decode",
+        "sequence_length": 512,
+        "num_layers": 64,
+        "layer_counts": {
+          "linear_attention": 48,
+          "full_attention": 16
+        },
+        "matmul_flops": 51600162816.0,
+        "non_matmul_flops": 113934336.0,
+        "non_matmul_breakdown": {
+          "attention_gate_multiply": 98304.0,
+          "recurrent_state_update": 113246208.0,
+          "delta_gate_and_residual": 589824.0
+        },
+        "omitted_non_matmul": [
+          "FFN activation function and gate multiply",
+          "Q/K normalization and RoPE",
+          "RMSNorm and output gate",
+          "SiLU/softplus/sigmoid/exp gates",
+          "attention softmax",
+          "logits post-processing / sampling",
+          "q/k L2 normalization",
+          "query-gate sigmoid"
+        ],
+        "total": 51714097152.0,
+        "estimate_status": "exact_from_config",
+        "assumptions": [
+          "2 FLOPs per multiply-accumulate",
+          "Linear-attention prefill uses the 64-token chunked reference kernel algorithm",
+          "listed omitted_non_matmul operations are excluded from totals"
+        ],
+        "state_traffic_bytes": {
+          "linear_state_bytes_read": 158859264,
+          "linear_state_bytes_written": 158859264
+        }
+      },
+      "2048": {
+        "dense_ffn": 34225520640.0,
+        "attention_qkv_projection_flops": 1342177280.0,
+        "attention_output_projection_flops": 1006632960.0,
+        "attention_query_gate_projection_flops": 1006632960.0,
+        "attention_score_flops": 805306368.0,
+        "linear_projection_flops": 8100249600.0,
+        "short_conv_flops": 3932160.0,
+        "linear_output_projection_flops": 3019898880.0,
+        "recurrent_state_flops": 150994944.0,
+        "lm_head_flops": 2542796800.0,
+        "mode": "decode",
+        "sequence_length": 2048,
+        "num_layers": 64,
+        "layer_counts": {
+          "linear_attention": 48,
+          "full_attention": 16
+        },
+        "matmul_flops": 52204142592.0,
+        "non_matmul_flops": 113934336.0,
+        "non_matmul_breakdown": {
+          "attention_gate_multiply": 98304.0,
+          "recurrent_state_update": 113246208.0,
+          "delta_gate_and_residual": 589824.0
+        },
+        "omitted_non_matmul": [
+          "FFN activation function and gate multiply",
+          "Q/K normalization and RoPE",
+          "RMSNorm and output gate",
+          "SiLU/softplus/sigmoid/exp gates",
+          "attention softmax",
+          "logits post-processing / sampling",
+          "q/k L2 normalization",
+          "query-gate sigmoid"
+        ],
+        "total": 52318076928.0,
+        "estimate_status": "exact_from_config",
+        "assumptions": [
+          "2 FLOPs per multiply-accumulate",
+          "Linear-attention prefill uses the 64-token chunked reference kernel algorithm",
+          "listed omitted_non_matmul operations are excluded from totals"
+        ],
+        "state_traffic_bytes": {
+          "linear_state_bytes_read": 158859264,
+          "linear_state_bytes_written": 158859264
+        }
+      },
+      "8192": {
+        "dense_ffn": 34225520640.0,
+        "attention_qkv_projection_flops": 1342177280.0,
+        "attention_output_projection_flops": 1006632960.0,
+        "attention_query_gate_projection_flops": 1006632960.0,
+        "attention_score_flops": 3221225472.0,
+        "linear_projection_flops": 8100249600.0,
+        "short_conv_flops": 3932160.0,
+        "linear_output_projection_flops": 3019898880.0,
+        "recurrent_state_flops": 150994944.0,
+        "lm_head_flops": 2542796800.0,
+        "mode": "decode",
+        "sequence_length": 8192,
+        "num_layers": 64,
+        "layer_counts": {
+          "linear_attention": 48,
+          "full_attention": 16
+        },
+        "matmul_flops": 54620061696.0,
+        "non_matmul_flops": 113934336.0,
+        "non_matmul_breakdown": {
+          "attention_gate_multiply": 98304.0,
+          "recurrent_state_update": 113246208.0,
+          "delta_gate_and_residual": 589824.0
+        },
+        "omitted_non_matmul": [
+          "FFN activation function and gate multiply",
+          "Q/K normalization and RoPE",
+          "RMSNorm and output gate",
+          "SiLU/softplus/sigmoid/exp gates",
+          "attention softmax",
+          "logits post-processing / sampling",
+          "q/k L2 normalization",
+          "query-gate sigmoid"
+        ],
+        "total": 54733996032.0,
+        "estimate_status": "exact_from_config",
+        "assumptions": [
+          "2 FLOPs per multiply-accumulate",
+          "Linear-attention prefill uses the 64-token chunked reference kernel algorithm",
+          "listed omitted_non_matmul operations are excluded from totals"
+        ],
+        "state_traffic_bytes": {
+          "linear_state_bytes_read": 158859264,
+          "linear_state_bytes_written": 158859264
+        }
+      },
+      "32768": {
+        "dense_ffn": 34225520640.0,
+        "attention_qkv_projection_flops": 1342177280.0,
+        "attention_output_projection_flops": 1006632960.0,
+        "attention_query_gate_projection_flops": 1006632960.0,
+        "attention_score_flops": 12884901888.0,
+        "linear_projection_flops": 8100249600.0,
+        "short_conv_flops": 3932160.0,
+        "linear_output_projection_flops": 3019898880.0,
+        "recurrent_state_flops": 150994944.0,
+        "lm_head_flops": 2542796800.0,
+        "mode": "decode",
+        "sequence_length": 32768,
+        "num_layers": 64,
+        "layer_counts": {
+          "linear_attention": 48,
+          "full_attention": 16
+        },
+        "matmul_flops": 64283738112.0,
+        "non_matmul_flops": 113934336.0,
+        "non_matmul_breakdown": {
+          "attention_gate_multiply": 98304.0,
+          "recurrent_state_update": 113246208.0,
+          "delta_gate_and_residual": 589824.0
+        },
+        "omitted_non_matmul": [
+          "FFN activation function and gate multiply",
+          "Q/K normalization and RoPE",
+          "RMSNorm and output gate",
+          "SiLU/softplus/sigmoid/exp gates",
+          "attention softmax",
+          "logits post-processing / sampling",
+          "q/k L2 normalization",
+          "query-gate sigmoid"
+        ],
+        "total": 64397672448.0,
+        "estimate_status": "exact_from_config",
+        "assumptions": [
+          "2 FLOPs per multiply-accumulate",
+          "Linear-attention prefill uses the 64-token chunked reference kernel algorithm",
+          "listed omitted_non_matmul operations are excluded from totals"
+        ],
+        "state_traffic_bytes": {
+          "linear_state_bytes_read": 158859264,
+          "linear_state_bytes_written": 158859264
+        }
+      }
+    },
+    "prefill": {
+      "512": {
+        "dense_ffn": 17523466567680.0,
+        "attention_qkv_projection_flops": 687194767360.0,
+        "attention_output_projection_flops": 515396075520.0,
+        "attention_query_gate_projection_flops": 515396075520.0,
+        "attention_score_flops": 51640270848.0,
+        "linear_projection_flops": 4147327795200.0,
+        "short_conv_flops": 2013265920.0,
+        "linear_output_projection_flops": 1546188226560.0,
+        "recurrent_state_flops": 215747002368.0,
+        "lm_head_flops": 2542796800.0,
+        "mode": "prefill",
+        "sequence_length": 512,
+        "num_layers": 64,
+        "layer_counts": {
+          "linear_attention": 48,
+          "full_attention": 16
+        },
+        "matmul_flops": 25206912843776.0,
+        "non_matmul_flops": 58334380032.0,
+        "non_matmul_breakdown": {
+          "attention_gate_multiply": 50331648.0,
+          "chunk_decay_and_updates": 58284048384.0
+        },
+        "omitted_non_matmul": [
+          "FFN activation function and gate multiply",
+          "Q/K normalization and RoPE",
+          "SiLU/softplus/sigmoid gates and RMSNorm",
+          "attention softmax",
+          "chunk decay exponentials and masking",
+          "logits post-processing",
+          "q/k L2 normalization",
+          "query-gate sigmoid"
+        ],
+        "total": 25265247223808.0,
+        "estimate_status": "exact_from_config",
+        "assumptions": [
+          "2 FLOPs per multiply-accumulate",
+          "Linear-attention prefill uses the 64-token chunked reference kernel algorithm",
+          "listed omitted_non_matmul operations are excluded from totals"
+        ],
+        "logits_tokens": 1,
+        "state_traffic_bytes": {
+          "linear_state_bytes_read": 0.0,
+          "linear_state_bytes_written": 158859264.0
+        }
+      },
+      "2048": {
+        "dense_ffn": 70093866270720.0,
+        "attention_qkv_projection_flops": 2748779069440.0,
+        "attention_output_projection_flops": 2061584302080.0,
+        "attention_query_gate_projection_flops": 2061584302080.0,
+        "attention_score_flops": 825036374016.0,
+        "linear_projection_flops": 16589311180800.0,
+        "short_conv_flops": 8053063680.0,
+        "linear_output_projection_flops": 6184752906240.0,
+        "recurrent_state_flops": 862988009472.0,
+        "lm_head_flops": 2542796800.0,
+        "mode": "prefill",
+        "sequence_length": 2048,
+        "num_layers": 64,
+        "layer_counts": {
+          "linear_attention": 48,
+          "full_attention": 16
+        },
+        "matmul_flops": 101438498275328.0,
+        "non_matmul_flops": 233337520128.0,
+        "non_matmul_breakdown": {
+          "attention_gate_multiply": 201326592.0,
+          "chunk_decay_and_updates": 233136193536.0
+        },
+        "omitted_non_matmul": [
+          "FFN activation function and gate multiply",
+          "Q/K normalization and RoPE",
+          "SiLU/softplus/sigmoid gates and RMSNorm",
+          "attention softmax",
+          "chunk decay exponentials and masking",
+          "logits post-processing",
+          "q/k L2 normalization",
+          "query-gate sigmoid"
+        ],
+        "total": 101671835795456.0,
+        "estimate_status": "exact_from_config",
+        "assumptions": [
+          "2 FLOPs per multiply-accumulate",
+          "Linear-attention prefill uses the 64-token chunked reference kernel algorithm",
+          "listed omitted_non_matmul operations are excluded from totals"
+        ],
+        "logits_tokens": 1,
+        "state_traffic_bytes": {
+          "linear_state_bytes_read": 0.0,
+          "linear_state_bytes_written": 158859264.0
+        }
+      },
+      "8192": {
+        "dense_ffn": 280375465082880.0,
+        "attention_qkv_projection_flops": 10995116277760.0,
+        "attention_output_projection_flops": 8246337208320.0,
+        "attention_query_gate_projection_flops": 8246337208320.0,
+        "attention_score_flops": 13195750146048.0,
+        "linear_projection_flops": 66357244723200.0,
+        "short_conv_flops": 32212254720.0,
+        "linear_output_projection_flops": 24739011624960.0,
+        "recurrent_state_flops": 3451952037888.0,
+        "lm_head_flops": 2542796800.0,
+        "mode": "prefill",
+        "sequence_length": 8192,
+        "num_layers": 64,
+        "layer_counts": {
+          "linear_attention": 48,
+          "full_attention": 16
+        },
+        "matmul_flops": 415641969360896.0,
+        "non_matmul_flops": 933350080512.0,
+        "non_matmul_breakdown": {
+          "attention_gate_multiply": 805306368.0,
+          "chunk_decay_and_updates": 932544774144.0
+        },
+        "omitted_non_matmul": [
+          "FFN activation function and gate multiply",
+          "Q/K normalization and RoPE",
+          "SiLU/softplus/sigmoid gates and RMSNorm",
+          "attention softmax",
+          "chunk decay exponentials and masking",
+          "logits post-processing",
+          "q/k L2 normalization",
+          "query-gate sigmoid"
+        ],
+        "total": 416575319441408.0,
+        "estimate_status": "exact_from_config",
+        "assumptions": [
+          "2 FLOPs per multiply-accumulate",
+          "Linear-attention prefill uses the 64-token chunked reference kernel algorithm",
+          "listed omitted_non_matmul operations are excluded from totals"
+        ],
+        "logits_tokens": 1,
+        "state_traffic_bytes": {
+          "linear_state_bytes_read": 0.0,
+          "linear_state_bytes_written": 158859264.0
+        }
+      },
+      "32768": {
+        "dense_ffn": 1121501860331520.0,
+        "attention_qkv_projection_flops": 43980465111040.0,
+        "attention_output_projection_flops": 32985348833280.0,
+        "attention_query_gate_projection_flops": 32985348833280.0,
+        "attention_score_flops": 211112674983936.0,
+        "linear_projection_flops": 265428978892800.0,
+        "short_conv_flops": 128849018880.0,
+        "linear_output_projection_flops": 98956046499840.0,
+        "recurrent_state_flops": 13807808151552.0,
+        "lm_head_flops": 2542796800.0,
+        "mode": "prefill",
+        "sequence_length": 32768,
+        "num_layers": 64,
+        "layer_counts": {
+          "linear_attention": 48,
+          "full_attention": 16
+        },
+        "matmul_flops": 1820889923452928.0,
+        "non_matmul_flops": 3733400322048.0,
+        "non_matmul_breakdown": {
+          "attention_gate_multiply": 3221225472.0,
+          "chunk_decay_and_updates": 3730179096576.0
+        },
+        "omitted_non_matmul": [
+          "FFN activation function and gate multiply",
+          "Q/K normalization and RoPE",
+          "SiLU/softplus/sigmoid gates and RMSNorm",
+          "attention softmax",
+          "chunk decay exponentials and masking",
+          "logits post-processing",
+          "q/k L2 normalization",
+          "query-gate sigmoid"
+        ],
+        "total": 1824623323774976.0,
+        "estimate_status": "exact_from_config",
+        "assumptions": [
+          "2 FLOPs per multiply-accumulate",
+          "Linear-attention prefill uses the 64-token chunked reference kernel algorithm",
+          "listed omitted_non_matmul operations are excluded from totals"
+        ],
+        "logits_tokens": 1,
+        "state_traffic_bytes": {
+          "linear_state_bytes_read": 0.0,
+          "linear_state_bytes_written": 158859264.0
+        }
+      }
+    }
+  },
+  "assumptions": [
+    "2 FLOPs per multiply-accumulate",
+    "Linear-attention prefill uses the 64-token chunked reference kernel algorithm",
+    "listed omitted_non_matmul operations are excluded from totals"
+  ]
+}

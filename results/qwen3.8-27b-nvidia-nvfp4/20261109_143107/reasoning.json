@@ -1,0 +1,84 @@
+{
+  "max_tokens": 4096,
+  "n_truncated": 0,
+  "per_prompt": [
+    {
+      "thinking_tokens": 66,
+      "answer_tokens": 111,
+      "ratio_thinking_to_answer": 0.595,
+      "split_method": "reasoning_parser",
+      "reasoning_text_preview": "We need answer simple math. Need final with reasoning. Compute speed mph: 60 miles in 45 minutes = 0.75 hours. speed = 60 / 0.75",
+      "answer_text_preview": "\n\nThe train travels **60 miles** in **45 minutes**.\n\nFirst, convert 45 minutes to hours:\n\n\\[\n45 \\text{ minutes} = \\frac{45}{60} ",
+      "output_tokens": 205,
+      "finish_reason": "stop",
+      "truncated": false,
+      "prompt_preview": "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show"
+    },
+    {
+      "thinking_tokens": 124,
+      "answer_tokens": 75,
+      "ratio_thinking_to_answer": 1.653,
+      "split_method": "reasoning_parser",
+      "reasoning_text_preview": "We need answer simple riddle. Need final with step-by-step. User: \"A farmer has 17 sheep, all but 9 die. How many are left? Expl",
+      "answer_text_preview": "\n\nThere are **9 sheep left**.\n\nReasoning:\n\n1. The farmer starts with **17 sheep**.\n2. The phrase **\u201call but 9 die\u201d** means that ",
+      "output_tokens": 203,
+      "finish_reason": "stop",
+      "truncated": false,
+      "prompt_preview": "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning "
+    },
+    {
+      "thinking_tokens": 54,
+      "answer_tokens": 33,
+      "ratio_thinking_to_answer": 1.636,
+      "split_method": "reasoning_parser",
+      "reasoning_text_preview": "We need answer simple math. Need solve: 60 miles in 45 minutes. Speed mph = distance / time hours. 45 min = 0.75 h. 60 / 0.75 = ",
+      "answer_text_preview": "\n\n45 minutes = 0.75 hours.\n\nSpeed = distance \u00f7 time = 60 miles \u00f7 0.75 hours = **80 mph**.",
+      "output_tokens": 102,
+      "finish_reason": "stop",
+      "truncated": false,
+      "prompt_preview": "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph?"
+    },
+    {
+      "thinking_tokens": 48,
+      "answer_tokens": 6,
+      "ratio_thinking_to_answer": 8.0,
+      "split_method": "reasoning_parser",
+      "reasoning_text_preview": "We need answer classic riddle: \"A farmer has 17 sheep, all but 9 die. How many are left?\" Need interpret: all but 9 die means 9 ",
+      "answer_text_preview": "\n\n9 sheep are left.",
+      "output_tokens": 58,
+      "finish_reason": "stop",
+      "truncated": false,
+      "prompt_preview": "A farmer has 17 sheep, all but 9 die. How many are left?"
+    },
+    {
+      "thinking_tokens": 80,
+      "answer_tokens": 329,
+      "ratio_thinking_to_answer": 0.243,
+      "split_method": "reasoning_parser",
+      "reasoning_text_preview": "We need answer simple probability. Need final with steps. Compute: total 8, blue 5. Draw two without replacement. Probability bo",
+      "answer_text_preview": "\n\nThere are \\(3\\) red marbles and \\(5\\) blue marbles, so the total number of marbles is:\n\n\\[\n3 + 5 = 8\n\\]\n\nWe draw two marbles *",
+      "output_tokens": 452,
+      "finish_reason": "stop",
+      "truncated": false,
+      "prompt_preview": "A bag contains 3 red marbles and 5 blue marbles. If you draw two marbles without"
+    },
+    {
+      "thinking_tokens": 713,
+      "answer_tokens": 1716,
+      "ratio_thinking_to_answer": 0.416,
+      "split_method": "reasoning_parser",
+      "reasoning_text_preview": "We need answer user: Write Python function finds longest palindromic substring. Explain algorithm choice and trace through examp",
+      "answer_text_preview": "\n\n```python\ndef longest_palindromic_substring(s: str) -> str:\n    \"\"\"\n    Returns the longest palindromic substring in s.\n\n    I",
+      "output_tokens": 2602,
+      "finish_reason": "stop",
+      "truncated": false,
+      "prompt_preview": "Write a Python function that finds the longest palindromic substring in a given "
+    }
+  ],
+  "thinking_tokens_avg": 180.8,
+  "thinking_tokens_max": 713,
+  "thinking_tokens_median": 73.0,
+  "answer_tokens_avg": 378.3,
+  "answer_tokens_max": 1716,
+  "answer_tokens_median": 93.0
+}
