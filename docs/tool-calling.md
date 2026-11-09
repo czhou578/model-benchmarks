@@ -140,12 +140,10 @@ Each category gets `pass_count`, `total`, `pass_rate`, `tool_accuracy`, `param_c
 
 `failure_modes` counts failed tasks only. One task can add to several modes. The code never increments `invalid_enum_value`, `wrong_param_type`, or `incorrect_refusal`, so these stay 0.
 
-## Versions and the pre-fix flag
+## Versions and old runs
 
 - `config.benchmark_version` is the constant `"1.0"` in `tool_calling.py`, `ttft_breakdown.py`, and `prefill.py`. No code reads it. It does not tell old scoring from new scoring.
-- The dashboard shows the badge "Pre-fix scoring" when the run dir timestamp is before 2026-11-07 (`SCORING_FIX_DATE` in `dashboard.py`). On that date, PR #42 and PR #44 fixed the cache-salt placement and the tool-calling scorer.
-- Do not compare tool-calling, latency, or deep-context numbers from before that date with later runs.
-- The flag uses only the run dir name. The result files hold no scoring version.
+- The result files hold no scoring version. [comparability.md](comparability.md) tells which tool-calling results you can compare, and how large the noise is.
 
 ## Example task
 

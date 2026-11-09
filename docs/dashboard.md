@@ -65,35 +65,13 @@ A card can show these badges:
 | Completed, Failed | The `status` in `summary.json`. |
 | MTP spec on, No spec decode | The vLLM command in `resolved_server.json` has a `--speculative-config` flag, or not. |
 | Older vLLM | The run used an older vLLM version than the newest shown run. Compare runs on different versions with care. |
-| Pre-fix scoring | The run dir timestamp is before 2026-11-07. See the next section. |
+| Pre-fix scoring | The run dir timestamp is before 2026-11-07 (`SCORING_FIX_DATE` in `dashboard.py`). See the next section. |
 | Shared concurrency prompt | The run sent one prompt to every concurrency request. Its concurrency numbers are not comparable with newer runs. See `prompt_mode` in [results-schema.md](results-schema.md). |
 | Stopped for memory | `memory_guard.py` stopped the run because free memory was too low. |
 
-## Pre-fix scoring
+## Pre-fix scoring and other eras
 
-Two fixes changed the measurements on 2026-11-07. The dashboard gives the "Pre-fix scoring" badge to each run that started before that date. A note above the charts lists the pre-fix runs that the page shows.
-
-Pre-fix TTFT, long-context TTFT, and tool-calling numbers are not comparable with newer runs. Pre-fix decode, concurrency, and reasoning numbers are comparable.
-
-### Cache-salt placement
-
-vLLM can keep a prefix cache. When a prompt repeats, vLLM reuses the cached work and skips most of the prefill. TTFT then shows the cache-hit time, not the time of a full prefill.
-
-To measure a full prefill, the harness sends a random `cache_salt` value with each request. vLLM does not share cached work between requests with different salts. Thus each request gets a cold prefill.
-
-Before the fix, the harness put the salt inside an `extra_body` object in the request JSON. vLLM ignores unknown fields, so it never received the salt. Also, the latency sweep and the deep-context benchmark sent no salt at all. Their repeated prompts hit the prefix cache when the server had `--enable-prefix-caching` on. The fix sends `cache_salt` as a top-level request field, and it salts every request.
-
-Result: pre-fix TTFT and long-context TTFT values can be too low, because some of them are cache hits.
-
-### Tool-calling scorer
-
-The earlier tool-calling scorer had three defects:
-
-- In multi-turn tasks, the chat history put the tool result before the tool call. All 33 multi-tool and error-recovery tasks used this wrong history.
-- Each task allowed only 256 output tokens. A thinking model often used all of them before its first tool call. The new default is 4096 tokens.
-- The composite score read a `single_tool` category that no task had. Thus three of its six components were always 0.
-
-Result: pre-fix tool-calling scores and composite scores do not show the true tool-calling quality of the model.
+The badges and the note above the charts mark old runs. [comparability.md](comparability.md) tells which metrics of each era you can compare, and gives the known limits of the badges.
 
 ## Page source
 

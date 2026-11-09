@@ -9,4 +9,4 @@ Each file in this folder is a write-up of past runs. The file name starts with t
 
 The raw data of a run is in its run dir, `results/<name>/<timestamp>/`. The `name:` in the model config sets the folder name. Use the lowercase scheme `<model>-<size>-<provider>-<quant>[-<variant>]`, for example `qwen3.8-27b-nvidia-nvfp4`.
 
-Runs before 2026-11-07 use pre-fix scoring. See [../dashboard.md](../dashboard.md) for the details.
+Fixes to the harness divide the runs into eras. See [../comparability.md](../comparability.md) before you compare two runs.

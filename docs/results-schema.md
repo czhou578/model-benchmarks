@@ -40,7 +40,7 @@ Read these points before you compare numbers.
 - `prefill_scaling.json` is a curve of prefill time and prefill rate against prompt length. It is not a GPU power curve. Its `gpu` block holds the GPU data of each length window.
 - In `decode.json`, `tok_per_sec_peak`, `tok_per_sec_min`, and `tok_per_sec_median` are `1 / gap` between two stream events with text (`instant_rates` in `run_decode_speed`). One event can carry more than one token, for example with speculative decoding. These three fields then count events per second. Use `tok_per_sec_avg` for the token rate.
 - `output_truncated` in `decode.json` is `true` when `actual_output_tokens` differs from `requested_output_tokens`. A `true` value means that the model stopped before `max_tokens`. It does not mean that `max_tokens` cut the output.
-- Old runs have wrong energy values. An old run has no `duration_s` in its `gpu` block. Do not compare old runs with newer runs. The dashboard does not show the old per-token value.
+- Old runs (eras E0 and E1 in [comparability.md](comparability.md)) have wrong energy values. An old run has no `duration_s` in its `gpu` block. The dashboard does not show the old per-token value.
   - `energy_per_token_wh` in `summary.json` is the GPU energy of the whole run divided by the decode output tokens only. In the 2026-11-07 Qwen3.8-27B run, it is 0.0158 Wh/token. An estimate of the decode window from the power trace gives 0.0009 Wh/token. So the old value is about 17 times too high. Newer runs write `decode_energy` instead.
   - Every `energy_wh` is mean power × number of samples × `monitor_interval_s`. The real sample period is about 1.07 s, so the value is about 6% too low.
   - In a GPU window block, `idle_base_power_w` comes from the window samples, not from the idle samples. It equals `gpu_power_avg_w`, and `energy_above_idle_wh` is near 0.
@@ -275,21 +275,32 @@ Top-level fields: `config`, `total_tasks`, `total_correct`, `composite_score` (0
 | `vllm.log`, `vllm_spec_*.log` | stdout and stderr of the vLLM process. |
 | `model_config.yml` | Exact copy of the model config file. |
 
-## Runs before 2026-11-07
+## Fields in old runs
 
-Fixes merged on 2026-11-07 changed several files. Run dirs from before that date differ from this page:
+Old run dirs differ from this page. [comparability.md](comparability.md) names the eras E0 to E3 and tells which metrics you can compare.
 
-- `prefill_scaling.json` holds `status: request_error` for each length. The client then had no `tokenize_prompt` method.
+E0 runs (July 2026):
+
 - The server command has no `--enable-per-request-metrics`, so all server timing fields are `null`.
 - `ttft_breakdown.json` has no `post_queue_ms` field.
 - The run dir has no `tool_calling.json`. The `tool_calling` entry in `summary.json` has no `failure_modes`.
 
-The dashboard marks these runs "Pre-fix scoring" (`SCORING_FIX_DATE` in dashboard.py).
+E0 runs and the E1 full run `20261107_094900`:
 
-## Runs with the old TTFT split
+- `prefill_scaling.json` holds `status: request_error` for each length. The client then had no `tokenize_prompt` method.
 
-Before the TTFT split fix, the client set `post_queue_ms` to server TTFT − queue time. The vLLM server TTFT does not include the queue time, so this value subtracts the queue time two times. The error is equal to the queue time. It is small at concurrency 1 and larger with queueing.
+E0 and E1 runs:
 
-- `ttft_breakdown.json` in these runs holds `post_queue_ms` and `aggregated.post_queue` values that are too low.
-- `prefill_scaling.json` in these runs holds `engine_prefill_tps` values that are too high.
+- The `gpu` block of `summary.json` has no `duration_s`. A run with the decode step has `energy_per_token_wh` and no `decode_energy`.
+- A `concurrency.json` file has no `prompt_mode` and no `prompt_length_method`. Every request sent the same prompt.
+
+E1 runs (old TTFT split): the client set `post_queue_ms` to server TTFT − queue time. The vLLM server TTFT does not include the queue time, so this value subtracts the queue time two times. The error is equal to the queue time. It is small at concurrency 1 and larger with queueing.
+
+- `ttft_breakdown.json` holds `post_queue_ms` and `aggregated.post_queue` values that are too low.
+- `prefill_scaling.json` holds `engine_prefill_tps` values that are too high.
 - The dashboard does not read `post_queue_ms`. It computes the post-queue median from `per_request[].server_ttft_s`, so it shows the correct value for old and new runs.
+
+E0 to E2 runs:
+
+- The `tool_calling` entry in `summary.json` has no `status`.
+- In E1 and E2, `tool_calling.json` has no `config.request_timeout_s` and no `failure_modes.request_timeout`. The read timeout was 120 s. A timeout counts in `request_failed`.
