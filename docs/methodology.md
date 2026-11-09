@@ -141,7 +141,7 @@ The FLOP analysis is an estimate from the model architecture. It sends no timed 
 - It counts 2 FLOPs per multiply-accumulate. The totals leave out the operations in `omitted_non_matmul`, for example norms and RoPE.
 - Linear-attention prefill uses the 64-token chunked algorithm.
 
-`load_architecture_config` tries these config sources in order. The first complete config that passes the dimension check wins.
+`load_architecture_config` tries these config sources in order. The first complete config wins.
 
 1. A local file: `architecture_config_path`, or a local path in the model reference.
 2. Hugging Face `AutoConfig.from_pretrained`. It runs only when no complete local config exists.
@@ -149,7 +149,11 @@ The FLOP analysis is an estimate from the model architecture. It sends no timed 
 
 Caution: the Hugging Face lookup passes `trust_remote_code=True`. It can run Python code from the model repository.
 
-The estimator supports only the Qwen3.6-35B-A3B dimensions (`_FIXED_DIMENSIONS`) with a MoE FFN, full attention, and Gated DeltaNet linear attention. Other models get `estimate_status: unsupported` and a list of `warnings`. `estimate_status` is `exact_from_config` when `model_type` starts with `qwen3_5_moe` or `qwen3_6_moe`, else `approximate`.
+The estimator reads all dimensions from the config. It supports full attention, Gated DeltaNet linear attention, a MoE FFN, and a dense FFN. A config without these fields gets `estimate_status: unsupported` and a list of `warnings`. `estimate_status` is `exact_from_config` when the text `model_type` starts with `qwen3_5` or `qwen3_6`, else `approximate`.
+
+- `architecture.model` is the text `model_type` without the `_text` suffix, for example `qwen3_5_moe` (Qwen3.6-35B-A3B) or `qwen3_5` (Qwen3.8-27B).
+- The dense FFN has 3 matrices (gate, up, down) for a gated model, else 2. Its key is `dense_ffn`.
+- Old runs labeled every `qwen3_5*` model `qwen3.5-35b-a3b`. They accepted only the Qwen3.6-35B-A3B dimensions, so Qwen3.8-27B got `unsupported`.
 
 ## Limits
 
@@ -160,4 +164,4 @@ The estimator supports only the Qwen3.6-35B-A3B dimensions (`_FIXED_DIMENSIONS`)
 - Version source: `environment.json` reads the torch and vLLM versions from the Python that runs `core_runner.py`. A managed server from another environment can use other versions. From era E3, `vllm_server_version` holds the version that the server reports. Use it for the server version.
 - External mode: the runner writes no `resolved_server.json` and no `vllm.log`. The run dir does not record the server settings.
 - Token estimates: reasoning token counts use tiktoken `cl100k_base`, not the model tokenizer.
-- FLOP analysis: it supports one model architecture.
+- FLOP analysis: it supports Qwen3.5-family models only (Gated DeltaNet and full attention, with a MoE or a dense FFN).

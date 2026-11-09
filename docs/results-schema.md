@@ -270,10 +270,10 @@ Each request uses `max_tokens` from `reasoning_max_tokens` (default 4096). Old r
 | Field | Unit | Meaning |
 |---|---|---|
 | `estimate_status` | | `exact_from_config`, `approximate`, or `unsupported`. |
-| `architecture` | | `model` label, `layer_counts`, `ffn`, `token_mixers`, `is_hybrid`. |
+| `architecture` | | `model` label, `layer_counts`, `ffn` (`moe` or `dense`), `token_mixers`, `is_hybrid`. `model` is the text `model_type` without `_text`, for example `qwen3_5_moe`. Old runs wrote `qwen3.5-35b-a3b` for every `qwen3_5*` model. |
 | `flops.decode.<length>` | FLOPs | One decode step at this context length. |
 | `flops.prefill.<length>` | FLOPs | One prefill request of this length. |
-| `flops.*.<length>.total`, `matmul_flops`, `non_matmul_flops` | FLOPs | Totals. Other keys hold the FLOPs of each component. |
+| `flops.*.<length>.total`, `matmul_flops`, `non_matmul_flops` | FLOPs | Totals. Other keys hold the FLOPs of each component: `moe_*` for a MoE FFN, `dense_ffn` for a dense FFN. |
 | `flops.*.<length>.state_traffic_bytes` | bytes | Linear-attention state read and written. |
 | `flops.*.<length>.omitted_non_matmul` | | Operations that the totals leave out. |
 | `assumptions` | | Rules of the estimate. |

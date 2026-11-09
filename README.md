@@ -15,13 +15,13 @@ A run executes the benchmarks below in sequence. Each benchmark writes one file 
 | Reasoning | `reasoning.json` | Thinking tokens and answer tokens per prompt | tokens |
 | Concurrency | `concurrency.json` | Aggregate throughput at 1 to 16 parallel requests | tokens/s |
 | Prefill scaling | `prefill_scaling.json` | Effective and engine prefill throughput per prompt length | tokens/s |
-| FLOP analysis | `flops_analysis.json` | Estimated FLOPs per decode token and per prefill (Qwen3.6-35B-A3B only) | FLOPs |
+| FLOP analysis | `flops_analysis.json` | Estimated FLOPs per decode token and per prefill | FLOPs |
 | Tool calling | `tool_calling.json` | Tasks passed (of 85) and composite score (0 to 6) | count, score |
 | Spec comparison | `spec_comparison.json` | Decode speed with speculative decoding on and off | tokens/s, % |
 
 Deep context runs only when the model config sets `context_lengths`. Spec comparison runs only with `--compare-spec`.
 
-The FLOP analysis accepts only the dimensions of Qwen3.6-35B-A3B. For other models, for example Qwen3.8-27B, `flops_analysis.json` holds `estimate_status: unsupported`, empty FLOP tables, and `warnings`.
+The FLOP analysis reads the dimensions from the model `config.json`. It supports Qwen3.5-family models with a MoE or a dense FFN, for example Qwen3.6-35B-A3B and Qwen3.8-27B. For other architectures, `flops_analysis.json` can hold `estimate_status: unsupported`, empty FLOP tables, and `warnings`.
 
 A run also writes `model_config.yml`, `environment.json`, `gpu_samples.csv`, and `summary.json`. In managed mode, it also writes `resolved_server.json` and the vLLM log. The published run dirs in `results/` do not include `gpu_samples.csv` or the vLLM logs. See [docs/results-schema.md](docs/results-schema.md) for each file and field.
 

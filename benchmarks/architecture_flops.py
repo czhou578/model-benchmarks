@@ -319,40 +319,6 @@ def detect_features(config: NormalizedConfig) -> ArchitectureFeatures:
     )
 
 
-# Fixed dimensions that every accepted Qwen3.6-35B MoE config must match.
-_FIXED_DIMENSIONS: dict[str, int] = {
-    "hidden_size": 2048,
-    "num_layers": 40,
-    "vocab_size": 248320,
-    "head_dim": 256,
-    "num_attention_heads": 16,
-    "num_key_value_heads": 2,
-    "num_experts": 256,
-    "experts_per_token": 8,
-    "expert_intermediate_size": 512,
-    "shared_expert_intermediate_size": 512,
-}
-
-
-def validate_fixed_dimensions(config: NormalizedConfig) -> list[str]:
-    """Return a list of dimension mismatches for the Qwen3.6-35B checkpoint.
-
-    Returns an empty list when all fixed dimensions match.  Mismatches
-    indicate that the config describes a different model variant and must
-    be rejected rather than silently accepted.
-    """
-    mismatches: list[str] = []
-    for field_name, expected in _FIXED_DIMENSIONS.items():
-        actual = getattr(config, field_name, None)
-        if actual is None:
-            continue  # already reported by missing_required_fields
-        if actual != expected:
-            mismatches.append(
-                f"{field_name}: expected {expected}, got {actual}"
-            )
-    return mismatches
-
-
 def missing_required_fields(config: NormalizedConfig) -> list[str]:
     """Return fields required to safely dispatch architecture estimators."""
     required = (
@@ -441,9 +407,8 @@ def load_architecture_config(
     """Load the full architecture config from the first source that fits.
 
     The sources, in order: a local config file, Hugging Face (only when the
-    local config is not complete), and the server config. The first config
-    that is complete and matches the Qwen3.6-35B dimensions wins. Without
-    one, the result has the status ``unsupported``.
+    local config is not complete), and the server config. The first complete
+    config wins. Without one, the result has the status ``unsupported``.
     """
     warnings: list[str] = []
     candidates: list[tuple[str, dict[str, Any]]] = []
@@ -459,9 +424,7 @@ def load_architecture_config(
     local_complete = False
     if candidates:
         first_norm = normalize_config(candidates[0][1], config_source=candidates[0][0])
-        local_complete = not missing_required_fields(
-            first_norm
-        ) and not validate_fixed_dimensions(first_norm)
+        local_complete = not missing_required_fields(first_norm)
     if model_reference and not local_complete:
         try:
             if auto_config_loader is None:
@@ -488,13 +451,6 @@ def load_architecture_config(
         normalized = normalize_config(raw, config_source=source)
         missing = missing_required_fields(normalized)
         if not missing:
-            dimension_errors = validate_fixed_dimensions(normalized)
-            if dimension_errors:
-                warnings.append(
-                    f"{source} config dimensions do not match "
-                    f"Qwen3.6-35B: {'; '.join(dimension_errors)}"
-                )
-                continue
             features = detect_features(normalized)
             return ConfigLoadResult(
                 status="exact_from_config",
@@ -867,6 +823,31 @@ class MoeFfnEstimator:
         )
 
 
+# ---- DenseFfnEstimator ----
+
+
+class DenseFfnEstimator:
+    """Dense FFN: gate, up, and down projections (gated), or up and down."""
+
+    def __init__(self, d: int, intermediate_size: int, ffn_kind: str = "gated") -> None:
+        self.d = d
+        self.m = intermediate_size
+        self.n_matrices = 3 if ffn_kind == "gated" else 2
+
+    def parameter_count(self) -> int:
+        return self.n_matrices * self.d * self.m
+
+    def decode_flops(self) -> ComponentResult:
+        matmul = float(2 * self.parameter_count())
+        return ComponentResult(
+            matmul_flops=matmul,
+            weight_bytes=float(2 * self.parameter_count()),
+            activation_bytes=float(4 * self.m),
+            matmul_breakdown={"dense_ffn": matmul},
+            omitted_non_matmul=("FFN activation function and gate multiply",),
+        )
+
+
 # ---- LmHeadEstimator ----
 
 
@@ -903,7 +884,7 @@ class LmHeadEstimator:
 
 
 class ModelFlopsEstimator:
-    """Compose Qwen MoE components using their actual per-layer mixer counts."""
+    """Compose Qwen components (MoE or dense FFN) with the per-layer mixer counts."""
 
     def __init__(
         self,
@@ -927,19 +908,19 @@ class ModelFlopsEstimator:
             )
 
         d = normalized.hidden_size
-        l = normalized.num_layers
+        n_layers = normalized.num_layers
         v = normalized.vocab_size
         h = normalized.head_dim
         n_q = normalized.num_attention_heads
         n_kv = normalized.num_key_value_heads
         assert d is not None
-        assert l is not None
+        assert n_layers is not None
         assert v is not None
         assert h is not None
         assert n_q is not None
         assert n_kv is not None
         self._d = int(d)
-        self._l = int(l)
+        self._l = int(n_layers)
         self._v = int(v)
         self._h = int(h)
         self._n_q = int(n_q)
@@ -983,7 +964,14 @@ class ModelFlopsEstimator:
             )
 
         self._moe: MoeFfnEstimator | None = None
-        if features.ffn == "moe":
+        self._dense: DenseFfnEstimator | None = None
+        if features.ffn == "dense" and normalized.intermediate_size is not None:
+            self._dense = DenseFfnEstimator(
+                self._d,
+                int(normalized.intermediate_size),
+                ffn_kind="gated" if self._gated else "two_matrix",
+            )
+        elif features.ffn == "moe":
             if (
                 normalized.num_experts is None
                 or normalized.experts_per_token is None
@@ -1003,7 +991,7 @@ class ModelFlopsEstimator:
                 ffn_kind="gated" if self._gated else "two_matrix",
             )
         else:
-            raise ValueError("this Phase 2 path supports MoE FFNs only")
+            raise ValueError("FFN dimensions are incomplete")
 
         self._lm = LmHeadEstimator(
             self._d,
@@ -1013,8 +1001,7 @@ class ModelFlopsEstimator:
         model_type = str(raw.get("model_type", "")).lower()
         self.estimate_status = (
             "exact_from_config"
-            if model_type.startswith("qwen3_5_moe")
-            or model_type.startswith("qwen3_6_moe")
+            if model_type.startswith(("qwen3_5", "qwen3_6"))
             else "approximate"
         )
         self.assumptions = [
@@ -1096,21 +1083,32 @@ class ModelFlopsEstimator:
         )
         return result
 
-    def decode_model_flops(self, context_length: int) -> dict[str, Any]:
-        if context_length < 0:
-            raise ValueError("context_length must be non-negative")
-
+    def _ffn_component(self, tokens: int) -> dict[str, Any]:
+        """The FFN of all layers for *tokens* tokens, MoE or dense."""
+        scale = tokens * self._l
+        if self._dense is not None:
+            return {
+                "result": self._dense.decode_flops(),
+                "matmul_m": scale, "non_matmul_m": scale,
+            }
+        assert self._moe is not None
         moe_names = {
             "routed_experts": "moe_routed",
             "shared_expert": "moe_shared",
             "router": "moe_router",
             "shared_expert_gate": "moe_shared_gate",
         }
-        components: list[dict[str, Any]] = [{
+        return {
             "result": self._moe.decode_flops(),
-            "matmul_m": self._l, "non_matmul_m": self._l,
+            "matmul_m": scale, "non_matmul_m": scale,
             "name_map": moe_names, "nmm_prefix": "moe_",
-        }]
+        }
+
+    def decode_model_flops(self, context_length: int) -> dict[str, Any]:
+        if context_length < 0:
+            raise ValueError("context_length must be non-negative")
+
+        components: list[dict[str, Any]] = [self._ffn_component(1)]
         if self._full_attn:
             components.append({
                 "result": self._full_attn.decode_flops(context_length),
@@ -1149,17 +1147,7 @@ class ModelFlopsEstimator:
         if S <= 0:
             raise ValueError("sequence length must be positive")
 
-        moe_names = {
-            "routed_experts": "moe_routed",
-            "shared_expert": "moe_shared",
-            "router": "moe_router",
-            "shared_expert_gate": "moe_shared_gate",
-        }
-        components: list[dict[str, Any]] = [{
-            "result": self._moe.decode_flops(),
-            "matmul_m": S * self._l, "non_matmul_m": S * self._l,
-            "name_map": moe_names, "nmm_prefix": "moe_",
-        }]
+        components: list[dict[str, Any]] = [self._ffn_component(S)]
         if self._full_attn:
             components.append({
                 "result": self._full_attn.prefill_flops(S),
@@ -1193,11 +1181,12 @@ class ModelFlopsEstimator:
 
     def weight_bytes(self, dtype_bytes: int = 2) -> dict[str, float]:
         out: dict[str, float] = {}
-        assert self._moe is not None
-        _moe = self._moe
-        moe_params = _moe.parameter_breakdown()
-        for name, params in moe_params.items():
-            out["moe_" + name] = params * self._l * dtype_bytes
+        if self._dense is not None:
+            out["dense_ffn"] = self._dense.parameter_count() * self._l * dtype_bytes
+        else:
+            assert self._moe is not None
+            for name, params in self._moe.parameter_breakdown().items():
+                out["moe_" + name] = params * self._l * dtype_bytes
 
         if self._full_attn:
             out["full_attention"] = (
@@ -1241,15 +1230,14 @@ class ModelFlopsEstimator:
         return out
 
 
-def _model_label(raw: dict[str, Any]) -> str:
-    """Derive a short model label from the config."""
+def _model_label(raw: Mapping[str, Any]) -> str:
+    """Return the text model_type of the config, for example ``qwen3_5_moe``.
+
+    The ``_text`` suffix of a multimodal text config is removed. The label
+    names the architecture family. It does not name the parameter count.
+    """
     model_type = str(raw.get("model_type", "unknown")).lower()
-    # Strip "qwen3_5_moe" / "qwen3_6_moe" prefix → "qwen3.5-35b-a3b"
-    if model_type.startswith("qwen3_6"):
-        return "qwen3.6-35b-a3b"
-    if model_type.startswith("qwen3_5"):
-        return "qwen3.5-35b-a3b"
-    return model_type.replace("_", "-")
+    return model_type.removesuffix("_text")
 
 
 def run_flops_analysis(
@@ -1260,11 +1248,12 @@ def run_flops_analysis(
     context_lengths: list[int] | None = None,
     prefill_lengths: list[int] | None = None,
 ) -> dict[str, Any]:
-    """Return a complete FLOPs analysis document for the Qwen3.6-35B config.
+    """Return a complete FLOPs analysis document for the model config.
 
     If the config is already complete (has all required fields) it is used
     directly.  Otherwise the function resolves the config from local files,
-    HuggingFace, or the vLLM server via ``load_architecture_config``.
+    HuggingFace, or the vLLM server via ``load_architecture_config``. All
+    dimensions come from the config.
 
     Args:
         model_config: the benchmark YAML config dict or a complete model config.
@@ -1297,18 +1286,6 @@ def run_flops_analysis(
                 "flops": {"decode": {}, "prefill": {}},
                 "assumptions": [],
                 "warnings": ["missing configuration fields: " + ", ".join(missing)],
-            }
-        dimension_errors = validate_fixed_dimensions(normalized)
-        if dimension_errors:
-            return {
-                "estimate_status": "unsupported",
-                "architecture": {"model": _model_label(model_config)},
-                "flops": {"decode": {}, "prefill": {}},
-                "assumptions": [],
-                "warnings": [
-                    "config dimensions do not match Qwen3.6-35B: "
-                    + "; ".join(dimension_errors)
-                ],
             }
         features = detect_features(normalized)
         config_result = ConfigLoadResult(
