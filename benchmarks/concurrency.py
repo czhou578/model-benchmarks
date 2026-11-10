@@ -22,8 +22,8 @@ from typing import Any
 import requests
 
 from benchmarks.prefill import PromptTokenizer, calibrate_prompt
-from harness.client import ModelClient
 from harness import prompts
+from harness.client import ModelClient
 from harness.prompts import count_tokens
 from harness.stats import stat_summary
 

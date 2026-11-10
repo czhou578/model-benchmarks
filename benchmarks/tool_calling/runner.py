@@ -9,12 +9,14 @@ from typing import Any
 
 from benchmarks.tool_calling.aggregate import _aggregate, _repeat_summary
 from benchmarks.tool_calling.multi_turn import _run_multi_turn_task
-from benchmarks.tool_calling.protocol import DEFAULT_REQUEST_TIMEOUT_S, _build_tools_definition
+from benchmarks.tool_calling.protocol import (
+    DEFAULT_REQUEST_TIMEOUT_S,
+    _build_tools_definition,
+)
 from benchmarks.tool_calling.results import BenchmarkResult, TaskResult
 from benchmarks.tool_calling.single_turn import _attach_overlay_defaults, _run_task
 from benchmarks.tool_calling.tasks import load_tasks, resolve_tasks_path
 from harness.client import ModelClient
-
 
 # --------------------------------------------------------------------------- #
 # Main benchmark function

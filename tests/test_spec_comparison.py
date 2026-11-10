@@ -28,10 +28,10 @@ class _FakeServer:
 
 
 def test_strip_spec_flags_removes_every_form():
-    command = BASE + ["--speculative-config", "{}", "-sc={}", "--spec-tokens", "3",
-                      "--speculative-config.method", "mtp", "--async-scheduling"]
+    command = [*BASE, "--speculative-config", "{}", "-sc={}", "--spec-tokens", "3",
+               "--speculative-config.method", "mtp", "--async-scheduling"]
     kept, removed = core_runner.strip_spec_flags(command)
-    assert kept == BASE + ["--async-scheduling"]
+    assert kept == [*BASE, "--async-scheduling"]
     assert removed == ["--speculative-config", "{}", "-sc={}", "--spec-tokens", "3",
                        "--speculative-config.method", "mtp"]
     assert core_runner.strip_spec_flags(BASE) == (BASE, [])
@@ -59,11 +59,11 @@ def test_disabled_variant_has_no_spec_flag(tmp_path, monkeypatch):
     cfg = {"speculative_config": {"method": "mtp", "num_speculative_tokens": 3}, "decode_lengths": [512]}
     run = core_runner.Run(cfg=cfg, args=argparse.Namespace(), run_dir=tmp_path,
                           summary={"server_mode": "managed"},
-                          server=_FakeServer(BASE + ["--speculative-config", '{"method":"ngram"}']))
+                          server=_FakeServer([*BASE, "--speculative-config", '{"method":"ngram"}']))
     core_runner.step_spec_comparison(run)
 
     enabled = commands["vllm_spec_enabled.log"]
-    assert enabled == BASE + ["--speculative-config", '{"method": "mtp", "num_speculative_tokens": 3}']
+    assert enabled == [*BASE, "--speculative-config", '{"method": "mtp", "num_speculative_tokens": 3}']
     assert commands["vllm_spec_disabled.log"] == BASE
     removed = run.summary["spec_comparison"]["config"]["removed_server_flags"]
     assert removed == ["--speculative-config", '{"method":"ngram"}']

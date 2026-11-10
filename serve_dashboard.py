@@ -41,7 +41,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
     results_dir: Path = ROOT / "results"
     out: Path = DEFAULT_OUT
 
-    def do_GET(self) -> None:  # noqa: N802 (http.server naming)
+    def do_GET(self) -> None:  # http.server names this method.
         path = self.path.split("?", 1)[0]
         if path == "/":
             self.send_response(302)

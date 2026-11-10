@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -10,10 +11,10 @@ import signal
 import socket
 import subprocess
 import time
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 from urllib.parse import urlparse
-
 
 # A variable name is secret-like when it ends in one of these words, after
 # "_" or at the start, or when it contains SECRET or PASSWORD. Thus HF_TOKEN
@@ -123,17 +124,13 @@ class VllmServer:
             return
 
         if process.poll() is None:
-            try:
+            with contextlib.suppress(ProcessLookupError):
                 os.killpg(process.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
             try:
                 process.wait(timeout=self.shutdown_timeout_s)
             except subprocess.TimeoutExpired:
-                try:
+                with contextlib.suppress(ProcessLookupError):
                     os.killpg(process.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
                 process.wait(timeout=5)
 
         self.stopped_at = time.time()
@@ -182,7 +179,7 @@ class VllmServer:
         metadata = self.metadata(base_dir=Path(path).parent)
         path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
-    def __enter__(self) -> "VllmServer":
+    def __enter__(self) -> VllmServer:
         self.start()
         return self
 

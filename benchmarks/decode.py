@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import statistics
 import uuid
-from typing import Any, Optional
+from typing import Any
 
 from benchmarks.reasoning import analyze_reasoning_tokens
 from harness.client import ModelClient
@@ -20,7 +20,7 @@ def event_rates(gaps: list[float], token_deltas: list[int] | None) -> tuple[list
     fallback when the server sends no per-chunk usage.
     """
     if token_deltas is not None and len(token_deltas) == len(gaps):
-        return [d / g for d, g in zip(token_deltas, gaps) if g > 0], "token_delta"
+        return [d / g for d, g in zip(token_deltas, gaps, strict=True) if g > 0], "token_delta"
     return [1.0 / g for g in gaps if g > 0], "event_gap"
 
 
@@ -40,7 +40,7 @@ def run_decode_speed(client: ModelClient, output_lengths: list[int],
         # Use the already-split reasoning and answer text from the model client
         reasoning_tokens_count: int = 0
         answer_tokens_count: int = 0
-        reasoning_ratio: Optional[float] = None
+        reasoning_ratio: float | None = None
         if gen.reasoning_text:
             reasoning_tokens_count = count_tokens(gen.reasoning_text)
             answer_tokens_count = count_tokens(gen.answer_text)

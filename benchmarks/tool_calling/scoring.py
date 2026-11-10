@@ -27,24 +27,33 @@ def _validate_param_type(value: Any, expected_type: str) -> bool:
 
 def _validate_param(value: Any, schema: dict) -> bool:
     """Validate a single parameter against its JSON Schema fragment."""
-    if "type" in schema:
-        if not _validate_param_type(value, schema["type"]):
-            return False
+    if "type" in schema and not _validate_param_type(value, schema["type"]):
+        return False
     if "enum" in schema and value not in schema["enum"]:
         return False
-    if "minimum" in schema and isinstance(value, (int, float)):
-        if value < schema["minimum"]:
-            return False
-    if "maximum" in schema and isinstance(value, (int, float)):
-        if value > schema["maximum"]:
-            return False
-    if "minLength" in schema and isinstance(value, str):
-        if len(value) < schema["minLength"]:
-            return False
-    if "maxLength" in schema and isinstance(value, str):
-        if len(value) > schema["maxLength"]:
-            return False
-    return True
+    if (
+        "minimum" in schema
+        and isinstance(value, (int, float))
+        and value < schema["minimum"]
+    ):
+        return False
+    if (
+        "maximum" in schema
+        and isinstance(value, (int, float))
+        and value > schema["maximum"]
+    ):
+        return False
+    if (
+        "minLength" in schema
+        and isinstance(value, str)
+        and len(value) < schema["minLength"]
+    ):
+        return False
+    return not (
+        "maxLength" in schema
+        and isinstance(value, str)
+        and len(value) > schema["maxLength"]
+    )
 
 
 def _score_params(
@@ -160,7 +169,7 @@ def _score_ambiguous_task(
     expected_params = task.get("expected", {}).get("params", {})
     no_halluc = True
     if expected_params and actual_params:
-        for key, value in (actual_params or {}).items():
+        for key, _value in (actual_params or {}).items():
             if key not in expected_params:
                 no_halluc = False
                 break
@@ -213,24 +222,21 @@ def _score_schema_compliance_task(
 
         # String constraints
         if isinstance(param_value, str):
-            if "minLength" in prop_schema:
-                if len(param_value) < prop_schema["minLength"]:
-                    results["length_valid"] = False
-                    details_parts.append(
-                        f"{param_name}: too short (len={len(param_value)}, min={prop_schema['minLength']})"
-                    )
-            if "maxLength" in prop_schema:
-                if len(param_value) > prop_schema["maxLength"]:
-                    results["length_valid"] = False
-                    details_parts.append(
-                        f"{param_name}: too long (len={len(param_value)}, max={prop_schema['maxLength']})"
-                    )
-            if "pattern" in prop_schema:
-                if not re.match(prop_schema["pattern"], param_value):
-                    results["pattern_valid"] = False
-                    details_parts.append(
-                        f"{param_name}: violates pattern {prop_schema['pattern']}"
-                    )
+            if "minLength" in prop_schema and len(param_value) < prop_schema["minLength"]:
+                results["length_valid"] = False
+                details_parts.append(
+                    f"{param_name}: too short (len={len(param_value)}, min={prop_schema['minLength']})"
+                )
+            if "maxLength" in prop_schema and len(param_value) > prop_schema["maxLength"]:
+                results["length_valid"] = False
+                details_parts.append(
+                    f"{param_name}: too long (len={len(param_value)}, max={prop_schema['maxLength']})"
+                )
+            if "pattern" in prop_schema and not re.match(prop_schema["pattern"], param_value):
+                results["pattern_valid"] = False
+                details_parts.append(
+                    f"{param_name}: violates pattern {prop_schema['pattern']}"
+                )
             if "enum" in prop_schema and param_value not in prop_schema["enum"]:
                 results["enum_valid"] = False
                 details_parts.append(
@@ -241,10 +247,13 @@ def _score_schema_compliance_task(
         if isinstance(param_value, list):
             item_schema = prop_schema.get("items", {})
             for item in param_value:
-                if "enum" in item_schema and isinstance(item, str):
-                    if item not in item_schema["enum"]:
-                        results["enum_valid"] = False
-                        details_parts.append(f"label: {item!r} not in enum")
+                if (
+                    "enum" in item_schema
+                    and isinstance(item, str)
+                    and item not in item_schema["enum"]
+                ):
+                    results["enum_valid"] = False
+                    details_parts.append(f"label: {item!r} not in enum")
 
         # Nested object (assignees)
         if isinstance(param_value, list) and prop_schema.get("items", {}).get("type") == "object":

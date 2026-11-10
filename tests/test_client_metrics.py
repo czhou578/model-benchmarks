@@ -9,8 +9,7 @@ import pytest
 
 import harness.client
 from benchmarks import latency
-from harness.client import ModelClient
-from harness.client import GenerationResult, _parse_server_metrics
+from harness.client import GenerationResult, ModelClient, _parse_server_metrics
 
 
 class _FakeResponse:
@@ -20,7 +19,7 @@ class _FakeResponse:
         self._lines = lines
         self.status_code = status_code
 
-    def __enter__(self) -> "_FakeResponse":
+    def __enter__(self) -> _FakeResponse:
         return self
 
     def __exit__(self, *exc: Any) -> bool:

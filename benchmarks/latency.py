@@ -66,7 +66,7 @@ def run_deep_context(client: ModelClient, context_lengths: list[int],
         exact = None
         status = "success"
         error: str | None = None
-        for i in range(repeats):
+        for _i in range(repeats):
             try:
                 gen = client.generate(
                     prompt, max_tokens=output_tokens, temperature=0.0,
@@ -76,7 +76,7 @@ def run_deep_context(client: ModelClient, context_lengths: list[int],
                 if gen.ttft_s == gen.ttft_s and gen.ttft_s > 0:
                     ttfts.append(gen.ttft_s)
                     prefill_tps.append(gen.prompt_tokens / gen.ttft_s)
-            except Exception as e:  # noqa: BLE001 - record and go to the next length
+            except Exception as e:  # Record the error and go to the next length.
                 error = f"{type(e).__name__}: {e}"
                 text = str(e).lower()
                 if isinstance(e, requests.exceptions.ConnectionError) or (

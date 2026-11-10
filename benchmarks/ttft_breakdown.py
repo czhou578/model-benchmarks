@@ -23,14 +23,14 @@ from __future__ import annotations
 
 import time
 import uuid
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Any
+
 from benchmarks.prefill import prepare_exact_prompt
 from harness.client import ModelClient
 from harness.stats import stat_summary
 from harness.telemetry import GpuMonitor
-
 
 # --------------------------------------------------------------------------- #
 # Data structures

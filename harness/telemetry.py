@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import bisect
 import csv
+import itertools
 import shutil
 import statistics
 import threading
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from harness.environment import run_command
 from harness.paths import repo_relative
@@ -56,7 +57,7 @@ def gpu_energy_wh(
     knots = [(lo, _power_at(points, lo))]
     knots += [(t, p) for t, p in points if lo < t < hi]
     knots.append((hi, _power_at(points, hi)))
-    joules = sum((t1 - t0) * (p0 + p1) / 2 for (t0, p0), (t1, p1) in zip(knots, knots[1:]))
+    joules = sum((t1 - t0) * (p0 + p1) / 2 for (t0, p0), (t1, p1) in itertools.pairwise(knots))
     return joules / 3600.0
 
 
@@ -159,7 +160,7 @@ class GpuMonitor:
         self.out_dir = out_dir
         self.interval_s = interval_s
         self._stop = threading.Event()
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self.samples: list[dict[str, Any]] = []
         self.has_nvidia_smi = shutil.which("nvidia-smi") is not None
         # Per-length window tracking
@@ -171,7 +172,7 @@ class GpuMonitor:
         """Parse one nvidia-smi CSV line into a row dict."""
         parts = [p.strip() for p in out.splitlines()[0].split(",")]
         row: dict[str, Any] = {}
-        for k, v in zip(self.KEYS, parts):
+        for k, v in zip(self.KEYS, parts, strict=False):
             try:
                 row[k] = float(v)
             except (ValueError, TypeError):
@@ -240,7 +241,7 @@ class GpuMonitor:
 
         csv_path = self.out_dir / "gpu_samples.csv"
         if self.samples:
-            keys = sorted({k for row in self.samples for k in row.keys()})
+            keys = sorted({k for row in self.samples for k in row})
             with open(csv_path, "w", newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=keys)
                 writer.writeheader()

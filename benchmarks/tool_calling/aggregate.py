@@ -9,8 +9,11 @@ from __future__ import annotations
 import statistics
 from typing import Any
 
-from benchmarks.tool_calling.results import BenchmarkResult, MultiTurnTaskResult, TaskResult
-
+from benchmarks.tool_calling.results import (
+    BenchmarkResult,
+    MultiTurnTaskResult,
+    TaskResult,
+)
 
 # --------------------------------------------------------------------------- #
 # Weighted composite score
@@ -335,25 +338,21 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
                 failure_modes["hallucinated_param_value"] += 1
 
             # Schema compliance failure modes.
-            if r.category == "schema_compliance":
-                if not getattr(r, "schema_required_present", True):
-                    failure_modes["schema_constraint_violation"] += 1
-                elif not getattr(r, "schema_length_valid", True):
-                    failure_modes["schema_constraint_violation"] += 1
-                elif not getattr(r, "schema_enum_valid", True):
-                    failure_modes["schema_constraint_violation"] += 1
-                elif not getattr(r, "schema_pattern_valid", True):
-                    failure_modes["schema_constraint_violation"] += 1
-                elif not getattr(r, "schema_nested_valid", True):
-                    failure_modes["schema_constraint_violation"] += 1
+            if r.category == "schema_compliance" and (
+                not getattr(r, "schema_required_present", True)
+                or not getattr(r, "schema_length_valid", True)
+                or not getattr(r, "schema_enum_valid", True)
+                or not getattr(r, "schema_pattern_valid", True)
+                or not getattr(r, "schema_nested_valid", True)
+            ):
+                failure_modes["schema_constraint_violation"] += 1
 
             # Error recovery failure modes.
-            if r.category == "error_recovery":
-                if isinstance(r, MultiTurnTaskResult):
-                    if not r.turns_correct:
-                        failure_modes["error_no_retry"] += 1
-                    elif not getattr(r, "no_hallucinated_params", True):
-                        failure_modes["error_retry_invalid"] += 1
+            if r.category == "error_recovery" and isinstance(r, MultiTurnTaskResult):
+                if not r.turns_correct:
+                    failure_modes["error_no_retry"] += 1
+                elif not getattr(r, "no_hallucinated_params", True):
+                    failure_modes["error_retry_invalid"] += 1
 
     _OVERLAY_FIELDS: dict[str, list[tuple[str, str, Any]]] = {
         "ambiguous": [
