@@ -15,7 +15,9 @@ def main() -> None:
     """Standalone entry point for running the benchmark."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Tool-calling benchmark")
+    parser = argparse.ArgumentParser(
+        prog="python -m benchmarks.tool_calling", description="Tool-calling benchmark",
+    )
     parser.add_argument(
         "--tasks", default="datasets/tool_calling_tasks.yaml",
         help="Path to the YAML task file",
