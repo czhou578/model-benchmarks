@@ -123,7 +123,7 @@ Notes:
 - The tool-calling benchmark always uses `/v1/chat/completions`. It ignores `endpoint.chat`.
 - Write `speculative_config` as a JSON string in single quotes, or as a YAML map. The runner sends a map as JSON (`json.dumps`) and a string as it is (`speculative_config_arg` in core_runner.py).
 - With `--compare-spec`, the runner removes the speculative decoding flags of `server.command` from both variants (`strip_spec_flags`). These flags are `--speculative-config`, `-sc`, `--speculative-config.<key>`, `--spec-method`, `--spec-model`, and `--spec-tokens`, each with its value. The enabled variant then adds `--speculative-config` with `speculative_config`. The runner prints a warning, and `spec_comparison.json` lists the removed arguments in `config.removed_server_flags`.
-- The FLOP analysis looks for a model reference in this order: `local_model_path`, `model_path`, `model_id`, `endpoint.model_name`, then the argument after `serve` in `server.command` (`_model_reference`).
+- The FLOP analysis looks for a model reference in this order: `local_model_path`, `model_path`, `model_id`, `endpoint.model_name`, then the argument after `serve` in `server.command` (`_model_reference` in `benchmarks/architecture_flops/loader.py`).
 - Some benchmark values have no key, for example the `max_tokens` of the latency requests. [methodology.md](methodology.md) lists them.
 
 ## Example: external mode

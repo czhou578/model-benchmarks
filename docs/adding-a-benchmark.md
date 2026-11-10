@@ -15,7 +15,7 @@ The runner runs the benchmarks in the order of this table. The function `run_ben
 | Reasoning | `run_reasoning_benchmark` in `benchmarks/reasoning.py` | `reasoning.json` | `reasoning`, full copy | `--skip-reasoning` |
 | Concurrency | `benchmarks/concurrency.py` | `concurrency.json` | `concurrency`, full copy | `--skip-concurrency` |
 | Prefill scaling | `benchmarks/prefill.py` | `prefill_scaling.json` | `prefill_scaling`, status and `n_success` per length | `--skip-prefill` |
-| FLOP analysis | `benchmarks/architecture_flops.py` | `flops_analysis.json` | `flops_analysis`, status and model label | `--skip-flops` |
+| FLOP analysis | `run_flops_analysis` in `benchmarks/architecture_flops/analysis.py` | `flops_analysis.json` | `flops_analysis`, status and model label | `--skip-flops` |
 | Tool calling | `benchmarks/tool_calling.py` | `tool_calling.json` | `tool_calling`, scores only | `--skip-tool-calling` |
 | Speculative decoding comparison | `compare_spec_decode_results` in `benchmarks/decode.py` | `spec_enabled.json`, `spec_disabled.json`, `spec_comparison.json` | `spec_comparison`, full copy | runs only with `--compare-spec` |
 
@@ -33,7 +33,7 @@ A step function does these things:
 2. It calls the run function of its module with `run.client`, the parameters, and optionally `gpu_monitor=run.monitor`.
 3. It calls `run.record("<name>", result)`. This writes `<name>.json` to the run dir and adds the `<name>` entry to the summary. Use `summary_entry=` to put a short form in the summary.
 
-The modules in `benchmarks/` import from `harness/` and from other modules in `benchmarks/`, for example `concurrency.py` from `prefill.py`. They never import `core_runner` at the top level. Keep it so: a top-level import of `core_runner` from a benchmark makes a circular import. Only the standalone `__main__` block of `architecture_flops.py` imports it.
+The modules in `benchmarks/` import from `harness/` and from other modules in `benchmarks/`, for example `concurrency.py` from `prefill.py`. They never import `core_runner` at the top level. Keep it so: a top-level import of `core_runner` from a benchmark makes a circular import. Only the standalone entry point `architecture_flops/__main__.py` imports it.
 
 ## Conventions
 
