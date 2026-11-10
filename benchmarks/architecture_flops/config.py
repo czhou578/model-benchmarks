@@ -7,8 +7,9 @@ result describing what is missing.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
-from typing import Any, Mapping
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -189,12 +190,16 @@ def normalize_config(
     head_dim = _integer(values["head_dim"])
     n_heads = _integer(values["num_attention_heads"])
     hidden_size = _integer(values["hidden_size"])
-    if head_dim is None and hidden_size is not None and n_heads:
-        if hidden_size % n_heads == 0:
-            head_dim = hidden_size // n_heads
-            source_keys["head_dim"] = (
-                "derived:hidden_size/num_attention_heads"
-            )
+    if (
+        head_dim is None
+        and hidden_size is not None
+        and n_heads
+        and hidden_size % n_heads == 0
+    ):
+        head_dim = hidden_size // n_heads
+        source_keys["head_dim"] = (
+            "derived:hidden_size/num_attention_heads"
+        )
 
     ffn_kind: str | None = None
     explicit_ffn_key = (
@@ -340,9 +345,12 @@ def missing_required_fields(config: NormalizedConfig) -> list[str]:
         missing.append("ffn_dimensions")
     if not features.token_mixers:
         missing.append("token_mixer")
-    if config.layer_types and config.num_layers is not None:
-        if len(config.layer_types) != config.num_layers:
-            missing.append("layer_types_length")
+    if (
+        config.layer_types
+        and config.num_layers is not None
+        and len(config.layer_types) != config.num_layers
+    ):
+        missing.append("layer_types_length")
     if features.unsupported_layer_types:
         missing.append("supported_layer_types")
     return missing

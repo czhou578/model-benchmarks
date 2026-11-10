@@ -23,7 +23,7 @@ def test_energy_uses_the_real_timestamps() -> None:
 
 
 def test_energy_skips_samples_without_power() -> None:
-    rows = SAMPLES + [{"t": 104.0, "gpu_power_w": None}]
+    rows = [*SAMPLES, {"t": 104.0, "gpu_power_w": None}]
     assert gpu_energy_wh(rows) == pytest.approx(70.0 / 3600)
     assert gpu_energy_wh([{"t": 1.0, "gpu_power_w": None}]) is None
     assert gpu_energy_wh(SAMPLES[:1]) is None

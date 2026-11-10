@@ -24,7 +24,6 @@ from benchmarks.tool_calling.scoring import (
 )
 from harness.client import ModelClient
 
-
 # --------------------------------------------------------------------------- #
 # Category overlay scoring — dispatch helper
 # --------------------------------------------------------------------------- #

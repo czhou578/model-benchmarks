@@ -10,8 +10,12 @@ import requests
 
 import harness.client
 from benchmarks import latency
-from harness.client import ModelClient
-from harness.client import MAX_ERROR_BODY_CHARS, GenerationResult, ServerHTTPError
+from harness.client import (
+    MAX_ERROR_BODY_CHARS,
+    GenerationResult,
+    ModelClient,
+    ServerHTTPError,
+)
 
 
 class _Resp:
@@ -22,7 +26,7 @@ class _Resp:
         self.text = body
         self._lines = lines or []
 
-    def __enter__(self) -> "_Resp":
+    def __enter__(self) -> _Resp:
         return self
 
     def __exit__(self, *exc: Any) -> bool:

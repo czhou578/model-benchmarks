@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from benchmarks.architecture_flops.attention import FullAttentionEstimator
 from benchmarks.architecture_flops.config import ArchitectureFeatures, NormalizedConfig
@@ -16,8 +17,8 @@ class ModelFlopsEstimator:
 
     def __init__(
         self,
-        normalized: "NormalizedConfig",
-        features: "ArchitectureFeatures",
+        normalized: NormalizedConfig,
+        features: ArchitectureFeatures,
     ):
         self.normalized = normalized
         self.features = features

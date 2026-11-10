@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-
 # Results from a single component's layer-level computation.
 # All quantities are per-layer, per-token (decode) or per-request (prefill).
 

@@ -6,10 +6,12 @@ timing (TTFT, gaps between stream events) and the vLLM per-request metrics.
 
 from __future__ import annotations
 
+import itertools
 import json
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any
 
 import requests
 
@@ -105,7 +107,7 @@ class ServerHTTPError(requests.HTTPError):
         self.status_code = int(response.status_code)
         try:
             body = response.text or ""
-        except Exception:  # noqa: BLE001 - the body is only for the message
+        except Exception:  # The body is only for the message.
             body = ""
         self.body = body[:MAX_ERROR_BODY_CHARS]
         super().__init__(f"HTTP {self.status_code} from {url}: {self.body}", response=response)
@@ -127,7 +129,7 @@ def stream_generation(
     last_event_time = start
     per_token_gaps: list[float] = []
     chunks: list[str] = []
-    usage: Optional[dict] = None
+    usage: dict | None = None
     server_metrics: dict[str, Any] | None = None
     cached_tokens: int = 0
     finish_reason: str | None = None
@@ -170,8 +172,8 @@ def stream_generation(
             delta = choice.get("delta") or {}
 
             if chat:
-                reasoning_text: Optional[str] = delta.get("reasoning")
-                content_text: Optional[str] = delta.get("content")
+                reasoning_text: str | None = delta.get("reasoning")
+                content_text: str | None = delta.get("content")
             else:
                 reasoning_text = None
                 content_text = choice.get("text")
@@ -210,7 +212,7 @@ def stream_generation(
     exact_output = usage.get("completion_tokens") if usage else None
     token_deltas: list[int] | None = None
     if event_token_counts and None not in event_token_counts:
-        token_deltas = [int(b) - int(a) for a, b in zip(event_token_counts, event_token_counts[1:])]
+        token_deltas = [int(b) - int(a) for a, b in itertools.pairwise(event_token_counts)]
 
     return GenerationResult(
         prompt_tokens=exact_prompt if exact_prompt is not None else count_tokens(payload.get("prompt", "")),
@@ -238,7 +240,7 @@ def stream_generation(
 class ModelClient:
     """Client for one model on an OpenAI-compatible server (chat or completions)."""
 
-    def __init__(self, base_url: str, model_name: str, api_key: Optional[str] = None,
+    def __init__(self, base_url: str, model_name: str, api_key: str | None = None,
                  chat: bool = True):
         self.base_url = base_url.rstrip("/")
         self.model_name = model_name
@@ -261,7 +263,7 @@ class ModelClient:
         self,
         timeout_s: int = 600,
         poll_s: float = 3.0,
-        process_check: Optional[Callable[[], None]] = None,
+        process_check: Callable[[], None] | None = None,
     ) -> None:
         """Wait until the vLLM engine is loaded and can actually process a request.
 

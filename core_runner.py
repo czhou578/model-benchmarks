@@ -25,14 +25,15 @@ from __future__ import annotations
 
 import argparse
 import json
-import signal
 import shutil
+import signal
 import time
-import yaml
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+import yaml
 
 from benchmarks.architecture_flops import run_flops_analysis
 from benchmarks.concurrency import run_concurrency_test
@@ -48,7 +49,6 @@ from harness.paths import ROOT, repo_relative
 from harness.provenance import fetch_server_version, harness_provenance
 from harness.telemetry import GpuMonitor, decode_energy_summary
 from vllm_server import VllmServer
-
 
 # --------------------------------------------------------------------------- #
 # Orchestration
@@ -370,7 +370,7 @@ def step_spec_comparison(run: Run) -> None:
             variant_server.save_metadata(run.run_dir / f"resolved_server_{label}.json")
 
     spec_results = run_variant(
-        "spec_enabled", base_command + ["--speculative-config", speculative_config_arg(spec_config)]
+        "spec_enabled", [*base_command, "--speculative-config", speculative_config_arg(spec_config)]
     )
     save_json(run.run_dir / "spec_enabled.json", spec_results)
     non_spec_results = run_variant("spec_disabled", base_command)

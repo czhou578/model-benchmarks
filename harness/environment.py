@@ -5,10 +5,10 @@ from __future__ import annotations
 import subprocess
 import sys
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 
-def run_command(cmd: list[str]) -> Optional[str]:
+def run_command(cmd: list[str]) -> str | None:
     """Run *cmd* and return its stripped stdout, or None when it fails."""
     try:
         out = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
