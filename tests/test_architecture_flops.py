@@ -6,6 +6,7 @@ The configs come from tests/fixtures. No Hugging Face download, no server.
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import types
 from pathlib import Path
@@ -147,3 +148,26 @@ def test_missing_transformers_gives_a_clear_warning(monkeypatch):
 
     assert result["estimate_status"] == "unsupported"
     assert any("transformers is not installed" in w for w in result["warnings"])
+
+
+def test_a_complete_config_with_alias_keys_takes_the_fast_path():
+    # d_model, n_layer, n_vocab, n_head, and num_kv_heads are aliases in config._ALIASES.
+    # The estimator gives "exact_from_config" only to the qwen3_5 and qwen3_6 model types.
+    cfg = {
+        "model_type": "qwen3_5", "d_model": 4096, "n_layer": 32, "n_vocab": 32000,
+        "n_head": 32, "num_kv_heads": 8, "intermediate_size": 14336,
+    }
+    result = run_flops_analysis(cfg, context_lengths=[512], prefill_lengths=[512])
+    assert result["estimate_status"] == "exact_from_config"
+    assert result["architecture"]["ffn"] == "dense"
+    assert result["architecture"]["layer_counts"] == {"full_attention": 32}
+    assert result["flops"]["decode"]["512"]["dense_ffn"] == 32 * 3 * 2 * 4096 * 14336
+
+
+def test_the_cli_help_prints_the_usage():
+    proc = subprocess.run(
+        [sys.executable, "-m", "benchmarks.architecture_flops", "--help"],
+        cwd=ROOT, capture_output=True, text=True, check=False,
+    )
+    assert proc.returncode == 0
+    assert proc.stdout.startswith("usage: python -m benchmarks.architecture_flops")

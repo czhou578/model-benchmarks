@@ -145,6 +145,24 @@ def _pick(
     return None, None
 
 
+_CORE_FIELDS = (
+    "hidden_size",
+    "num_layers",
+    "vocab_size",
+    "num_attention_heads",
+    "num_key_value_heads",
+)
+
+
+def has_core_fields(config: Mapping[str, Any]) -> bool:
+    """Return True if the config sets each core dimension under a known alias.
+
+    The check reads the top level of the mapping only. It does not unwrap
+    ``text_config``. It uses the same aliases as ``normalize_config``.
+    """
+    return all(_pick(config, name, "")[0] is not None for name in _CORE_FIELDS)
+
+
 def normalize_config(
     model_config: Mapping[str, Any] | Any,
     *,

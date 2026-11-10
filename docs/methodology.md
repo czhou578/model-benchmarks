@@ -141,7 +141,7 @@ The FLOP analysis is an estimate from the model architecture. It sends no timed 
 - It counts 2 FLOPs per multiply-accumulate. The totals leave out the operations in `omitted_non_matmul`, for example norms and RoPE.
 - Linear-attention prefill uses the 64-token chunked algorithm.
 
-The code is in the package `benchmarks/architecture_flops/`. Run `python -m benchmarks.architecture_flops <config.yml>` to print the analysis of one model config.
+The code is in the package `benchmarks/architecture_flops/`. Run `python -m benchmarks.architecture_flops [config.yml]` to print the analysis of one model config. Without a path, the command reads `models/legacy/qwen3.6_35b_redhat_nvfp4.yml`. The `--help` option prints the usage.
 
 | Module | Contents |
 |---|---|
@@ -152,7 +152,7 @@ The code is in the package `benchmarks/architecture_flops/`. Run `python -m benc
 | `attention.py`, `linear_attention.py`, `ffn.py`, `lm_head.py` | The estimator of each layer component. |
 | `component.py` | `ComponentResult`: the FLOPs and bytes of one layer component. |
 
-`load_architecture_config` tries these config sources in order. The first complete config wins.
+If the config itself sets the hidden size, the layer count, the vocabulary size, and the attention and KV head counts, `run_flops_analysis` uses it directly. Each of these fields can use any alias that `normalize_config` reads, for example `n_layer` or `d_model`. Otherwise `load_architecture_config` tries these config sources in order. The first complete config wins.
 
 1. A local file: `architecture_config_path`, or a local path in the model reference.
 2. Hugging Face `AutoConfig.from_pretrained`. It runs only when no complete local config exists. It needs the `transformers` package, which is not a dependency of this repo. Without the package, `warnings` tells you to install it or to set `architecture_config_path`.
