@@ -8,6 +8,7 @@ from typing import Any
 from benchmarks.architecture_flops.config import (
     ConfigLoadResult,
     detect_features,
+    has_core_fields,
     missing_required_fields,
     normalize_config,
 )
@@ -50,16 +51,9 @@ def run_flops_analysis(
     if prefill_lengths is None:
         prefill_lengths = [512, 2048, 8192, 32768]
 
-    # Fast path: if the config is already complete (has all required fields),
-    # use it directly instead of trying file/HF lookups.
-    required = (
-        "hidden_size",
-        "num_hidden_layers",
-        "vocab_size",
-        "num_attention_heads",
-        "num_key_value_heads",
-    )
-    if all(k in model_config and model_config[k] is not None for k in required):
+    # Fast path: if the config already sets the core dimensions (under any
+    # alias that normalize_config reads), use it without file or HF lookups.
+    if has_core_fields(model_config):
         normalized = normalize_config(model_config)
         missing = missing_required_fields(normalized)
         if missing:
