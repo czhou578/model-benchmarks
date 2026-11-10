@@ -15,7 +15,7 @@ The PR merge times are in PST.
 | E2 | 2026-11-08 | #67 to #69, merged 2026-11-07 17:35. #70, merged 2026-11-08 13:26 | 0.33.0, 2.14.0+cu130 | `results/qwen3.8-27b-nvidia-nvfp4/20261108_132808` | Fixes to the TTFT split and the energy integral. A distinct concurrency prompt for each request. Configs on vLLM 0.33.0 with `--no-enable-prefix-caching`. | Tool calling, with care |
 | E3 | 2026-11-09 | #73 to #75, merged 2026-11-09 12:29 to 12:32 | 0.33.0 in the configs | None | 600 s tool-calling timeout. `tool_calling.status` in `summary.json`. | Decode rates, reasoning, TTFT breakdown, tool-calling composite, FLOP analysis |
 | E4 | from 2026-11-09 | #96 to #107, merged 2026-11-09 14:09 to 14:21, and the `SCHEMA_VERSION` 4 change | 0.33.0, 2.14.0+cu130 | `results/qwen3.8-27b-nvidia-nvfp4/20261109_143107` | Decode rates in tokens. Salted decode and reasoning. Reasoning cap 4096 and new Qwen3.8 prompts. Calibrated TTFT-breakdown prompts. Refusal score. FLOP estimates for dense models and a fixed prefill estimate. | Tool-calling pass count, `ambiguous` category, `request_failed` count |
-| E5 | from 2026-11-09 | #TBD, and the `SCHEMA_VERSION` 5 change | 0.33.0 in the configs | None yet | The clarification check of `underspecified` tasks reads all 13 phrases. A task exception counts in `request_failed`. | – |
+| E5 | from 2026-11-09 | #138, and the `SCHEMA_VERSION` 5 change | 0.33.0 in the configs | None yet | The clarification check of `underspecified` tasks reads all 13 phrases. A task exception counts in `request_failed`. | – |
 
 ### E0: July 2026, Qwen3.6-35B-A3B
 
@@ -69,12 +69,12 @@ Runs of this era have `harness.schema_version` 4. They also have `vllm_server_ve
 
 Runs of this era have `harness.schema_version` 5.
 
-- Tool calling (#TBD): before, the clarification check of `underspecified` tasks read only `?` and the first five phrases of its list. Now it reads the whole list. [tool-calling.md](tool-calling.md#scoring) lists the 13 phrases.
+- Tool calling (#138): before, the clarification check of `underspecified` tasks read only `?` and the first five phrases of its list. Now it reads the whole list. [tool-calling.md](tool-calling.md#scoring) lists the 13 phrases.
 - The new phrases are `do you`, `please clarify`, `more information`, `what would`, `are you asking`, and `let me know`. `which one` and `could you tell` contain older phrases, so they add no match.
 - The fix removes five phrases that also occur in plain answers: `i can`, `help me`, `specifically`, `i'm not sure`, and `i don't know`. They never had an effect.
 - Only the three `underspecified` tasks can change result. Such a task can only change from fail to pass. Thus the `ambiguous` pass rate and the total pass count can rise.
 - The composite does not read the `ambiguous` category, so the composite does not change.
-- Tool calling (#TBD): a task that raises an exception has the `details` `Exception: <error>`. Now `failure_modes.request_failed` counts it. Before, it counted in `no_tool_call` or in no mode. Scores do not change.
+- Tool calling (#138): a task that raises an exception has the `details` `Exception: <error>`. Now `failure_modes.request_failed` counts it. Before, it counted in `no_tool_call` or in no mode. Scores do not change.
 
 ## Metrics across era boundaries
 
