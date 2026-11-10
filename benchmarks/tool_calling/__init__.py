@@ -10,17 +10,11 @@ import time
 import requests
 
 from benchmarks.tool_calling.aggregate import (
-    _MOCK_TOOL_RESPONSES,
     _WEIGHTS,
     DEFAULT_REQUEST_TIMEOUT_S,
-    BenchmarkResult,
-    MultiTurnTaskResult,
-    TaskResult,
-    ToolCallTrace,
     _aggregate,
     _build_tools_definition,
     _compute_weighted_composite,
-    _mock_tool_response,
     _run_multi_turn_task,
     _run_task,
     _run_task_list,
@@ -30,6 +24,13 @@ from benchmarks.tool_calling.aggregate import (
     main,
     resolve_tasks_path,
     run_tool_calling_benchmark,
+)
+from benchmarks.tool_calling.mocks import _MOCK_TOOL_RESPONSES, _mock_tool_response
+from benchmarks.tool_calling.results import (
+    BenchmarkResult,
+    MultiTurnTaskResult,
+    TaskResult,
+    ToolCallTrace,
 )
 
 # ``requests`` and ``time`` stay package attributes: tests patch
