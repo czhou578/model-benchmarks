@@ -97,10 +97,11 @@ def _tools_match(expected: str | None, actual: str | None) -> bool:
 # --------------------------------------------------------------------------- #
 
 
+# Phrases that ask the user for input. A phrase that also occurs in a plain
+# answer (for example "i can") gives a false positive, so it is not here.
 _CLARIFICATION_KEYWORDS = [
     "which", "what is", "could you", "would you", "can you", "do you",
-    "please clarify", "more information", "specifically", "help me",
-    "i'm not sure", "i don't know", "what would", "i can", "which one",
+    "please clarify", "more information", "what would", "which one",
     "could you tell", "are you asking", "let me know",
 ]
 
@@ -114,10 +115,8 @@ def _has_clarification(text: str) -> bool:
     if "?" in text:
         return True
     # Ask for more info
-    return any(
-        keyword in text.lower()
-        for keyword in _CLARIFICATION_KEYWORDS[:5]
-    )
+    lowered = text.lower()
+    return any(keyword in lowered for keyword in _CLARIFICATION_KEYWORDS)
 
 
 def _score_ambiguous_task(

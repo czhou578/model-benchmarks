@@ -77,7 +77,7 @@ Read these points before you compare numbers.
 
 | Field | Meaning |
 |---|---|
-| `schema_version` | `SCHEMA_VERSION` in `harness/provenance.py`. Version N is era EN in [comparability.md](comparability.md). E3 runs have 3, and E4 runs have 4. |
+| `schema_version` | `SCHEMA_VERSION` in `harness/provenance.py`. Version N is era EN in [comparability.md](comparability.md). E3 runs have 3, E4 runs have 4, and E5 runs have 5. |
 | `git_commit` | `git rev-parse HEAD` of the harness checkout. `null` without git. |
 | `git_dirty` | `true` when a tracked file differs from `git_commit`. Untracked files, for example new run dirs, do not count. `null` without git. |
 
@@ -305,7 +305,7 @@ Top-level fields: `config`, `total_tasks`, `total_correct`, `composite_score` (0
 
 ## Fields in old runs
 
-Old run dirs differ from this page. [comparability.md](comparability.md) names the eras E0 to E4 and tells which metrics you can compare.
+Old run dirs differ from this page. [comparability.md](comparability.md) names the eras E0 to E5 and tells which metrics you can compare.
 
 E0 runs (July 2026):
 

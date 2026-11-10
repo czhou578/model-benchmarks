@@ -263,3 +263,38 @@ def test_schema_compliance_scoring_reads_only_params_and_schema():
     assert ok is True
     assert bad is False and results["length_valid"] is False
     assert "too long" in details
+
+
+@pytest.mark.parametrize("text", [
+    "Please let me know the city.",
+    "Please clarify the topic.",
+    "I need more information about the meeting.",
+    "Tell me what would be a good time.",
+    "Are you asking about the news or the weather.",
+    "Do you mean today or tomorrow.",
+    "Which city.",
+])
+def test_clarification_uses_the_whole_phrase_list(text):
+    assert tc.scoring._has_clarification(text) is True
+
+
+@pytest.mark.parametrize("text", [
+    "I can help with that. The weather is sunny.",
+    "Here is the email. Help me later if needed.",
+    "Specifically, the forecast says rain.",
+    "I'm not sure it rains, but the forecast says 20 C.",
+    "I don't know the reason. The meeting is at 3 PM.",
+    "",
+])
+def test_plain_answer_is_not_a_clarification(text):
+    assert tc.scoring._has_clarification(text) is False
+
+
+def test_underspecified_task_passes_on_a_late_list_phrase():
+    task = {"category": "ambiguous", "scoring": {"strategy": "underspecified"},
+            "expected": {"tool": None}}
+
+    assert tc._score_ambiguous_task(None, None, "Let me know the city.", task) == (True, True, "")
+    assert tc._score_ambiguous_task(None, None, "It is sunny.", task) == (
+        False, True, "no clarification",
+    )

@@ -313,7 +313,8 @@ def _aggregate(results: list[TaskResult], config: dict) -> BenchmarkResult:
                 failure_modes["truncated_output"] += 1
             if r.details.startswith("Request timed out"):
                 failure_modes["request_timeout"] += 1
-            elif "failed:" in r.details:
+            elif "failed:" in r.details or r.details.startswith("Exception: "):
+                # "Exception: " comes from _run_task_list when a task raises.
                 failure_modes["request_failed"] += 1
             elif r.expected_tool is None and r.actual_tool is not None:
                 failure_modes["unnecessary_tool_call"] += 1

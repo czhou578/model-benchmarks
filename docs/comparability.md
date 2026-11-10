@@ -14,7 +14,8 @@ The PR merge times are in PST.
 | E1 | 2026-11-07 | #42 and #44, merged 2026-11-06 21:42 | 0.25.1, 2.11.0+cu130 | `results/qwen3.8-27b-nvidia-nvfp4/20261107_094900` (full run), `results/qwen3.8-27b-nvidia-nvfp4-prefill/20261107_125906` (prefill rerun) | `cache_salt` reaches vLLM. Server timings. New tool-calling scorer. Prefill scaling works. | Concurrency, energy |
 | E2 | 2026-11-08 | #67 to #69, merged 2026-11-07 17:35. #70, merged 2026-11-08 13:26 | 0.33.0, 2.14.0+cu130 | `results/qwen3.8-27b-nvidia-nvfp4/20261108_132808` | Fixes to the TTFT split and the energy integral. A distinct concurrency prompt for each request. Configs on vLLM 0.33.0 with `--no-enable-prefix-caching`. | Tool calling, with care |
 | E3 | 2026-11-09 | #73 to #75, merged 2026-11-09 12:29 to 12:32 | 0.33.0 in the configs | None | 600 s tool-calling timeout. `tool_calling.status` in `summary.json`. | Decode rates, reasoning, TTFT breakdown, tool-calling composite, FLOP analysis |
-| E4 | from 2026-11-09 | #96 to #107, merged 2026-11-09 14:09 to 14:21, and the `SCHEMA_VERSION` 4 change | 0.33.0, 2.14.0+cu130 | `results/qwen3.8-27b-nvidia-nvfp4/20261109_143107` | Decode rates in tokens. Salted decode and reasoning. Reasoning cap 4096 and new Qwen3.8 prompts. Calibrated TTFT-breakdown prompts. Refusal score. FLOP estimates for dense models and a fixed prefill estimate. | – |
+| E4 | from 2026-11-09 | #96 to #107, merged 2026-11-09 14:09 to 14:21, and the `SCHEMA_VERSION` 4 change | 0.33.0, 2.14.0+cu130 | `results/qwen3.8-27b-nvidia-nvfp4/20261109_143107` | Decode rates in tokens. Salted decode and reasoning. Reasoning cap 4096 and new Qwen3.8 prompts. Calibrated TTFT-breakdown prompts. Refusal score. FLOP estimates for dense models and a fixed prefill estimate. | Tool-calling pass count, `ambiguous` category, `request_failed` count |
+| E5 | from 2026-11-09 | #TBD, and the `SCHEMA_VERSION` 5 change | 0.33.0 in the configs | None yet | The clarification check of `underspecified` tasks reads all 13 phrases. A task exception counts in `request_failed`. | – |
 
 ### E0: July 2026, Qwen3.6-35B-A3B
 
@@ -64,21 +65,32 @@ Runs of this era have `harness.schema_version` 4. They also have `vllm_server_ve
 - Tool calling (#96): the `refusal` component of the composite reads the new `correct_refusal` field. Before, it read the refusal pass rate. The pass counts do not change. `tool_calling_repeats` can repeat the task set.
 - FLOP analysis (#105 to #107): the estimator reads the dimensions from `config.json`, so Qwen3.8-27B gets an estimate. `architecture.model` is the `model_type`. The prefill estimate counted the prompt length twice in the attention terms. The new prefill values are about S times lower. The decode values of Qwen3.6-35B-A3B do not change.
 
+### E5: from 2026-11-09
+
+Runs of this era have `harness.schema_version` 5.
+
+- Tool calling (#TBD): before, the clarification check of `underspecified` tasks read only `?` and the first five phrases of its list. Now it reads the whole list. [tool-calling.md](tool-calling.md#scoring) lists the 13 phrases.
+- The new phrases are `do you`, `please clarify`, `more information`, `what would`, `are you asking`, and `let me know`. `which one` and `could you tell` contain older phrases, so they add no match.
+- The fix removes five phrases that also occur in plain answers: `i can`, `help me`, `specifically`, `i'm not sure`, and `i don't know`. They never had an effect.
+- Only the three `underspecified` tasks can change result. Such a task can only change from fail to pass. Thus the `ambiguous` pass rate and the total pass count can rise.
+- The composite does not read the `ambiguous` category, so the composite does not change.
+- Tool calling (#TBD): a task that raises an exception has the `details` `Exception: <error>`. Now `failure_modes.request_failed` counts it. Before, it counted in `no_tool_call` or in no mode. Scores do not change.
+
 ## Metrics across era boundaries
 
 "Yes" means that the harness measures the metric with the same method on both sides. The vLLM version can still change the number. E1 and E2 also differ in the vLLM and torch versions. Read a difference between them as an effect of the vLLM upgrade.
 
-| Metric | E0 and later eras | E1 and E2 | E2 and E3 | E3 and E4 |
-|---|---|---|---|---|
-| Client TTFT: latency, deep context | No: cache hits | Yes | Yes | Yes |
-| TTFT breakdown | No: no server data | Yes, from `server_ttft_s` | Yes | No: exact prompt lengths |
-| Decode, with and without MTP | Yes | Yes | Yes | Mean: yes. Peak, min, median: no |
-| Reasoning tokens | Yes | Yes | Yes | No: cap, prompts, salt |
-| Concurrency | No: shared prompt | No: shared prompt, other length | Yes | Yes |
-| Prefill scaling | No: no data | Yes, from the prefill rerun | Yes | Throughput: yes. Window energy: no |
-| Tool calling | No: old scorer | Yes, inside the noise | With care: timeout and mock | Pass count: yes. Composite: no |
-| Energy | No: old method | No: old method | Yes | Yes |
-| FLOP analysis | Yes, Qwen3.6-35B-A3B only | Yes, but 27B is `unsupported` | Yes | Decode: yes. Prefill: no |
+| Metric | E0 and later eras | E1 and E2 | E2 and E3 | E3 and E4 | E4 and E5 |
+|---|---|---|---|---|---|
+| Client TTFT: latency, deep context | No: cache hits | Yes | Yes | Yes | Yes |
+| TTFT breakdown | No: no server data | Yes, from `server_ttft_s` | Yes | No: exact prompt lengths | Yes |
+| Decode, with and without MTP | Yes | Yes | Yes | Mean: yes. Peak, min, median: no | Yes |
+| Reasoning tokens | Yes | Yes | Yes | No: cap, prompts, salt | Yes |
+| Concurrency | No: shared prompt | No: shared prompt, other length | Yes | Yes | Yes |
+| Prefill scaling | No: no data | Yes, from the prefill rerun | Yes | Throughput: yes. Window energy: no | Yes |
+| Tool calling | No: old scorer | Yes, inside the noise | With care: timeout and mock | Pass count: yes. Composite: no | Composite: yes. Pass count, `ambiguous`, `request_failed`: no |
+| Energy | No: old method | No: old method | Yes | Yes | Yes |
+| FLOP analysis | Yes, Qwen3.6-35B-A3B only | Yes, but 27B is `unsupported` | Yes | Decode: yes. Prefill: no | Yes |
 
 ## How the dashboard marks the eras
 
@@ -108,7 +120,7 @@ Known limits:
 - An unpublished run from before E3 has no schema version and no `provenance.json`. The page uses the date rule for it. Such a run after 2026-11-07 shows no era, and a run from an old checkout gets no "Pre-fix scoring" badge. To fix this, add a `provenance.json` to its run dir.
 - The runner writes `SCHEMA_VERSION` from `harness/provenance.py`. A new era needs a new number there. Otherwise the new runs show the old era.
 - "Older vLLM" compares only the shown runs. When you hide the newer run, the badge goes away.
-- The era badge is plain. Only "Pre-fix scoring" marks an era as a warning. No warning badge marks the E1 and E2, E2 and E3, or E3 and E4 boundaries, or the old whole-run energy. "Run energy" in the "All runs" table is about 6% low for E0 and E1.
+- The era badge is plain. Only "Pre-fix scoring" marks an era as a warning. No warning badge marks the E1 and E2, E2 and E3, E3 and E4, or E4 and E5 boundaries, or the old whole-run energy. "Run energy" in the "All runs" table is about 6% low for E0 and E1.
 - The "Prefix cache" column shows the flag in the server command. Without a flag, it shows "default", because the vLLM default differs between versions. Read `vllm.log` for the real value.
 
 ## Noise
