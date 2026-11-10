@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from benchmarks.tool_calling.aggregate import run_tool_calling_benchmark
 from benchmarks.tool_calling.protocol import DEFAULT_REQUEST_TIMEOUT_S
+from benchmarks.tool_calling.runner import run_tool_calling_benchmark
 from harness.client import ModelClient
 from harness.paths import ROOT
 

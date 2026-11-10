@@ -42,7 +42,8 @@ The package keeps the names of the former module
 - ``single_turn``: the category overlay scoring and the one-shot runner.
 - ``multi_turn``: the multi-turn loop and its scoring.
 - ``aggregate``: the category scores, the failure modes, the composite,
-  and ``run_tool_calling_benchmark``.
+  and the summary of the repeats.
+- ``runner``: ``run_tool_calling_benchmark`` and the task loop.
 - ``cli``: the command-line entry point.
 """
 
@@ -54,8 +55,6 @@ from benchmarks.tool_calling.aggregate import (
     _WEIGHTS,
     _aggregate,
     _compute_weighted_composite,
-    _run_task_list,
-    run_tool_calling_benchmark,
 )
 from benchmarks.tool_calling.cli import main
 from benchmarks.tool_calling.mocks import _MOCK_TOOL_RESPONSES, _mock_tool_response
@@ -68,6 +67,7 @@ from benchmarks.tool_calling.results import (
     ToolCallTrace,
 )
 from benchmarks.tool_calling.scoring import _score_ambiguous_task, _score_schema_compliance_task
+from benchmarks.tool_calling.runner import _run_task_list, run_tool_calling_benchmark
 from benchmarks.tool_calling.single_turn import _run_task
 from benchmarks.tool_calling.tasks import load_tasks, resolve_tasks_path
 
