@@ -43,7 +43,6 @@ from pathlib import Path
 from typing import Any
 
 import requests
-import re
 
 from benchmarks.tool_calling.mocks import _mock_tool_response
 from benchmarks.tool_calling.protocol import (
@@ -62,124 +61,15 @@ from benchmarks.tool_calling.results import (
     TaskResult,
     ToolCallTrace,
 )
-from benchmarks.tool_calling.scoring import _score_ambiguous_task, _score_params, _tools_match
+from benchmarks.tool_calling.scoring import (
+    _score_ambiguous_task,
+    _score_params,
+    _score_schema_compliance_task,
+    _tools_match,
+)
 from benchmarks.tool_calling.tasks import load_tasks, resolve_tasks_path
 from harness.client import ModelClient
 from harness.paths import ROOT
-
-
-def _score_schema_compliance_task(
-    actual_params: dict[str, Any] | None,
-    tool_params_schema: dict,
-    scoring: dict,
-) -> tuple[bool, dict[str, bool], str]:
-    """Score a schema compliance task.
-
-    Checks that the model's params satisfy all schema constraints.
-
-    Returns:
-        (correct, constraint_results, details)
-    """
-    properties = tool_params_schema.get("properties", {})
-    required = tool_params_schema.get("required", [])
-
-    if not actual_params:
-        if required:
-            return False, {"required_present": False}, "no params provided"
-        return True, {}, "no params, no required fields"
-
-    results: dict[str, bool] = {
-        "required_present": True,
-        "length_valid": True,
-        "enum_valid": True,
-        "pattern_valid": True,
-        "nested_valid": True,
-    }
-
-    details_parts: list[str] = []
-
-    # Check required fields
-    for req in required:
-        if req not in actual_params:
-            results["required_present"] = False
-            details_parts.append(f"missing required: {req}")
-
-    # Check each provided param against its schema
-    for param_name, param_value in actual_params.items():
-        prop_schema = properties.get(param_name, {})
-
-        # String constraints
-        if isinstance(param_value, str):
-            if "minLength" in prop_schema:
-                if len(param_value) < prop_schema["minLength"]:
-                    results["length_valid"] = False
-                    details_parts.append(
-                        f"{param_name}: too short (len={len(param_value)}, min={prop_schema['minLength']})"
-                    )
-            if "maxLength" in prop_schema:
-                if len(param_value) > prop_schema["maxLength"]:
-                    results["length_valid"] = False
-                    details_parts.append(
-                        f"{param_name}: too long (len={len(param_value)}, max={prop_schema['maxLength']})"
-                    )
-            if "pattern" in prop_schema:
-                if not re.match(prop_schema["pattern"], param_value):
-                    results["pattern_valid"] = False
-                    details_parts.append(
-                        f"{param_name}: violates pattern {prop_schema['pattern']}"
-                    )
-            if "enum" in prop_schema and param_value not in prop_schema["enum"]:
-                results["enum_valid"] = False
-                details_parts.append(
-                    f"{param_name}: {param_value!r} not in {prop_schema['enum']}"
-                )
-
-        # Array constraints
-        if isinstance(param_value, list):
-            item_schema = prop_schema.get("items", {})
-            for item in param_value:
-                if "enum" in item_schema and isinstance(item, str):
-                    if item not in item_schema["enum"]:
-                        results["enum_valid"] = False
-                        details_parts.append(f"label: {item!r} not in enum")
-
-        # Nested object (assignees)
-        if isinstance(param_value, list) and prop_schema.get("items", {}).get("type") == "object":
-            items_schema = prop_schema["items"]
-            nested_props = items_schema.get("properties", {})
-            nested_required = items_schema.get("required", [])
-            for idx, entry in enumerate(param_value):
-                if isinstance(entry, dict):
-                    # Check required nested fields
-                    for nr in nested_required:
-                        if nr not in entry:
-                            results["nested_valid"] = False
-                            details_parts.append(f"assignee[{idx}]: missing {nr}")
-                    # Check nested string constraints
-                    for ne, nv in entry.items():
-                        np_ = nested_props.get(ne, {})
-                        if isinstance(nv, str):
-                            if "pattern" in np_ and not re.match(np_["pattern"], nv):
-                                results["pattern_valid"] = False
-                                details_parts.append(f"assignee[{idx}].{ne}: pattern violation")
-                            if "enum" in np_ and nv not in np_["enum"]:
-                                results["enum_valid"] = False
-                                details_parts.append(f"assignee[{idx}].{ne}: {nv!r} not in enum")
-
-    all_ok = all(results.values())
-    if not results["required_present"]:
-        all_ok = False
-    if not results["length_valid"]:
-        all_ok = False
-    if not results["enum_valid"]:
-        all_ok = False
-    if not results["pattern_valid"]:
-        all_ok = False
-    if not results["nested_valid"]:
-        all_ok = False
-
-    details = "; ".join(details_parts) if details_parts else ""
-    return all_ok, results, details
 
 
 # --------------------------------------------------------------------------- #
