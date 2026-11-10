@@ -220,7 +220,7 @@ def test_repeats_report_mean_and_spread(monkeypatch):
         [_refusal("a", None), _refusal("b", "search")],
         [_refusal("a", "search"), _refusal("b", "search")],
     ])
-    monkeypatch.setattr(tc.aggregate, "_run_task_list", lambda *a, **k: next(passes))
+    monkeypatch.setattr(tc.runner, "_run_task_list", lambda *a, **k: next(passes))
 
     out = tc.run_tool_calling_benchmark(_client(), task_set="lite", repeats=3)
 
@@ -234,7 +234,7 @@ def test_repeats_report_mean_and_spread(monkeypatch):
 
 
 def test_single_repeat_adds_no_repeat_summary(monkeypatch):
-    monkeypatch.setattr(tc.aggregate, "_run_task_list", lambda *a, **k: [_refusal("a", None)])
+    monkeypatch.setattr(tc.runner, "_run_task_list", lambda *a, **k: [_refusal("a", None)])
 
     out = tc.run_tool_calling_benchmark(_client(), task_set="lite")
 
