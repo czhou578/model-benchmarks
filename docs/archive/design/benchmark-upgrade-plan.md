@@ -157,7 +157,7 @@ integrated into this module (tracked in other benchmarks). Configurable via
 Evaluate models on: - Single-tool invocation - Multi-tool chaining - Schema
 compliance - Error recovery - Ambiguous/underspecified prompts
 
-**Implemented:** `benchmarks/tool_calling.py:run_tool_calling_benchmark()` — runs a
+**Implemented:** `benchmarks/tool_calling/runner.py:run_tool_calling_benchmark()` — runs a
 YAML-defined task suite with per-task scoring (tool selection, param completeness,
 param correctness, schema constraint validation, multi-tool orchestration, error
 self-correction). Produces a weighted composite score across 6 categories, per-task

@@ -1,6 +1,23 @@
 # Tool-calling benchmark
 
-The tool-calling benchmark sends tasks with tool definitions to the model and scores the tool calls. The code is in `benchmarks/tool_calling.py`. The tasks are in `datasets/tool_calling_tasks.yaml`.
+The tool-calling benchmark sends tasks with tool definitions to the model and scores the tool calls. The code is in the `benchmarks/tool_calling/` package. The tasks are in `datasets/tool_calling_tasks.yaml`.
+
+The package has these modules:
+
+| Module | Contents |
+|---|---|
+| `runner.py` | `run_tool_calling_benchmark`: the task selection, the task loop, and the output dict |
+| `single_turn.py` | `_run_task` and the category overlay scoring |
+| `multi_turn.py` | `_run_multi_turn_task`: the multi-turn loop and its scoring |
+| `scoring.py` | The parameter checks, `_score_ambiguous_task`, and `_score_schema_compliance_task` |
+| `aggregate.py` | `_aggregate`, `_WEIGHTS`, `_compute_weighted_composite`, and the repeat summary |
+| `mocks.py` | `_MOCK_TOOL_RESPONSES` and `_mock_tool_response` |
+| `protocol.py` | The request URL, `DEFAULT_REQUEST_TIMEOUT_S`, and the tool-call parsing |
+| `tasks.py` | `load_tasks` and `resolve_tasks_path` |
+| `results.py` | The result data classes |
+| `cli.py` | `main`, the command line |
+
+`benchmarks/tool_calling/__init__.py` re-exports these names, so `from benchmarks.tool_calling import run_tool_calling_benchmark` works.
 
 ## Run the benchmark
 
@@ -148,7 +165,7 @@ Each category gets `pass_count`, `total`, `pass_rate`, `tool_accuracy`, `param_c
 
 ## Versions and old runs
 
-- `config.benchmark_version` is the constant `"1.0"` in `tool_calling.py`, `ttft_breakdown.py`, and `prefill.py`. No code reads it. It does not tell old scoring from new scoring.
+- `config.benchmark_version` is the constant `"1.0"` in `tool_calling/runner.py`, `ttft_breakdown.py`, and `prefill.py`. No code reads it. It does not tell old scoring from new scoring.
 - The result files hold no scoring version. [comparability.md](comparability.md) tells which tool-calling results you can compare, and how large the noise is.
 
 ## Example task
@@ -190,5 +207,5 @@ The mock returns a price of 150.0 for `NVDA`. The task passes when the model cal
 ## Add a task
 
 1. Add the task to `datasets/tool_calling_tasks.yaml`.
-2. For a multi-turn task, add each new tool to `_MOCK_TOOL_RESPONSES` in `tool_calling.py`. Also add each new input of `get_stock_price`, `get_weather`, `convert_currency`, or `calculate`. Without the entry, the mock returns an error.
+2. For a multi-turn task, add each new tool to `_MOCK_TOOL_RESPONSES` in `tool_calling/mocks.py`. Also add each new input of `get_stock_price`, `get_weather`, `convert_currency`, or `calculate`. Without the entry, the mock returns an error.
 3. Run `pytest -q`.

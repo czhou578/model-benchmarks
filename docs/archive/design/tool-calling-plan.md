@@ -1,6 +1,6 @@
 # Tool Calling Effectiveness — Benchmark Plan
 
-> **Status (checked 2026-11-09): implemented, with differences.** `benchmarks/tool_calling.py` runs 85 tasks in 16 categories, not "10 categories". The composite is the plain sum of six components (0 to 6), not the weighted sum (weights 0.25 to 0.10) in this note. The code makes the tool results in-process (`_mock_tool_response`), not with an HTTP mock server. `lite` takes the first task of each category, at most 8 tasks, not about 20. See [tool-calling.md](../../tool-calling.md).
+> **Status (checked 2026-11-09): implemented, with differences.** The `benchmarks/tool_calling/` package runs 85 tasks in 16 categories, not "10 categories". The composite is the plain sum of six components (0 to 6), not the weighted sum (weights 0.25 to 0.10) in this note. The code makes the tool results in-process (`_mock_tool_response`), not with an HTTP mock server. `lite` takes the first task of each category, at most 8 tasks, not about 20. See [tool-calling.md](../../tool-calling.md).
 
 **Phase:** Roadmap item #19 (Capability dimension — structured output reliability)
 **Type:** Capability benchmark (not system performance)
