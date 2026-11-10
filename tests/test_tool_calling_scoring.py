@@ -241,3 +241,25 @@ def test_single_repeat_adds_no_repeat_summary(monkeypatch):
     assert "repeats" not in out
     with pytest.raises(ValueError):
         tc.run_tool_calling_benchmark(_client(), task_set="lite", repeats=0)
+
+
+def test_assumption_without_expected_tool_gives_detail_only_on_a_call():
+    task = {"category": "ambiguous", "scoring": {"strategy": "assumption"},
+            "expected": {"tool": None}}
+
+    assert tc._score_ambiguous_task(None, None, "Here you go.", task) == (True, True, "")
+    assert tc._score_ambiguous_task("search", {"query": "x"}, None, task) == (
+        False, True, "unexpected tool call",
+    )
+
+
+def test_schema_compliance_scoring_reads_only_params_and_schema():
+    schema = {"properties": {"title": {"type": "string", "maxLength": 5}},
+              "required": ["title"]}
+
+    ok, _, _ = tc._score_schema_compliance_task({"title": "abc"}, schema)
+    bad, results, details = tc._score_schema_compliance_task({"title": "abcdefg"}, schema)
+
+    assert ok is True
+    assert bad is False and results["length_valid"] is False
+    assert "too long" in details

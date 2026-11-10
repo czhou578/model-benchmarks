@@ -164,7 +164,9 @@ def _score_ambiguous_task(
 
     # --- Case 3: assumption — model may make a reasonable default call ---
     if expected_tool is None:
-        return (actual_tool is None, True, "unexpected tool call")
+        if actual_tool is None:
+            return (True, True, "")
+        return (False, True, "unexpected tool call")
 
     expected_params = task.get("expected", {}).get("params", {})
     no_halluc = True
@@ -183,7 +185,6 @@ def _score_ambiguous_task(
 def _score_schema_compliance_task(
     actual_params: dict[str, Any] | None,
     tool_params_schema: dict,
-    scoring: dict,
 ) -> tuple[bool, dict[str, bool], str]:
     """Score a schema compliance task.
 

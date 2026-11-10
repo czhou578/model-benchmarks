@@ -79,9 +79,7 @@ def _apply_overlay_scoring(
     if category == "schema_compliance":
         actual_schema = _get_tool_schema(tools_def, actual_tool or "")
         schema_ok, schema_constraint_results, schema_details = (
-            _score_schema_compliance_task(
-                actual_params, actual_schema, task.get("scoring", {}),
-            )
+            _score_schema_compliance_task(actual_params, actual_schema)
         )
         result.no_hallucinated_params = schema_ok
         result.ambig_strategy = "schema_compliance"
