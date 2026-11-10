@@ -19,8 +19,8 @@ from benchmarks.architecture_flops.model import (
     load_architecture_config,
     missing_required_fields,
     normalize_config,
-    run_flops_analysis,
 )
+from benchmarks.architecture_flops.analysis import run_flops_analysis
 
 __all__ = [
     "ArchitectureFeatures",
