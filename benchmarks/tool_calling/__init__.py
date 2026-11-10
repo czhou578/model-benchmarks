@@ -16,7 +16,6 @@ from benchmarks.tool_calling.aggregate import (
     _run_multi_turn_task,
     _run_task,
     _run_task_list,
-    _score_schema_compliance_task,
     main,
     run_tool_calling_benchmark,
 )
@@ -28,7 +27,7 @@ from benchmarks.tool_calling.results import (
     TaskResult,
     ToolCallTrace,
 )
-from benchmarks.tool_calling.scoring import _score_ambiguous_task
+from benchmarks.tool_calling.scoring import _score_ambiguous_task, _score_schema_compliance_task
 from benchmarks.tool_calling.tasks import load_tasks, resolve_tasks_path
 
 # ``requests`` and ``time`` stay package attributes: tests patch
