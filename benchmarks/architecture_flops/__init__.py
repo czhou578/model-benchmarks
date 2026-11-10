@@ -5,6 +5,8 @@ The package re-exports its public names, so callers import them from
 """
 
 from benchmarks.architecture_flops.analysis import run_flops_analysis
+from benchmarks.architecture_flops.attention import FullAttentionEstimator
+from benchmarks.architecture_flops.component import ComponentResult
 from benchmarks.architecture_flops.config import (
     ArchitectureFeatures,
     ConfigLoadResult,
@@ -15,9 +17,7 @@ from benchmarks.architecture_flops.config import (
 )
 from benchmarks.architecture_flops.loader import load_architecture_config
 from benchmarks.architecture_flops.model import (
-    ComponentResult,
     DenseFfnEstimator,
-    FullAttentionEstimator,
     GatedDeltaNetEstimator,
     LmHeadEstimator,
     ModelFlopsEstimator,
