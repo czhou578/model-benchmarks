@@ -17,7 +17,6 @@ class LmHeadEstimator:
         matmul = 2 * self.d * self.v
         return ComponentResult(
             matmul_flops=matmul,
-            weight_bytes=0 if self.tied else 2 * self.d * self.v,
             matmul_breakdown={"lm_head_flops": matmul},
             omitted_non_matmul=("logits post-processing / sampling",),
         )
@@ -28,7 +27,6 @@ class LmHeadEstimator:
         matmul = logits_tokens * 2 * self.d * self.v
         return ComponentResult(
             matmul_flops=matmul,
-            weight_bytes=0 if self.tied else 2 * self.d * self.v,
             matmul_breakdown={"lm_head_flops": matmul},
             omitted_non_matmul=("logits post-processing",),
         )

@@ -150,7 +150,7 @@ The code is in the package `benchmarks/architecture_flops/`. Run `python -m benc
 | `config.py` | `normalize_config`, `detect_features`, `missing_required_fields`, and the config records. |
 | `model.py` | `ModelFlopsEstimator`: the decode and prefill totals of the model. |
 | `attention.py`, `linear_attention.py`, `ffn.py`, `lm_head.py` | The estimator of each layer component. |
-| `component.py` | `ComponentResult`: the FLOPs and bytes of one layer component. |
+| `component.py` | `ComponentResult`: the FLOPs of one layer component, and the linear-attention state bytes. |
 
 If the config itself sets the hidden size, the layer count, the vocabulary size, and the attention and KV head counts, `run_flops_analysis` uses it directly. Each of these fields can use any alias that `normalize_config` reads, for example `n_layer` or `d_model`. Otherwise `load_architecture_config` tries these config sources in order. The first complete config wins.
 

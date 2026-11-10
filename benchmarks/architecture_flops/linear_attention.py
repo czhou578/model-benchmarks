@@ -70,7 +70,6 @@ class GatedDeltaNetEstimator:
             non_matmul_flops=sum(non_matmul_breakdown.values()),
             kv_read_bytes=self.state_bytes(),
             kv_write_bytes=self.state_bytes(),
-            activation_bytes=4 * self.conv_dim * self.kernel_size,
             matmul_breakdown=breakdown,
             non_matmul_breakdown=non_matmul_breakdown,
             omitted_non_matmul=(
@@ -122,7 +121,6 @@ class GatedDeltaNetEstimator:
             non_matmul_flops=sum(non_matmul_breakdown.values()),
             kv_read_bytes=0,
             kv_write_bytes=self.state_bytes(),
-            activation_bytes=4 * padded_tokens * self.conv_dim,
             matmul_breakdown=breakdown,
             non_matmul_breakdown=non_matmul_breakdown,
             omitted_non_matmul=(

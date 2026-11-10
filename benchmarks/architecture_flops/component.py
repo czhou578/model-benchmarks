@@ -1,4 +1,4 @@
-"""ComponentResult: the FLOP and byte record of one layer component."""
+"""ComponentResult: the FLOP record of one layer component."""
 
 from __future__ import annotations
 
@@ -10,7 +10,11 @@ from dataclasses import dataclass, field
 
 @dataclass(frozen=True)
 class ComponentResult:
-    """FLOP and memory-traffic breakdown for a single layer component.
+    """FLOP breakdown for a single layer component.
+
+    Only the linear-attention estimator sets ``kv_read_bytes`` and
+    ``kv_write_bytes``. They give the FP32 recurrent state traffic, which the
+    model reports as ``state_traffic_bytes``.
 
     Component estimators return per-layer work. Decode values cover one new
     token; prefill values cover the complete prompt request. Model-level
@@ -22,20 +26,9 @@ class ComponentResult:
     matmul_breakdown: dict[str, float] = field(default_factory=dict)
     non_matmul_breakdown: dict[str, float] = field(default_factory=dict)
     omitted_non_matmul: tuple[str, ...] = ()
-    weight_bytes: float = 0.0              # weight bytes streamed from HBM
-    kv_read_bytes: float = 0.0             # KV / recurrent state read
-    kv_write_bytes: float = 0.0            # KV / recurrent state written
-    activation_bytes: float = 0.0          # activation footprint (peak)
+    kv_read_bytes: float = 0.0             # recurrent state read (linear attention)
+    kv_write_bytes: float = 0.0            # recurrent state written (linear attention)
 
     @property
     def total_flops(self) -> float:
         return self.matmul_flops + self.non_matmul_flops
-
-    @property
-    def total_bytes(self) -> float:
-        return (
-            self.weight_bytes
-            + self.kv_read_bytes
-            + self.kv_write_bytes
-            + self.activation_bytes
-        )
