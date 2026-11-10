@@ -138,3 +138,18 @@ def test_relative_tasks_path_resolves_from_repo_root(monkeypatch, tmp_path):
     local = tmp_path / "local.yaml"
     local.write_text("tasks: []\n")
     assert tc.resolve_tasks_path("local.yaml") == local.relative_to(tmp_path)
+
+
+def test_single_turn_task_without_expected_fails_without_stopping_the_loop(monkeypatch):
+    post = _RecordingPost()
+    monkeypatch.setattr(tc.requests, "post", post)
+    monkeypatch.setattr(tc.time, "sleep", lambda _s: None)
+    broken = {"id": "no_expected", "category": "stock_basic", "prompt": "p"}
+
+    results = tc._run_task_list(_client(), [broken, _SINGLE], _TOOLS, 64, None, 0.0, 5.0)
+
+    assert [r.task_id for r in results] == ["no_expected", "t"]
+    assert results[0].correct is False
+    assert results[0].expected_tool is None
+    assert results[0].details.startswith("Exception: ")
+    assert len(post.calls) == 1  # Only the valid task sends a request.

@@ -150,9 +150,10 @@ def _run_task_list(
     total = len(tasks)
     for idx, task in enumerate(tasks, 1):
         is_multi = task.get("category") == "multi_tool" or "expected_sequence" in task
-        desc = task["expected"].get("tool") or "no tool" if not is_multi else (
-            f"{task.get('expected_turns', '?')} turns"
-        )
+        if is_multi:
+            desc = f"{task.get('expected_turns', '?')} turns"
+        else:
+            desc = task.get("expected", {}).get("tool") or "no tool"
         print(
             f"[tool_calling] {idx}/{total}: {task['id']} "
             f"(expected: {desc})"
@@ -177,7 +178,7 @@ def _run_task_list(
             r = TaskResult(
                 task_id=task["id"],
                 category=task.get("category", "unknown"),
-                prompt=task["prompt"],
+                prompt=task.get("prompt", ""),
                 expected_tool=task.get("expected", {}).get("tool"),
                 actual_tool=None,
                 tool_call_id=None,
