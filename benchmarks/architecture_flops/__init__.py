@@ -15,14 +15,11 @@ from benchmarks.architecture_flops.config import (
     missing_required_fields,
     normalize_config,
 )
+from benchmarks.architecture_flops.ffn import DenseFfnEstimator, MoeFfnEstimator
 from benchmarks.architecture_flops.linear_attention import GatedDeltaNetEstimator
+from benchmarks.architecture_flops.lm_head import LmHeadEstimator
 from benchmarks.architecture_flops.loader import load_architecture_config
-from benchmarks.architecture_flops.model import (
-    DenseFfnEstimator,
-    LmHeadEstimator,
-    ModelFlopsEstimator,
-    MoeFfnEstimator,
-)
+from benchmarks.architecture_flops.model import ModelFlopsEstimator
 
 __all__ = [
     "ArchitectureFeatures",
