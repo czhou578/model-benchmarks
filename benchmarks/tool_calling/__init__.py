@@ -13,12 +13,12 @@ from benchmarks.tool_calling.aggregate import (
     _WEIGHTS,
     _aggregate,
     _compute_weighted_composite,
-    _run_multi_turn_task,
     _run_task_list,
     main,
     run_tool_calling_benchmark,
 )
 from benchmarks.tool_calling.mocks import _MOCK_TOOL_RESPONSES, _mock_tool_response
+from benchmarks.tool_calling.multi_turn import _run_multi_turn_task
 from benchmarks.tool_calling.protocol import DEFAULT_REQUEST_TIMEOUT_S, _build_tools_definition
 from benchmarks.tool_calling.results import (
     BenchmarkResult,
