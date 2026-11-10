@@ -59,7 +59,7 @@ A thinking model writes its reasoning before the first tool call. vLLM parses to
 
 A full 4096-token answer takes about 330 s at 12.3 tok/s (Qwen3.8-27B). The old 120 s timeout cut off such answers. The 600 s default covers 4096 tokens down to about 7 tok/s. Increase the timeout for a slower model or a higher `tool_calling_max_tokens`.
 
-When a request times out, the task fails. Its `details` starts with `Request timed out after <N> s`, and `failure_modes.request_timeout` counts it. Other request errors give `Request failed: <error>` and count in `failure_modes.request_failed`. A multi-turn task stops at the failed turn and records the same `details`.
+When a request times out, the task fails. Its `details` starts with `Request timed out after <N> s`, and `failure_modes.request_timeout` counts it. Other request errors give `Request failed: <error>` and count in `failure_modes.request_failed`. When a task raises an exception, its `details` is `Exception: <error>`. From E5, `failure_modes.request_failed` also counts it. A multi-turn task stops at the failed turn and records the same `details`.
 
 `{enable_thinking: false}` in `tool_calling_chat_template_kwargs` turns off thinking in chat templates that read this flag, for example Qwen3.
 
@@ -117,7 +117,7 @@ Two categories add a check after the base check. `correct` then needs both check
 
 - `ambiguous` (`_score_ambiguous_task`):
   - `no_tool` passes when the model calls no tool.
-  - `underspecified` without a tool call passes when the reply asks for detail. The reply must contain `?`, `which`, `what is`, `could you`, `would you`, or `can you`.
+  - `underspecified` without a tool call passes when the reply asks for detail. The reply must contain `?` or one of these phrases, in any case: `which`, `what is`, `could you`, `would you`, `can you`, `do you`, `please clarify`, `more information`, `what would`, `which one`, `could you tell`, `are you asking`, `let me know`. Before E5, the code checked only `?` and the first five phrases.
   - `assumption` with `expected.tool: null` passes when the model calls no tool.
   - `underspecified` with a tool call, and `assumption` with an expected tool, check the parameters against `expected.params`. They pass when each parameter name is in `expected.params` and no value differs from a non-null expected value. An empty `expected.params` accepts any parameters.
 - `schema_compliance` (`_score_schema_compliance_task`): the parameters must pass `required`, `minLength`, `maxLength`, `pattern`, and `enum`. The check also applies `enum` to array items, and `required`, `pattern`, and `enum` to nested objects. It uses the schema of the tool that the model called.

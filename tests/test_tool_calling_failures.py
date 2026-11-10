@@ -153,3 +153,19 @@ def test_single_turn_task_without_expected_fails_without_stopping_the_loop(monke
     assert results[0].expected_tool is None
     assert results[0].details.startswith("Exception: ")
     assert len(post.calls) == 1  # Only the valid task sends a request.
+
+
+def test_task_exception_counts_as_request_failed(monkeypatch):
+    def _raise(*_a, **_k):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(tc.runner, "_run_task", _raise)
+    monkeypatch.setattr(tc.runner, "_run_multi_turn_task", _raise)
+    monkeypatch.setattr(tc.time, "sleep", lambda _s: None)
+
+    results = tc._run_task_list(_client(), [_SINGLE, _MULTI], _TOOLS, 64, None, 0.0, 5.0)
+
+    assert [r.details for r in results] == ["Exception: boom", "Exception: boom"]
+    modes = tc._aggregate(results, {}).failure_modes
+    assert modes["request_failed"] == 2
+    assert modes["no_tool_call"] == 0
