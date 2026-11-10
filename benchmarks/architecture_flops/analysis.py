@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Any, Callable, Mapping
 
+from benchmarks.architecture_flops.loader import load_architecture_config
 from benchmarks.architecture_flops.model import (
     ConfigLoadResult,
     ModelFlopsEstimator,
     detect_features,
-    load_architecture_config,
     missing_required_fields,
     normalize_config,
 )
