@@ -38,7 +38,6 @@ import json
 import statistics
 import time
 import uuid
-from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -47,6 +46,13 @@ import requests
 import yaml
 import re
 
+from benchmarks.tool_calling.mocks import _mock_tool_response
+from benchmarks.tool_calling.results import (
+    BenchmarkResult,
+    MultiTurnTaskResult,
+    TaskResult,
+    ToolCallTrace,
+)
 from harness.client import ModelClient
 from harness.paths import ROOT
 
@@ -80,80 +86,6 @@ def _response_metadata(response: dict[str, Any]) -> tuple[str | None, int | None
     usage = response.get("usage") or {}
     completion_tokens = usage.get("completion_tokens")
     return finish_reason, completion_tokens
-
-
-# --------------------------------------------------------------------------- #
-# Data structures
-# --------------------------------------------------------------------------- #
-
-
-@dataclass
-class TaskResult:
-    """Result for a single benchmark task."""
-
-    task_id: str
-    category: str
-    prompt: str
-    expected_tool: str | None       # ``null`` for refusal tasks
-    actual_tool: str | None         # ``null`` if model called no tool
-    tool_call_id: str | None        # vLLM call ID (for tracing)
-    actual_params: dict[str, Any] | None
-    correct: bool
-    tool_correct: bool
-    params_complete: float          # fraction of required params present
-    params_valid: bool              # types + enums + ranges all OK
-    composite_score: float          # tool_correct × params_complete × params_valid
-    details: str = ""               # human-readable reason for failure
-    raw_response: dict[str, Any] = field(default_factory=dict)
-    # Dynamic attributes for ambiguous-task scoring (set after construction).
-    no_hallucinated_params: bool = True
-    ambig_strategy: str = "assumption"
-    ambig_details: str = ""
-    # Generation metadata, used to tell truncation from refusal.
-    finish_reason: str | None = None
-    completion_tokens: int | None = None
-
-
-@dataclass
-class BenchmarkResult:
-    """Aggregated benchmark output."""
-
-    config: dict[str, Any]
-    total_tasks: int
-    total_correct: int
-    composite_score: float
-    per_task: list[dict[str, Any]]
-    category_scores: dict[str, dict[str, Any]]
-    failure_modes: dict[str, int]
-
-
-# --------------------------------------------------------------------------- #
-# Multi-turn result data structures
-# --------------------------------------------------------------------------- #
-
-
-@dataclass
-class ToolCallTrace:
-    """One turn in the multi-turn chain."""
-
-    step: int
-    tool_name: str | None
-    params: dict[str, Any] | None
-    tool_response: dict[str, Any] | None  # simulated response
-
-
-@dataclass
-class MultiTurnTaskResult(TaskResult):
-    """Extended result for a multi-tool chain task."""
-
-    trace: list[ToolCallTrace] = field(default_factory=list)
-    orchestration_correct: bool = False    # right tools in right order
-    data_flow_correct: bool = False        # used previous output as input
-    turns_correct: bool = False            # stopped at expected turn
-    parallel_detected: bool = False        # called two tools in one turn
-    multi_score: float = 0.0              # orchestration * data_flow * turns
-    details: str = ""
-    turn_finish_reasons: list[str | None] = field(default_factory=list)
 
 
 # --------------------------------------------------------------------------- #
@@ -479,104 +411,6 @@ def _score_schema_compliance_task(
 
     details = "; ".join(details_parts) if details_parts else ""
     return all_ok, results, details
-
-
-# --------------------------------------------------------------------------- #
-# Mock tool executor — deterministic simulated responses
-# --------------------------------------------------------------------------- #
-
-# Deterministic responses that the benchmark uses to simulate tool outputs.
-# The multi-turn loop calls these instead of hitting a real API.
-_MOCK_TOOL_RESPONSES: dict[str, Any] = {
-    "get_stock_price": {
-        "NVDA": {"price": 150.0, "symbol": "NVDA", "change_pct": 2.3},
-        "AAPL": {"price": 190.0, "symbol": "AAPL", "change_pct": -0.5},
-        "MSFT": {"price": 420.0, "symbol": "MSFT", "change_pct": 1.1},
-        "TSLA": {"price": 250.0, "symbol": "TSLA", "change_pct": -1.8},
-    },
-    "get_weather": {
-        "Tokyo": {"temp": 22, "condition": "sunny", "location": "Tokyo"},
-        "London": {"temp": 15, "condition": "cloudy", "location": "London"},
-        "Sydney": {"temp": 28, "condition": "clear", "location": "Sydney"},
-        "Canberra": {"temp": 18, "condition": "partly cloudy", "location": "Canberra"},
-        "Ottawa": {"temp": -2, "condition": "snowy", "location": "Ottawa"},
-        "Rome": {"temp": 25, "condition": "sunny", "location": "Rome"},
-    },
-    # Rates keyed by (from, to). The mock computes amount * rate from the
-    # call arguments, so every amount gets a consistent result.
-    "convert_currency": {
-        ("USD", "JPY"): 149.50,
-        ("EUR", "GBP"): 0.85,
-        ("GBP", "EUR"): 1.18,
-        ("GBP", "USD"): 1.27,
-        ("USD", "EUR"): 0.92,
-    },
-    "calculate": {
-        "150 * 1.2": {"expression": "150 * 1.2", "result": 180.0},
-        "190 * 0.9": {"expression": "190 * 0.9", "result": 171.0},
-        "250 * 1.15": {"expression": "250 * 1.15", "result": 287.5},
-        "250 * 0.90": {"expression": "250 * 0.90", "result": 225.0},
-        "200 * 1.15": {"expression": "200 * 1.15", "result": 230.0},
-        "1000 / 8": {"expression": "1000 / 8", "result": 125.0},
-        "1000 * 0.20": {"expression": "1000 * 0.20", "result": 200.0},
-        "250 * 0.20": {"expression": "250 * 0.20", "result": 50.0},
-        "14000000 * 0.10": {"expression": "14000000 * 0.10", "result": 1400000.0},
-        "50 * 0.25": {"expression": "50 * 0.25", "result": 12.5},
-        "50 + 75": {"expression": "50 + 75", "result": 125.0},
-        "1000 * 0.30": {"expression": "1000 * 0.30", "result": 300.0},
-        "(100 + 200) * 3 / 4": {"expression": "(100 + 200) * 3 / 4", "result": 225.0},
-        "250 * 0.2": {"expression": "250 * 0.2", "result": 50.0},
-        "150 * 0.2": {"expression": "150 * 0.2", "result": 30.0},
-    },
-    "search": {
-        "default": {"results_count": 5, "snippet": "Search results available"},
-    },
-    "send_email": {
-        "default": {"message_id": "msg_12345", "status": "sent"},
-    },
-    "schedule_meeting": {
-        "default": {"meeting_id": "mtg_67890", "confirmed": True},
-    },
-}
-
-
-def _mock_tool_response(tool_name: str, params: dict[str, Any]) -> dict[str, Any]:
-    """Return a deterministic simulated response for a tool call.
-
-    This is used by the multi-turn loop so the benchmark can run
-    without an external tool server.
-    """
-    if tool_name not in _MOCK_TOOL_RESPONSES:
-        return {"error": f"Unknown tool: {tool_name}"}
-
-    registry = _MOCK_TOOL_RESPONSES[tool_name]
-
-    if "symbol" in params and tool_name == "get_stock_price":
-        return registry.get(params["symbol"], {"error": f"Unknown symbol: {params.get('symbol')}"})
-    if "location" in params and tool_name == "get_weather":
-        return registry.get(params["location"], {"error": f"Unknown location: {params.get('location')}"})
-    if tool_name == "convert_currency":
-        key = (params.get("from_currency", ""), params.get("to_currency", ""))
-        if key not in registry:
-            return {"error": f"Unknown conversion: {key}"}
-        try:
-            amount = float(params.get("amount"))
-        except (TypeError, ValueError):
-            return {"error": f"Invalid amount: {params.get('amount')!r}"}
-        rate = registry[key]
-        return {"amount": amount, "rate": rate, "result": round(amount * rate, 2)}
-    if tool_name == "calculate":
-        expr = params.get("expression", "")
-        return registry.get(expr, {"expression": expr, "result": "unknown", "error": "Expression not mocked"})
-    if tool_name == "search":
-        query = params.get("query", "")
-        # Return a synthetic number for queries about quantities
-        if "state" in query.lower() and "how many" in query.lower():
-            return {"results_count": 1, "snippet": "The United States has 50 states"}
-        if "population" in query.lower():
-            return {"results_count": 1, "snippet": "Tokyo population is approximately 14 million"}
-        return {"results_count": 1, "snippet": f"Results for: {query}"}
-    return registry.get("default", {"error": "No mock response"})
 
 
 # --------------------------------------------------------------------------- #
