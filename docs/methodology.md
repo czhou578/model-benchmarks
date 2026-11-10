@@ -122,6 +122,7 @@ The comparison needs managed mode and `speculative_config`. It runs after all ot
 
 - `GpuMonitor` (in `harness/telemetry.py`) starts after the endpoint is ready, and stops at the end of the run. It does not cover the model load.
 - A background thread calls `nvidia-smi --query-gpu=utilization.gpu,utilization.memory,memory.used,memory.total,power.draw`. It reads only the first GPU line. Then it waits `monitor_interval_s`.
+- Each sample holds all five values. A missing column, or a value that is not a number, gives an empty cell in `gpu_samples.csv`. If the column count is not five, the monitor prints one warning and drops the extra columns.
 - The real sample period is longer than `monitor_interval_s`, because the `nvidia-smi` call also takes time.
 - `gpu_energy_wh` in `harness/telemetry.py` integrates the power over the real sample timestamps with the trapezoid rule. It does not use `monitor_interval_s`.
 - For a time window, `gpu_energy_wh` interpolates the power at the window start and at the window stop. Outside the sampled span, it holds the nearest power value.

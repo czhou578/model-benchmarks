@@ -167,15 +167,28 @@ class GpuMonitor:
         self._windows: dict[str, list[dict[str, Any]]] = {}
         self._window_starts: dict[str, float] = {}
         self._idle_samples: list[dict[str, Any]] = []
+        self._column_mismatch_warned = False
 
     def _parse_row(self, out: str) -> dict[str, Any]:
-        """Parse one nvidia-smi CSV line into a row dict."""
+        """Parse one nvidia-smi CSV line into a row dict.
+
+        The row always holds every key in ``KEYS``. A missing column or a
+        value that is not a number gives ``None``. The parser drops extra
+        columns. The first column count mismatch prints one warning.
+        """
         parts = [p.strip() for p in out.splitlines()[0].split(",")]
+        if len(parts) != len(self.KEYS) and not self._column_mismatch_warned:
+            self._column_mismatch_warned = True
+            print(
+                f"[telemetry] warning: nvidia-smi gave {len(parts)} columns, "
+                f"expected {len(self.KEYS)} ({self.FIELDS}); "
+                "missing columns are None and extra columns are dropped"
+            )
         row: dict[str, Any] = {}
-        for k, v in zip(self.KEYS, parts, strict=False):
+        for i, k in enumerate(self.KEYS):
             try:
-                row[k] = float(v)
-            except (ValueError, TypeError):
+                row[k] = float(parts[i])
+            except (IndexError, ValueError):
                 row[k] = None
         return row
 
