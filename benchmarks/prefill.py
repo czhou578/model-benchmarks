@@ -456,8 +456,8 @@ def run_prefill_scaling(
         # Aggregate
         successes = [r for r in length_results if r.success]
         ttfts = [r.client_ttft_s for r in successes]
-        tps = [r.effective_prefill_tps for r in successes if r.effective_prefill_tps is not None]
-        engine_tps = [r.engine_prefill_tps for r in successes if r.engine_prefill_tps is not None]
+        tps_values = [r.effective_prefill_tps for r in successes if r.effective_prefill_tps is not None]
+        engine_tps_values = [r.engine_prefill_tps for r in successes if r.engine_prefill_tps is not None]
 
         results["per_length"][length_key] = {
             "status": length_status,
@@ -472,8 +472,8 @@ def run_prefill_scaling(
             ],
             "aggregated": {
                 "ttft": stat_summary(ttfts),
-                "effective_prefill_tps": stat_summary(tps) if tps else _empty_stats(),
-                "engine_prefill_tps": stat_summary(engine_tps) if engine_tps else _empty_stats(),
+                "effective_prefill_tps": stat_summary(tps_values) if tps_values else _empty_stats(),
+                "engine_prefill_tps": stat_summary(engine_tps_values) if engine_tps_values else _empty_stats(),
                 "gpu": gpu_summary if gpu_summary else {},
             },
         }

@@ -79,7 +79,8 @@ def _mock_tool_response(tool_name: str, params: dict[str, Any]) -> dict[str, Any
         if key not in registry:
             return {"error": f"Unknown conversion: {key}"}
         try:
-            amount = float(params.get("amount"))
+            raw_amount: Any = params.get("amount")
+            amount = float(raw_amount)
         except (TypeError, ValueError):
             return {"error": f"Invalid amount: {params.get('amount')!r}"}
         rate = registry[key]

@@ -180,6 +180,7 @@ def normalize_config(
             source_keys["quantization"] = source_key
 
     layer_types_value = values["layer_types"]
+    layer_types: tuple[str, ...]
     if isinstance(layer_types_value, str):
         layer_types = (layer_types_value,)
     elif isinstance(layer_types_value, (list, tuple)):

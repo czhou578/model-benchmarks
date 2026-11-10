@@ -193,7 +193,7 @@ def _run_multi_turn_task(
                         next_step_key = f"step_{step_num + 1}_input_from_step_{step_num}"
                         if next_step_key in expected_intermediate:
                             next_input = expected_intermediate[next_step_key]
-                            actual_next = next(
+                            actual_next: dict[str, Any] = next(
                                 (
                                     c["params"]
                                     for c in actual_sequence

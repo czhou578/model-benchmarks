@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "ruff"]
+dev = ["mypy", "pytest", "ruff", "types-PyYAML", "types-requests"]
 
 [tool.setuptools]
 py-modules = ["core_runner", "batch_run", "dashboard", "memory_guard", "serve_dashboard", "vllm_server"]
@@ -23,6 +23,24 @@ py-modules = ["core_runner", "batch_run", "dashboard", "memory_guard", "serve_da
 # Find every package and subpackage, so that a new subpackage needs no edit here.
 [tool.setuptools.packages.find]
 include = ["benchmarks*", "harness*"]
+
+[tool.mypy]
+python_version = "3.10"
+files = [
+    "benchmarks",
+    "harness",
+    "batch_run.py",
+    "core_runner.py",
+    "dashboard.py",
+    "memory_guard.py",
+    "serve_dashboard.py",
+    "vllm_server.py",
+]
+
+# Some third-party modules ship no type hints.
+[[tool.mypy.overrides]]
+module = ["tiktoken.*", "transformers.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

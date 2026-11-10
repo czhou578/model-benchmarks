@@ -152,6 +152,7 @@ DEFAULT_REASONING_PROMPTS = [
 
 
 def step_latency(run: Run) -> None:
+    assert run.client is not None
     prompt_lengths = run.cfg.get("prompt_lengths", [32, 128, 512, 2048, 8192, 16384])
     repeats = run.cfg.get("latency_repeats", 10)
     print(f"[core_runner] latency sweep over {prompt_lengths} ({repeats} reps each)")
@@ -159,6 +160,7 @@ def step_latency(run: Run) -> None:
 
 
 def step_deep_context(run: Run) -> None:
+    assert run.client is not None
     context_lengths = run.cfg["context_lengths"]
     context_repeats = run.cfg.get("context_repeats", 5)
     output_tokens = int(run.cfg.get("deep_context_output_tokens", 64))
@@ -170,6 +172,7 @@ def step_deep_context(run: Run) -> None:
 
 
 def step_ttft_breakdown(run: Run) -> None:
+    assert run.client is not None
     ttft_lengths = run.cfg.get("ttft_prompt_lengths", [128, 512, 2048, 8192, 32768])
     ttft_reps = run.cfg.get("ttft_repetitions", 10)
     print(f"[core_runner] TTFT breakdown over {ttft_lengths} ({ttft_reps} reps each)")
@@ -180,6 +183,7 @@ def step_ttft_breakdown(run: Run) -> None:
 
 
 def step_decode(run: Run) -> None:
+    assert run.client is not None
     output_lengths = run.cfg.get("decode_lengths", [512, 1024, 2048])
     print(f"[core_runner] decode speed benchmark over {output_lengths}")
     decode_start = time.time()
@@ -189,6 +193,7 @@ def step_decode(run: Run) -> None:
 
 
 def step_reasoning(run: Run) -> None:
+    assert run.client is not None
     prompts = run.cfg.get("reasoning_prompts", DEFAULT_REASONING_PROMPTS)
     # 1024 tokens cut the Qwen3.8 palindrome prompt in every run (0 answer
     # tokens), and two prompts in each Qwen3.6 run.
@@ -198,6 +203,7 @@ def step_reasoning(run: Run) -> None:
 
 
 def step_concurrency(run: Run) -> None:
+    assert run.client is not None
     levels = run.cfg.get("concurrency_levels", [1, 2, 4, 8, 16])
     requests_per_level = run.cfg.get("concurrency_requests_per_level", 5)
     max_tokens = run.cfg.get("concurrency_max_tokens", 256)
@@ -228,6 +234,7 @@ def prefix_caching_flag(command: list[str]) -> bool | None:
 
 
 def step_prefill(run: Run) -> None:
+    assert run.client is not None
     target_lengths = run.cfg.get("prefill_target_lengths", [512, 2048, 8192])
     repetitions = run.cfg.get("prefill_repetitions", 5)
     # Record a GPU idle baseline (default 5 s) before the prefill requests.
@@ -237,6 +244,7 @@ def step_prefill(run: Run) -> None:
     idle_baseline_s = float(run.cfg.get("idle_baseline_s", 5.0))
     if gpu_interval > 0.2:
         print("[core_runner] capturing GPU idle baseline...")
+    assert run.monitor is not None
     run.monitor.start_idle()
     for _ in range(int(idle_baseline_s / gpu_interval)):
         run.monitor.record_idle()
@@ -276,6 +284,7 @@ def step_tool_calling(run: Run) -> None:
         # 256 tokens truncated most ticket tasks in the July 2026 runs.
         # 4096 tokens at ~12 tok/s take ~330 s, so the timeout is 600 s.
         print(f"[core_runner] running tool-calling benchmark (task_set={task_set})")
+        assert run.client is not None
         result = run_tool_calling_benchmark(
             run.client,
             tasks_path=cfg.get("tool_calling_tasks", "datasets/tool_calling_tasks.yaml"),

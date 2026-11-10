@@ -126,6 +126,7 @@ def stream_process(cmd: list[str], log_file: Any, timeout_s: float) -> tuple[int
     process exceeds timeout_s and batch_run kills it.
     """
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=ROOT)
+    assert proc.stdout is not None  # stdout=PIPE always sets it.
     timed_out = threading.Event()
 
     def kill() -> None:

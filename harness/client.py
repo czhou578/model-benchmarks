@@ -11,7 +11,7 @@ import json
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import requests
 
@@ -212,7 +212,8 @@ def stream_generation(
     exact_output = usage.get("completion_tokens") if usage else None
     token_deltas: list[int] | None = None
     if event_token_counts and None not in event_token_counts:
-        token_deltas = [int(b) - int(a) for a, b in itertools.pairwise(event_token_counts)]
+        counts = cast("list[int]", event_token_counts)
+        token_deltas = [int(b) - int(a) for a, b in itertools.pairwise(counts)]
 
     return GenerationResult(
         prompt_tokens=exact_prompt if exact_prompt is not None else count_tokens(payload.get("prompt", "")),
@@ -277,7 +278,7 @@ class ModelClient:
         """
         health_url = f"{self.base_url}/v1/models"
         deadline = time.time() + timeout_s
-        last_err = None
+        last_err: requests.RequestException | str | None = None
 
         # Step 1: wait for the HTTP server to accept connections.
         while time.time() < deadline:
