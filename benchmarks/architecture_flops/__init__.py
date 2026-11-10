@@ -4,6 +4,8 @@ The package re-exports its public names, so callers import them from
 ``benchmarks.architecture_flops``.
 """
 
+from benchmarks.architecture_flops.analysis import run_flops_analysis
+from benchmarks.architecture_flops.loader import load_architecture_config
 from benchmarks.architecture_flops.model import (
     ArchitectureFeatures,
     ComponentResult,
@@ -16,11 +18,9 @@ from benchmarks.architecture_flops.model import (
     MoeFfnEstimator,
     NormalizedConfig,
     detect_features,
-    load_architecture_config,
     missing_required_fields,
     normalize_config,
 )
-from benchmarks.architecture_flops.analysis import run_flops_analysis
 
 __all__ = [
     "ArchitectureFeatures",
