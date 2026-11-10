@@ -4,14 +4,13 @@ from __future__ import annotations
 
 from typing import Any, Callable, Mapping
 
-from benchmarks.architecture_flops.loader import load_architecture_config
-from benchmarks.architecture_flops.model import (
+from benchmarks.architecture_flops.config import (
     ConfigLoadResult,
-    ModelFlopsEstimator,
     detect_features,
     missing_required_fields,
-    normalize_config,
 )
+from benchmarks.architecture_flops.loader import load_architecture_config
+from benchmarks.architecture_flops.model import ModelFlopsEstimator, normalize_config
 
 
 def _model_label(raw: Mapping[str, Any]) -> str:
