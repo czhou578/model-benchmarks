@@ -19,7 +19,7 @@ dev = ["pytest", "ruff"]
 
 [tool.setuptools]
 py-modules = ["core_runner", "batch_run", "dashboard", "memory_guard", "serve_dashboard", "vllm_server"]
-packages = ["benchmarks", "harness"]
+packages = ["benchmarks", "benchmarks.tool_calling", "harness"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
