@@ -1,40 +1,11 @@
-"""Tool-calling benchmark.
+"""Aggregation of the tool-calling task results.
 
-The default task file has 85 tasks in these groups:
-
-Single-tool invocation
-  One-shot tool calls. Tests tool selection and parameter validation.
-  The group also holds the ``ambiguous`` and ``refusal`` tasks, where the
-  correct answer can be a question or no tool call.
-
-Multi-tool chaining (``multi_tool``)
-  Multi-turn chains where the model must orchestrate multiple tools.
-  The output of one tool feeds into the next.
-
-Schema compliance (``schema_compliance``)
-  Strict JSON Schema constraint validation (minLength, maxLength, pattern,
-  enum, required, nested objects).
-
-Error recovery (``error_recovery``)
-  Multi-turn tasks. The model must correct its call after a tool error.
-
-The composite score is the plain sum of six components, from 0 to 6
-(``_compute_weighted_composite``). docs/tool-calling.md describes the scoring.
-
-Input : ``datasets/tool_calling_tasks.yaml``
-Output: ``tool_calling.json`` inside the run directory. The standalone CLI
-writes ``results/tool_calling.json`` unless --output names another file.
-
-Usage::
-
-    python -m benchmarks.tool_calling --tasks datasets/tool_calling_tasks.yaml --base-url http://localhost:8000/v1 --model <model-name>
-
-Or import ``run_tool_calling_benchmark(client, tasks_path=...)`` from benchmarks.tool_calling.
+The module computes the category scores, the failure modes, and the
+composite score. It also holds ``run_tool_calling_benchmark``.
 """
 
 from __future__ import annotations
 
-import json
 import statistics
 import time
 from datetime import datetime, timezone
@@ -47,7 +18,6 @@ from benchmarks.tool_calling.results import BenchmarkResult, MultiTurnTaskResult
 from benchmarks.tool_calling.single_turn import _attach_overlay_defaults, _run_task
 from benchmarks.tool_calling.tasks import load_tasks, resolve_tasks_path
 from harness.client import ModelClient
-from harness.paths import ROOT
 
 
 # --------------------------------------------------------------------------- #
@@ -662,88 +632,3 @@ def _repeat_summary(runs: list[BenchmarkResult]) -> dict[str, Any]:
             "max": max(values),
         }
     return summary
-
-
-# --------------------------------------------------------------------------- #
-# CLI entry point
-# --------------------------------------------------------------------------- #
-
-
-def main() -> None:
-    """Standalone entry point for running the benchmark."""
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Tool-calling benchmark")
-    parser.add_argument(
-        "--tasks", default="datasets/tool_calling_tasks.yaml",
-        help="Path to the YAML task file",
-    )
-    parser.add_argument(
-        "--base-url", required=True,
-        help="vLLM base URL (e.g. http://localhost:8000/v1)",
-    )
-    parser.add_argument(
-        "--model", required=True,
-        help="Model name to use for requests",
-    )
-    parser.add_argument(
-        "--task-set", choices=["lite", "full"], default="full",
-        help="Task subset to run",
-    )
-    parser.add_argument(
-        "--max-tokens", type=int, default=4096,
-        help="Maximum output tokens per request (thinking models need room)",
-    )
-    parser.add_argument(
-        "--request-timeout", type=float, default=DEFAULT_REQUEST_TIMEOUT_S,
-        help="HTTP read timeout in seconds for each request",
-    )
-    parser.add_argument(
-        "--disable-thinking", action="store_true",
-        help="Send chat_template_kwargs={'enable_thinking': false} with every request",
-    )
-    parser.add_argument(
-        "--repeats", type=int, default=1,
-        help="Run the task set N times and report the mean and the spread",
-    )
-    parser.add_argument(
-        "--output", type=str, default=None,
-        help="Output JSON file (default: results/tool_calling.json in the repo)",
-    )
-    args = parser.parse_args()
-
-    client = ModelClient(
-        base_url=args.base_url,
-        model_name=args.model,
-        chat=True,
-    )
-
-    result = run_tool_calling_benchmark(
-        client,
-        tasks_path=args.tasks,
-        task_set=args.task_set,
-        max_tokens=args.max_tokens,
-        chat_template_kwargs={"enable_thinking": False} if args.disable_thinking else None,
-        request_timeout_s=args.request_timeout,
-        repeats=args.repeats,
-    )
-
-    output_path = Path(args.output) if args.output else ROOT / "results" / "tool_calling.json"
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w") as f:
-        json.dump(result, f, indent=2, default=str)
-    print(f"[tool_calling] results written to {output_path}")
-    print(
-        f"[tool_calling] composite_score={result['composite_score']}  "
-        f"{result['total_correct']}/{result['total_tasks']} correct"
-    )
-    if "repeats" in result:
-        spread = result["repeats"]["composite_score"]
-        print(
-            f"[tool_calling] {args.repeats} repeats: composite mean={spread['mean']} "
-            f"stdev={spread['stdev']} range={spread['min']}..{spread['max']}"
-        )
-
-
-if __name__ == "__main__":
-    main()
