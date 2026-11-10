@@ -1358,20 +1358,3 @@ def run_flops_analysis(
         "assumptions": estimator.assumptions,
     }
 
-
-# --------------------------------------------------------------------------- #
-# CLI entry point — standalone analysis
-# --------------------------------------------------------------------------- #
-
-if __name__ == "__main__":
-    import json
-    import sys
-
-    from core_runner import load_model_config as _load_model_config
-
-    cfg_path = (
-        Path(sys.argv[1]) if len(sys.argv) > 1 else Path("models/legacy/qwen3.6_35b_redhat_nvfp4.yml")
-    )
-    cfg = _load_model_config(cfg_path)
-    result = run_flops_analysis(cfg)
-    print(json.dumps(result, indent=2, default=str))
