@@ -8,9 +8,10 @@ from benchmarks.architecture_flops.config import (
     ConfigLoadResult,
     detect_features,
     missing_required_fields,
+    normalize_config,
 )
 from benchmarks.architecture_flops.loader import load_architecture_config
-from benchmarks.architecture_flops.model import ModelFlopsEstimator, normalize_config
+from benchmarks.architecture_flops.model import ModelFlopsEstimator
 
 
 def _model_label(raw: Mapping[str, Any]) -> str:

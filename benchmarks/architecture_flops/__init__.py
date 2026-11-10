@@ -11,6 +11,7 @@ from benchmarks.architecture_flops.config import (
     NormalizedConfig,
     detect_features,
     missing_required_fields,
+    normalize_config,
 )
 from benchmarks.architecture_flops.loader import load_architecture_config
 from benchmarks.architecture_flops.model import (
@@ -21,7 +22,6 @@ from benchmarks.architecture_flops.model import (
     LmHeadEstimator,
     ModelFlopsEstimator,
     MoeFfnEstimator,
-    normalize_config,
 )
 
 __all__ = [

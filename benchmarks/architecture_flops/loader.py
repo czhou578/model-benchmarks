@@ -8,10 +8,11 @@ from typing import Any, Callable, Mapping
 
 from benchmarks.architecture_flops.config import (
     ConfigLoadResult,
+    _as_dict,
     detect_features,
     missing_required_fields,
+    normalize_config,
 )
-from benchmarks.architecture_flops.model import _as_dict, normalize_config
 
 
 def _model_reference(benchmark_config: Mapping[str, Any]) -> str | None:
