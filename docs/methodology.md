@@ -141,6 +141,17 @@ The FLOP analysis is an estimate from the model architecture. It sends no timed 
 - It counts 2 FLOPs per multiply-accumulate. The totals leave out the operations in `omitted_non_matmul`, for example norms and RoPE.
 - Linear-attention prefill uses the 64-token chunked algorithm.
 
+The code is in the package `benchmarks/architecture_flops/`. Run `python -m benchmarks.architecture_flops <config.yml>` to print the analysis of one model config.
+
+| Module | Contents |
+|---|---|
+| `analysis.py` | `run_flops_analysis`: the entry point, the status, and the warnings. |
+| `loader.py` | `load_architecture_config`: the model reference and the config sources. |
+| `config.py` | `normalize_config`, `detect_features`, `missing_required_fields`, and the config records. |
+| `model.py` | `ModelFlopsEstimator`: the decode and prefill totals of the model. |
+| `attention.py`, `linear_attention.py`, `ffn.py`, `lm_head.py` | The estimator of each layer component. |
+| `component.py` | `ComponentResult`: the FLOPs and bytes of one layer component. |
+
 `load_architecture_config` tries these config sources in order. The first complete config wins.
 
 1. A local file: `architecture_config_path`, or a local path in the model reference.
