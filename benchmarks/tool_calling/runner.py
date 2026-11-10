@@ -158,6 +158,7 @@ def _run_task_list(
             f"(expected: {desc})"
         )
         exc_details = None
+        r: TaskResult
         try:
             if is_multi:
                 r = _run_multi_turn_task(

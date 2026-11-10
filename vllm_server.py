@@ -13,7 +13,7 @@ import subprocess
 import time
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 from urllib.parse import urlparse
 
 # A variable name is secret-like when it ends in one of these words, after
@@ -59,7 +59,7 @@ class VllmServer:
         self.process: subprocess.Popen[str] | None = None
         self.started_at: float | None = None
         self.stopped_at: float | None = None
-        self._log_file = None
+        self._log_file: TextIO | None = None
 
         command_port = self._option_value("--port")
         if command_port is not None and int(command_port) != self.port:

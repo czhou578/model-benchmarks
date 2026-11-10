@@ -8,7 +8,7 @@ from typing import Any
 
 def _validate_param_type(value: Any, expected_type: str) -> bool:
     """Check whether *value* matches the expected JSON Schema type string."""
-    type_map = {
+    type_map: dict[str, type | tuple[type, ...]] = {
         "string": str,
         "number": (int, float),
         "integer": int,
