@@ -19,7 +19,10 @@ dev = ["pytest", "ruff"]
 
 [tool.setuptools]
 py-modules = ["core_runner", "batch_run", "dashboard", "memory_guard", "serve_dashboard", "vllm_server"]
-packages = ["benchmarks", "benchmarks.tool_calling", "harness"]
+
+# Find every package and subpackage, so that a new subpackage needs no edit here.
+[tool.setuptools.packages.find]
+include = ["benchmarks*", "harness*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
