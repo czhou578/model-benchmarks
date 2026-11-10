@@ -59,11 +59,6 @@ class MoeFfnEstimator:
         return ComponentResult(
             matmul_flops=sum(breakdown.values()),
             non_matmul_flops=sum(non_matmul_breakdown.values()),
-            weight_bytes=float(2 * sum(self.parameter_breakdown().values())),
-            activation_bytes=float(
-                4 * self.k * self.m_e
-                + (4 * self.m_s if self.m_s is not None else 0)
-            ),
             matmul_breakdown=breakdown,
             non_matmul_breakdown=non_matmul_breakdown,
             omitted_non_matmul=(
@@ -89,8 +84,6 @@ class DenseFfnEstimator:
         matmul = float(2 * self.parameter_count())
         return ComponentResult(
             matmul_flops=matmul,
-            weight_bytes=float(2 * self.parameter_count()),
-            activation_bytes=float(4 * self.m),
             matmul_breakdown={"dense_ffn": matmul},
             omitted_non_matmul=("FFN activation function and gate multiply",),
         )

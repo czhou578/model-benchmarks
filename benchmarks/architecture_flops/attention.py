@@ -57,12 +57,6 @@ class FullAttentionEstimator:
         return ComponentResult(
             matmul_flops=sum(breakdown.values()),
             non_matmul_flops=sum(non_matmul_breakdown.values()),
-            weight_bytes=float(2 * self.parameter_count()),
-            kv_read_bytes=float(
-                (self.d_k + self.d_v) * 2 * S if S is not None else 0
-            ),
-            kv_write_bytes=float((self.d_k + self.d_v) * 2),
-            activation_bytes=float(4 * (self.d_q + self.d_k + self.d_v)),
             matmul_breakdown=breakdown,
             non_matmul_breakdown=non_matmul_breakdown,
             omitted_non_matmul=(
@@ -88,10 +82,6 @@ class FullAttentionEstimator:
         return ComponentResult(
             matmul_flops=sum(breakdown.values()),
             non_matmul_flops=sum(non_matmul_breakdown.values()),
-            weight_bytes=float(2 * self.parameter_count()),
-            kv_read_bytes=0.0,
-            kv_write_bytes=float(S * (self.d_k + self.d_v) * 2),
-            activation_bytes=float(4 * S * (self.d_q + self.d_k + self.d_v)),
             matmul_breakdown=breakdown,
             non_matmul_breakdown=non_matmul_breakdown,
             omitted_non_matmul=(
@@ -100,6 +90,3 @@ class FullAttentionEstimator:
                 "query-gate sigmoid",
             ),
         )
-
-    def kv_cache_bytes(self, S: int, dtype_bytes: int = 2) -> float:
-        return S * (self.d_k + self.d_v) * dtype_bytes
