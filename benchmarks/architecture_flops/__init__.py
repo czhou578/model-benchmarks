@@ -5,20 +5,22 @@ The package re-exports its public names, so callers import them from
 """
 
 from benchmarks.architecture_flops.analysis import run_flops_analysis
+from benchmarks.architecture_flops.config import (
+    ArchitectureFeatures,
+    ConfigLoadResult,
+    NormalizedConfig,
+    detect_features,
+    missing_required_fields,
+)
 from benchmarks.architecture_flops.loader import load_architecture_config
 from benchmarks.architecture_flops.model import (
-    ArchitectureFeatures,
     ComponentResult,
-    ConfigLoadResult,
     DenseFfnEstimator,
     FullAttentionEstimator,
     GatedDeltaNetEstimator,
     LmHeadEstimator,
     ModelFlopsEstimator,
     MoeFfnEstimator,
-    NormalizedConfig,
-    detect_features,
-    missing_required_fields,
     normalize_config,
 )
 
