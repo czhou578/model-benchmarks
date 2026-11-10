@@ -16,7 +16,7 @@ The runner runs the benchmarks in the order of this table. The function `run_ben
 | Concurrency | `benchmarks/concurrency.py` | `concurrency.json` | `concurrency`, full copy | `--skip-concurrency` |
 | Prefill scaling | `benchmarks/prefill.py` | `prefill_scaling.json` | `prefill_scaling`, status and `n_success` per length | `--skip-prefill` |
 | FLOP analysis | `run_flops_analysis` in `benchmarks/architecture_flops/analysis.py` | `flops_analysis.json` | `flops_analysis`, status and model label | `--skip-flops` |
-| Tool calling | `benchmarks/tool_calling.py` | `tool_calling.json` | `tool_calling`, scores only | `--skip-tool-calling` |
+| Tool calling | `run_tool_calling_benchmark` in `benchmarks/tool_calling/runner.py` | `tool_calling.json` | `tool_calling`, scores only | `--skip-tool-calling` |
 | Speculative decoding comparison | `compare_spec_decode_results` in `benchmarks/decode.py` | `spec_enabled.json`, `spec_disabled.json`, `spec_comparison.json` | `spec_comparison`, full copy | runs only with `--compare-spec` |
 
 Other command-line options: `--model` (required), `--server-mode`, `--results-dir`, and `--compare-spec`. [model-config.md](model-config.md) and [methodology.md](methodology.md) describe them.

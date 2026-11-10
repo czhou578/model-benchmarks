@@ -44,7 +44,7 @@ The steps below follow `main()` and `run_benchmarks()` in `core_runner.py`.
 | 6 | Concurrency | `step_concurrency` | `concurrency.py` | no `--skip-concurrency` | `concurrency.json` |
 | 7 | Prefill scaling | `step_prefill` | `prefill.py` | no `--skip-prefill` | `prefill_scaling.json` |
 | 8 | FLOP analysis | `step_flops` | `architecture_flops/` | no `--skip-flops` | `flops_analysis.json` |
-| 9 | Tool calling | `step_tool_calling` | `tool_calling.py` | no `--skip-tool-calling` | `tool_calling.json` |
+| 9 | Tool calling | `step_tool_calling` | `tool_calling/` | no `--skip-tool-calling` | `tool_calling.json` |
 | 10 | Spec comparison | `step_spec_comparison` | `decode.py` | `--compare-spec` | `spec_comparison.json` and five more files |
 
 The next table gives the default parameters in the code. A model config can change most of them. [model-config.md](model-config.md) lists the keys. Prompt lengths are in tokens.
