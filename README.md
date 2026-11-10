@@ -160,5 +160,7 @@ The modules in `benchmarks/` import from `harness/` and from other modules in `b
 - Run `ruff check .` and `pytest -q` before you open a pull request.
 - CI runs `ruff check .` and `pytest -q` on each push to `main` and on each pull request.
 - Keep each pull request small, with one topic.
+- `main` requires the CI checks `test (3.10)` and `test (3.12)` to pass before a merge.
+- GitHub deletes the head branch of a pull request after the merge.
 
 See [LICENSE](LICENSE).
