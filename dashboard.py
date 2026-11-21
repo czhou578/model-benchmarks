@@ -44,6 +44,7 @@ JS_MODULES = [
     "bars.js",
     "lines.js",
     "scores.js",
+    "tasks.js",
 ]
 
 # PR #42 and PR #44 (merged 2026-11-07) fixed the cache-salt placement and
@@ -389,6 +390,8 @@ def collect_run(run_dir: Path) -> dict[str, Any] | None:
             ),
         },
         "memory": memory_info(run_dir),
+        # Optional task-level results, written by hand or by a test script.
+        "task_eval": load_json(run_dir / "task_eval.json"),
     }
 
 

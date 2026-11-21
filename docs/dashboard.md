@@ -71,6 +71,24 @@ A card can show these badges:
 | Shared concurrency prompt | The run sent one prompt to every concurrency request. Its concurrency numbers are not comparable with newer runs. See `prompt_mode` in [results-schema.md](results-schema.md). |
 | Stopped for memory | `memory_guard.py` stopped the run because free memory was too low. |
 
+## Task-level results
+
+A run dir can hold an optional `task_eval.json`. It carries results that this harness does not measure, for example tests of a model in its worker role. The page then draws three charts: the side-by-side judge score, the decode speed in real sessions, and the memory at the peak. A run without the file adds nothing to these charts.
+
+```json
+{
+  "tests": {"judge_score": 0.33, "decode_tok_s": 63.7, "peak_gib": 47.8},
+  "reference": [
+    {"label": "Other model", "judge_score": 0.49, "decode_tok_s": 91.7, "peak_gib": 28.1, "color": "#3b78e7"}
+  ]
+}
+```
+
+- `tests` holds the numbers of the run. Each key is optional. A chart appears when a run has its key.
+- `reference` lists models that are not runs of this harness. Each one draws as a column next to the run. `color` is any CSS color.
+- `title` and `note` are free text for the reader of the file. The page does not show them. Other keys of `tests` stay in the data and are not drawn.
+- The file is not part of the harness schema. Write it by hand or from a test script.
+
 ## Pre-fix scoring and other eras
 
 The badges and the note above the charts mark old runs. The page reads the era from `harness.schema_version` in `summary.json`, else from `provenance.json` in the run dir, else from the run dir date. [comparability.md](comparability.md#how-the-dashboard-marks-the-eras) gives the rule, the metrics of each era that you can compare, and the known limits of the badges.
