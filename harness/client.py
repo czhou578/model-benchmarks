@@ -126,6 +126,11 @@ def stream_generation(
     """
     start = time.time()
     first_token_time = None
+    # Time of the first chunk whose usage counts an output token. The TTFT
+    # uses it only when no chunk has text: a reasoning parser can hide the
+    # first token, for example the token that opens a thinking block. With
+    # ``max_tokens=1`` such a stream then has no text event at all.
+    usage_token_time: float | None = None
     last_event_time = start
     per_token_gaps: list[float] = []
     chunks: list[str] = []
@@ -192,6 +197,12 @@ def stream_generation(
                     per_token_gaps.append(now - last_event_time)
                 last_event_time = now
                 event_token_counts.append((obj.get("usage") or {}).get("completion_tokens"))
+            elif (
+                first_token_time is None
+                and usage_token_time is None
+                and ((obj.get("usage") or {}).get("completion_tokens") or 0) > 0
+            ):
+                usage_token_time = time.time()
 
             if reasoning_text:
                 reasoning_chunks.append(reasoning_text)
@@ -201,6 +212,8 @@ def stream_generation(
                 chunks.append(content_text)
 
     end = time.time()
+    if first_token_time is None:
+        first_token_time = usage_token_time
     output_text = "".join(chunks)
     parsed_metrics = _parse_server_metrics(server_metrics)
     # vLLM reports prefix-cache hits under usage.prompt_tokens_details.

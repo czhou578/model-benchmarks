@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from typing import Any
 
 import pytest
@@ -159,3 +160,104 @@ def test_latency_and_deep_context_use_fresh_salts():
     assert len(salts) == 5
     assert all(salts)
     assert len(set(salts)) == 5
+
+
+def _patch_timed_post(monkeypatch, lines: list[str]) -> None:
+    """Serve *lines* with a fake clock that moves 0.1 s at each line.
+
+    ``time.time`` returns 0.0 before the first line. A chunk read from line
+    N thus has the time 0.1 * N, however often the client reads the clock.
+    """
+    clock = {"now": 0.0}
+
+    class _TimedResponse(_FakeResponse):
+        def iter_lines(self):
+            for line in self._lines:
+                clock["now"] += 0.1
+                yield line.encode("utf-8")
+
+    def fake_post(url, headers=None, json=None, stream=False, timeout=None):
+        return _TimedResponse(lines)
+
+    monkeypatch.setattr(harness.client.requests, "post", fake_post)
+    monkeypatch.setattr(harness.client.time, "time", lambda: clock["now"])
+
+
+def _hidden_first_token_stream() -> list[str]:
+    """A ``max_tokens=1`` stream from a reasoning parser that hides the token.
+
+    The role chunk and the finish chunk have no text. Only the final usage
+    chunk (line 3) shows that the server made one output token.
+    """
+    return [
+        _sse({"choices": [{"delta": {"role": "assistant", "content": ""}}]}),
+        _sse({"choices": [{"delta": {}, "finish_reason": "length"}]}),
+        _sse({
+            "choices": [],
+            "usage": {"prompt_tokens": 512, "completion_tokens": 1},
+            "metrics": {"time_to_first_token_ms": 200.0, "queue_time_ms": 10.0},
+        }),
+        "data: [DONE]",
+    ]
+
+
+def test_hidden_first_token_gives_finite_client_ttft(monkeypatch):
+    _patch_timed_post(monkeypatch, _hidden_first_token_stream())
+
+    gen = ModelClient("http://127.0.0.1:8000", "m").generate("hi", max_tokens=1)
+
+    assert gen.ttft_s == pytest.approx(0.3)
+    assert gen.output_text == ""
+    assert gen.output_tokens == 1
+    assert gen.per_token_times == []
+
+
+def test_text_event_keeps_priority_over_usage_time(monkeypatch):
+    # With per-chunk usage, every chunk counts tokens. The first text event
+    # (line 2) sets the TTFT, as before. The usage of line 1 does not.
+    lines = [
+        _sse({"choices": [{"delta": {}}], "usage": {"completion_tokens": 1}}),
+        _sse({"choices": [{"delta": {"content": "a"}}], "usage": {"completion_tokens": 2}}),
+        _sse({"choices": [], "usage": {"prompt_tokens": 4, "completion_tokens": 2}}),
+        "data: [DONE]",
+    ]
+    _patch_timed_post(monkeypatch, lines)
+
+    gen = ModelClient("http://127.0.0.1:8000", "m").generate("hi", continuous_usage=True)
+
+    assert gen.ttft_s == pytest.approx(0.2)
+
+
+def test_stream_without_output_token_keeps_nan_ttft(monkeypatch):
+    lines = [
+        _sse({"choices": [{"delta": {}, "finish_reason": "abort"}]}),
+        _sse({"choices": [], "usage": {"prompt_tokens": 4, "completion_tokens": 0}}),
+        "data: [DONE]",
+    ]
+    _patch_timed_post(monkeypatch, lines)
+
+    gen = ModelClient("http://127.0.0.1:8000", "m").generate("hi", max_tokens=1)
+
+    assert math.isnan(gen.ttft_s)
+
+
+def test_prefill_scaling_rate_with_hidden_first_token(monkeypatch):
+    from benchmarks import prefill
+
+    class _Client(ModelClient):
+        def preflight_cache_salt(self) -> bool:
+            return True
+
+        def tokenize_prompt(self, prompt: str) -> Any:
+            return harness.client.TokenizedPrompt(count=len(prompt) // 4, tokens=[])
+
+    _patch_timed_post(monkeypatch, _hidden_first_token_stream())
+    monkeypatch.setattr(prefill.time, "sleep", lambda s: None)
+
+    result = prefill.run_prefill_scaling(
+        _Client("http://127.0.0.1:8000", "m"), target_lengths=[512], repetitions=1
+    )
+
+    row = result["per_length"]["512"]["per_request"][0]
+    assert row["client_ttft_s"] == pytest.approx(0.3)
+    assert row["effective_prefill_tps"] == pytest.approx(512 / 0.3, rel=1e-3)
