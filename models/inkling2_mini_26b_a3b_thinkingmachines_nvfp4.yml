@@ -1,0 +1,148 @@
+# Inkling 2 Mini (looped MoE: 24 layers, the middle 12 run three times, 8 of
+# 128 experts per token) with mixed NVFP4 and MXFP8 weights from Thinking
+# Machines. 26.4B parameters in total, 3.4B active per pass.
+#
+# vLLM support: no vLLM release on PyPI loads this model yet. The support is in
+# the open vllm-project/vllm pull request 69028. This config runs the
+# vLLM image that the vLLM recipe names for the model, pinned by its digest:
+#   vllm/vllm-openai:inkling-2-mini (arm64), vLLM 0.1.dev25855+g7cb5dae22,
+#   torch 2.14.0+cu130, CUDA 13.0. Pull it before the run.
+# The harness starts `docker run` as a managed server. The docker client passes
+# SIGTERM to vLLM in the container, and --rm removes the container. If a run
+# stops in an unusual way, look for a container that is left:
+#   docker ps -a --filter name=inkling-bench
+# environment.json reads PyTorch and the driver from the host, not from the
+# container. The vLLM version comes from the server, so it is correct.
+#
+# The harness does not expand `$HOME` in server.command, and `docker run -v`
+# needs absolute paths. Thus `sh -c` starts docker: the shell expands `$HOME` in
+# the mounts, and `exec` replaces the shell, so SIGTERM goes to the docker
+# client. "$@" passes the vLLM arguments below, one item each. Thus the port
+# check sees `--port 8000`, and --compare-spec can remove and add
+# --speculative-config. The mounts are the Hugging Face cache, with the
+# weights, and two compile caches that make the next start faster.
+#
+# The server flags come from two sources:
+#   - the vLLM recipe for the DGX Spark (context limit 262144, the `inkling`
+#     reasoning parser, the DSpark speculator config)
+#   - docs/models/inkling2.md in pull request 69028 (the GB10 flags: Humming
+#     MoE backend, FP8 KV cache, decode CUDA graphs)
+#
+# Smoke test on 2026-11-20 (DGX Spark, this image and these flags):
+#   - weights: 18.52 GiB, 87 to 124 s to load from the page cache or the disk
+#   - KV cache: one request of 262,144 tokens with the DSpark draft needs
+#     18.39 GiB, so the 16G pin of the Qwen3.8-27B config fails at startup.
+#     The 20G pin holds 285,129 tokens with the draft.
+#   - MemAvailable stayed at 49 GiB or more with the server up.
+#   - the stream puts the thinking text in delta.reasoning, the `inkling`
+#     parser returns OpenAI tool calls, and /tokenize and cache_salt work.
+#   - a prefill of 12,025 tokens works, so the shared-memory failure of
+#     vllm-project/vllm pull request 69021 does not occur with this image.
+#
+# Differences from models/qwen3.8_27b_nvidia_nvfp4.yml:
+#   - the server runs in Docker, see above
+#   - --kv-cache-memory-bytes 20G, see above
+#   - no --attention-backend flag: the model selects its own backends
+#     (INKLING_SCONV_SWA and FLASH_ATTN version 2 on the GB10)
+#   - no --load-format fastsafetensors: not confirmed for this checkpoint
+#   - --limit-mm-per-prompt turns off image input, because the harness sends
+#     text only
+#   - the reasoning effort stays at the chat template default of 0.9 ("high")
+#
+# Run the config through memory_guard.py, which stops the run if MemAvailable
+# drops low:
+#   python memory_guard.py --min-start-gib 60 -- python -u core_runner.py \
+#     --model models/inkling2_mini_26b_a3b_thinkingmachines_nvfp4.yml --compare-spec
+name: inkling2-mini-26b-a3b-thinkingmachines-nvfp4
+server:
+  mode: managed
+  command:
+    - sh
+    - -c
+    - >-
+      exec docker run --rm --name inkling-bench --gpus all --ipc=host --network host
+      -e HF_HUB_OFFLINE=1
+      -v "$HOME/.cache/huggingface:/root/.cache/huggingface"
+      -v "$HOME/.cache/inkling-docker/vllm:/root/.cache/vllm"
+      -v "$HOME/.cache/inkling-docker/triton:/root/.triton"
+      vllm/vllm-openai@sha256:c2dc759f5984f69c1e2418c6af7c26eb756f5ed2a8934c768ae1253645d1449e
+      "$@"
+    # $0 of the shell. The image entrypoint is `vllm serve`, and the arguments
+    # after this item go to it.
+    - sh
+    - thinkingmachines/Inkling-2-Mini
+    - --host
+    - "127.0.0.1"
+    - --port
+    - "8000"
+    - --tensor-parallel-size
+    - "1"
+    - --gpu-memory-utilization
+    - "0.70"
+    - --kv-cache-memory-bytes
+    - 20G
+    - --max-model-len
+    - "262144"
+    - --max-num-seqs
+    - "16"
+    - --max-num-batched-tokens
+    - "8192"
+    - --moe-backend
+    - humming
+    - --kv-cache-dtype
+    - fp8_e4m3
+    - --limit-mm-per-prompt
+    - '{"image": 0}'
+    - --no-enable-prefix-caching
+    - --compilation-config
+    - '{"mode":0,"cudagraph_mode":"FULL_DECODE_ONLY","decode_cudagraph_capture_request_sizes":[1,2,4,8,16],"prefill_cudagraph_capture_token_sizes":[]}'
+    - --reasoning-parser
+    - inkling
+    - --tool-call-parser
+    - inkling
+    - --enable-auto-tool-choice
+    - --enable-per-request-metrics
+    - --generation-config
+    - vllm
+  startup_timeout_s: 900
+  # vLLM in the container needs time to stop. After this wait the harness
+  # kills only the docker client, and the container can stay.
+  shutdown_timeout_s: 120
+
+endpoint:
+  base_url: "http://127.0.0.1:8000"
+  model_name: "thinkingmachines/Inkling-2-Mini"
+  chat: true
+ready_timeout_s: 900
+monitor_interval_s: 1.0
+prompt_lengths: [32, 128, 512, 2048, 8192, 16384]
+latency_repeats: 10
+decode_lengths: [512, 1024, 2048]
+# The same six prompts and the same token cap as the Qwen3.8-27B config. The
+# model card says that the model can stay in a long reasoning loop, so the
+# cap of 4096 tokens also limits such a loop.
+reasoning_max_tokens: 4096
+reasoning_prompts:
+  - "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph? Show your reasoning."
+  - "A farmer has 17 sheep, all but 9 die. How many are left? Explain your reasoning step by step."
+  - "Solve: if a train travels 60 miles in 45 minutes, what is its speed in mph?"
+  - "A farmer has 17 sheep, all but 9 die. How many are left?"
+  - >-
+    A bag contains 3 red marbles and 5 blue marbles. If you draw two marbles without replacement, what is the probability that both are blue? Show each step of your calculation.
+  - >-
+    Write a Python function that finds the longest palindromic substring in a given string. Explain your algorithm choice and trace through an example like "babad" or "cbbd".
+
+concurrency_levels: [1, 2, 4, 8, 16]
+concurrency_requests_per_level: 16
+concurrency_max_tokens: 256
+concurrency_temperature: 0.0
+context_lengths: [32768, 65536]
+context_repeats: 5
+
+# A thinking model spends hundreds of tokens before its first tool call.
+tool_calling_max_tokens: 4096
+
+# The checkpoint ships a DSpark speculator in mtp.safetensors. --compare-spec
+# appends this config. The harness sends temperature 0.0, and the vLLM recipe
+# says that the acceptance rate depends on the temperature.
+speculative_config: '{"method":"dspark","num_speculative_tokens":7,"draft_sample_method":"probabilistic"}'
