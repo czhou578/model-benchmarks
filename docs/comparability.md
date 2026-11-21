@@ -75,6 +75,7 @@ Runs of this era have `harness.schema_version` 5.
 - Only the three `underspecified` tasks can change result. Such a task can only change from fail to pass. Thus the `ambiguous` pass rate and the total pass count can rise.
 - The composite does not read the `ambiguous` category, so the composite does not change.
 - Tool calling (#138): a task that raises an exception has the `details` `Exception: <error>`. Now `failure_modes.request_failed` counts it. Before, it counted in `no_tool_call` or in no mode. Scores do not change.
+- Client TTFT: a stream with no text event, for example a hidden first token of Inkling 2 Mini, now gets the time of the first chunk with a nonzero `usage.completion_tokens`. Before, its client TTFT was `NaN` and its `effective_prefill_tps` was `null`. A stream with a text event gets the same value as before. Thus this fix adds no era and does not change `SCHEMA_VERSION`.
 
 ## Metrics across era boundaries
 

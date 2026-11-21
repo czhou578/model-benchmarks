@@ -135,7 +135,7 @@ The Qwen3.8-27B config also turns prefix caching off with `--no-enable-prefix-ca
 
 | Term | Meaning |
 |---|---|
-| TTFT (client) | Time to first token, from the client clock. It starts just before the HTTP request and stops at the first stream event with text. It includes the HTTP time, the queue time, the prefill, and the first decode step. The first reasoning token stops the clock. |
+| TTFT (client) | Time to first token, from the client clock. It starts just before the HTTP request and stops at the first stream event with text. It includes the HTTP time, the queue time, the prefill, and the first decode step. The first reasoning token stops the clock. If no event has text, the first chunk with a nonzero `usage.completion_tokens` stops the clock. |
 | TTFT (server), post-queue time | vLLM `time_to_first_token_ms`: from the first scheduling of the request to the first token. It does not include the queue time. `ttft_breakdown.json` stores it as `post_queue_ms`. vLLM sends it only with `--enable-per-request-metrics`. |
 | Queue time, scheduler delay | vLLM `queue_time_ms`: from the arrival of the request in the queue to its first scheduling. |
 | Prefill | The forward pass over all prompt tokens. It fills the KV cache and comes before the first output token. |
