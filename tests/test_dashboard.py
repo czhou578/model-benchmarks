@@ -139,6 +139,14 @@ def test_era_comes_from_summary_then_provenance_then_date(tmp_path: Path) -> Non
     assert dashboard.collect_run(new)["pre_fix"] is True
 
 
+def test_task_eval_reaches_the_page_data(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, "m", "20261110_100000", spec=False, memory=False)
+    assert dashboard.collect_run(run_dir)["task_eval"] is None
+    data = {"tests": {"judge_score": 0.33}, "reference": [{"label": "ref", "judge_score": 0.5}]}
+    (run_dir / "task_eval.json").write_text(json.dumps(data))
+    assert dashboard.collect_run(run_dir)["task_eval"] == data
+
+
 def test_run_label_reaches_the_page_data(tmp_path: Path) -> None:
     run_dir = _write_run(tmp_path, "m", "20261110_100000", spec=False, memory=False)
     assert dashboard.collect_run(run_dir)["run_label"] is None
