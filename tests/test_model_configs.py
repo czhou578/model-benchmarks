@@ -1,4 +1,4 @@
-"""Static checks of every model config in models/ and models/legacy/."""
+"""Static checks of every model config in models/, models/legacy/ and models/agent/."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-CONFIGS = sorted([*ROOT.glob("models/*.yml"), *ROOT.glob("models/legacy/*.yml")])
+CONFIGS = sorted([*ROOT.glob("models/*.yml"), *ROOT.glob("models/legacy/*.yml"), *ROOT.glob("models/agent/*.yml")])
 # docs/results/README.md: <model>-<size>-<provider>-<quant>[-<variant>], lowercase.
 NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9.]*(-[a-z0-9][a-z0-9.]*){3,}$")
 VLLM_DEFAULT_PORT = 8000

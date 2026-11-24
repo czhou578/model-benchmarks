@@ -96,19 +96,22 @@ The harness sends vLLM request fields such as `cache_salt`. Another server can i
 | `--skip-deep-context`, `--skip-flops`, `--skip-tool-calling` | Skip deep context, the FLOP analysis, or tool calling. |
 | `--server-mode {managed,external}` | Override `server.mode` from the model config. |
 | `--compare-spec` | Restart vLLM with and without `speculative_config`, then compare decode speed. |
+| `--sandbox`, `--only-sandbox` | Run the sandbox step after the other steps, or only the sandbox step. See [docs/sandbox.md](docs/sandbox.md). |
+| `--sandbox-allow-no-prefix-cache` | Run the sandbox step although the server has prefix caching off. |
 | `--results-dir DIR` | Write run dirs under `DIR`. The default is `results/` in the repo root. |
 
 `batch_run.py`:
 
 | Flag | Effect |
 |---|---|
-| `--model FILE` | Run one model config. The path is relative to `models/`. |
+| `--model FILE` | Run this model config. The path is relative to `models/`. Repeat it for several configs. |
+| `--sandbox`, `--only-sandbox` | Pass the flag to `core_runner.py`. |
 | `--dry-run` | List the model configs and their ports, then stop. |
 | `--max-retries N` | Retry a failed run `N` times. The default is 1. |
 | `--no-retry` | Do not retry a failed run. |
 | `--output-dir DIR` | Write `summary.json`, `SUMMARY.md` and `logs/<name>.log` to `DIR`. The default is the current directory. |
 
-`batch_run.py` runs the model configs one at a time. It reads only the top level of `models/`, not its subfolders. It passes only `--model` and `--results-dir` to `core_runner.py`. A run fails when `core_runner.py` exits with a nonzero code, writes no `summary.json`, or writes a status other than `completed`. `batch_run.py` then retries the run. It shows the `core_runner.py` output on the console and writes it to `logs/<name>.log`.
+`batch_run.py` runs the model configs one at a time. It reads only the top level of `models/`, not its subfolders. It passes `--model`, `--results-dir`, and `--sandbox` or `--only-sandbox` to `core_runner.py`. The agent configs of the sandbox step are in [models/agent/](models/agent/README.md). A run fails when `core_runner.py` exits with a nonzero code, writes no `summary.json`, or writes a status other than `completed`. `batch_run.py` then retries the run. It shows the `core_runner.py` output on the console and writes it to `logs/<name>.log`.
 
 ## Published results
 
@@ -148,6 +151,7 @@ The modules in `benchmarks/` import from `harness/` and from other modules in `b
 - [docs/results-schema.md](docs/results-schema.md): the files and fields in a run dir.
 - [docs/methodology.md](docs/methodology.md): how each benchmark measures.
 - [docs/tool-calling.md](docs/tool-calling.md): the tool-calling tasks and the scorer.
+- [docs/sandbox.md](docs/sandbox.md): the sandbox step, which runs the model as an agent on coding tasks.
 - [docs/adding-a-benchmark.md](docs/adding-a-benchmark.md): how to add a benchmark.
 - [docs/dashboard.md](docs/dashboard.md): how to build, serve, and read the dashboard.
 - [docs/dgx-spark.md](docs/dgx-spark.md): DGX Spark setup and the memory guard.

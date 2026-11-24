@@ -115,6 +115,14 @@ The runner does not validate keys. It ignores an unknown key, so a misspelled ke
 | `tool_calling_request_timeout_s` | float | 600 | no | Read timeout of each request, in seconds. 4096 tokens at 12.3 tok/s take about 330 s, so 120 s was too short. | tool calling |
 | `tool_calling_repeats` | int | 1 | no | Number of passes over the task set. With more than 1, `tool_calling.json` adds the mean and the spread of the composite and the pass count. | tool calling |
 | `speculative_config` | JSON string or map | none | for `--compare-spec` | Value of `--speculative-config` for the spec-enabled server. | `--compare-spec` |
+| `sandbox.agent_eval_dir` | path | `~/Projects/dsv4-specialize/agent-eval` | no | The agent-eval checkout. | sandbox |
+| `sandbox.agent_eval_commit` | commit or tag | none | for the sandbox step | The pinned commit. The step refuses another commit or local changes. | sandbox |
+| `sandbox.heldout_dir`, `sandbox.heldout_commit` | path, commit or tag | none | no | The held-out checkout and its pin (for example the tag `v1`). Without `heldout_dir`, only the dev set runs. | sandbox |
+| `sandbox.families`, `sandbox.tasks` | list | `[C, D]`, none | no | The task families, or a list of task ids for a short check. | sandbox |
+| `sandbox.seeds`, `sandbox.agents` | int | 3, 1 | no | Runs of each task, and task runs at the same time. | sandbox |
+| `sandbox.slots`, `sandbox.container_memory` | int, string | 2, `1g` | no | Containers at the same time on the host, and the memory of each. | sandbox |
+| `sandbox.max_tokens`, `sandbox.time_limit_s` | int | 8192, 1200 | no | `max_tokens` of each turn, and the time limit of each task run. | sandbox |
+| `sandbox.stop_new_after` | `HH:MM` | none | no | No new task run starts after this local time. | sandbox |
 
 Notes:
 

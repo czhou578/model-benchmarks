@@ -18,6 +18,7 @@ The runner runs the benchmarks in the order of this table. The function `run_ben
 | FLOP analysis | `run_flops_analysis` in `benchmarks/architecture_flops/analysis.py` | `flops_analysis.json` | `flops_analysis`, status and model label | `--skip-flops` |
 | Tool calling | `run_tool_calling_benchmark` in `benchmarks/tool_calling/runner.py` | `tool_calling.json` | `tool_calling`, scores only | `--skip-tool-calling` |
 | Speculative decoding comparison | `compare_spec_decode_results` in `benchmarks/decode.py` | `spec_enabled.json`, `spec_disabled.json`, `spec_comparison.json` | `spec_comparison`, full copy | runs only with `--compare-spec` |
+| Sandbox | `run_sandbox` in `benchmarks/sandbox.py` | `sandbox.json`, `sandbox/point/` | `sandbox`, rates of each set | runs only with `--sandbox` or `--only-sandbox` |
 
 Other command-line options: `--model` (required), `--server-mode`, `--results-dir`, and `--compare-spec`. [model-config.md](model-config.md) and [methodology.md](methodology.md) describe them.
 
