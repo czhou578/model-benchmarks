@@ -186,3 +186,29 @@ def test_run_label_is_absent_when_not_set(tmp_path, monkeypatch):
     _, _, summary = _run_main(tmp_path, monkeypatch)
     assert "run_label" not in summary
     assert summary["harness"]["schema_version"] == SCHEMA_VERSION
+
+
+def _fake_sandbox(seen, error=None):
+    def run_sandbox(sandbox_cfg, **kwargs):
+        seen.append(kwargs["label"])
+        if error:
+            raise error
+        return {"exit_code": 0, "prefix_cache": {"hit_rate": 52.2}, "report": {"groups": []}}
+    return run_sandbox
+
+
+def test_only_sandbox_runs_only_the_sandbox_step(tmp_path, monkeypatch):
+    seen: list[str] = []
+    monkeypatch.setattr(core_runner, "run_sandbox", _fake_sandbox(seen))
+    calls, run_dir, summary = _run_main(tmp_path, monkeypatch, "--only-sandbox")
+    assert calls == [] and seen == ["fake-model"] and (run_dir / "sandbox.json").exists()
+    assert summary["sandbox"]["status"] == "completed" and summary["sandbox"]["prefix_cache_hit_rate"] == 52.2
+
+
+def test_sandbox_runs_last_and_a_failure_does_not_stop_the_run(tmp_path, monkeypatch):
+    seen: list[str] = []
+    monkeypatch.setattr(core_runner, "run_sandbox", _fake_sandbox(seen, RuntimeError("no checkout")))
+    calls, _, summary = _run_main(tmp_path, monkeypatch, "--sandbox")
+    assert calls == ALL_STEPS and seen == ["fake-model"]
+    assert summary["status"] == "completed"
+    assert summary["sandbox"] == {"status": "failed", "error": "RuntimeError: no checkout"}
