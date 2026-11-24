@@ -251,3 +251,22 @@ def test_prefix_caching_flag_reads_the_explicit_flag_only():
     assert dashboard.prefix_caching_flag([*base, "--enable-prefix-caching"]) is True
     assert dashboard.prefix_caching_flag([*base, "--no-enable-prefix-caching"]) is False
     assert dashboard.prefix_caching_flag(base) is None
+
+
+def test_sandbox_reaches_the_page_data(tmp_path: Path) -> None:
+    run_dir = _write_run(tmp_path, "m", "20261123_210000", spec=False, memory=False)
+    assert dashboard.collect_run(run_dir)["sandbox"] is None
+    rate = {"rate": 50.0, "lo": 0.0, "hi": 100.0}
+    summary = json.loads((run_dir / "summary.json").read_text())
+    summary["sandbox"] = {"status": "completed", "prefix_cache_hit_rate": 29.6, "prefix_cache_best_rate": 29.6,
+                          "sets": {"dev": {"runs": 2, "tasks": 2, "pass": rate, "hallucination": rate}}}
+    (run_dir / "summary.json").write_text(json.dumps(summary))
+    group = {"set": "dev", "family": "all", "stops": {"report": 2}, "median_s": 90.0, "median_completion_tokens": 900}
+    (run_dir / "sandbox.json").write_text(json.dumps({
+        "config": {"agents": 8, "seeds": 3, "commits": {"agent_eval": "48a3dcfa48eaff6addcf"}},
+        "report": {"groups": [group, group | {"family": "C", "median_s": 1.0}]}}))
+    sb = dashboard.collect_run(run_dir)["sandbox"]
+    assert sb["hit_rate"] == 29.6 and sb["agents"] == 8 and sb["commits"] == {"agent_eval": "48a3dcfa48ea"}
+    assert sb["sets"]["dev"] == {"runs": 2, "tasks": 2, "pass": rate, "hallucination": rate, "stops": {"report": 2},
+                                 "median_tokens": 900, "median_min": 1.5}
+    assert "agentpass" in dashboard.render(dashboard.build_payload(tmp_path), fragment=True)

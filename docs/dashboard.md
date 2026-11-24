@@ -51,6 +51,7 @@ VS Code forwards the port and opens the page in your browser. Reload the page af
 - Charts for decode speed, TTFT, throughput under load, long-context TTFT, thinking tokens, and the MTP speed-up.
 - The decode chart shows the peak rate only when `rate_method` is `token_delta`. An older run counts stream events, not tokens, so its peak shows as "–".
 - Charts for tool-calling scores, the tool-calling pass rate by category, and memory headroom.
+- Two charts for the sandbox step ([sandbox.md](sandbox.md)): the share of agent tasks passed and the share of hallucinations, for each task set, with the 95% interval as a whisker. The "Sandbox runs" table gives the tasks, the median minutes and tokens, the stops, the measured and the best prefix-cache hit rate, the agents and the agent-eval commit. The page reads `summary.json` and `sandbox.json`.
 - Two tables: "All runs" with the era, the key numbers, and the server settings, and "Server-side TTFT split". The "Prefix cache" column shows the flag in the server command, or "default" when the command has no flag.
 - A Table toggle on each chart. The toggle shows the chart values as a table.
 - Run filter chips above the charts. Each chip shows or hides one run.
