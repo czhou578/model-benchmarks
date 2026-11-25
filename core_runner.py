@@ -13,7 +13,8 @@ A run does these steps. docs/methodology.md gives the details.
    until the endpoint answers a real generation request. Add the vLLM
    version from GET /version to environment.json.
 4. Start the GPU monitor (harness/telemetry.py).
-5. Run the benchmark steps in the order of run_benchmarks().
+5. Run the benchmark steps in the order of run_benchmarks(). With
+   --sandbox, the sandbox step (agent-eval) runs last.
 6. Stop the monitor and the server. Write summary.json.
 
 benchmarks/ holds one module per benchmark. harness/ holds the shared
@@ -25,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import signal
 import time
@@ -41,6 +43,8 @@ from benchmarks.decode import compare_spec_decode_results, run_decode_speed
 from benchmarks.latency import run_deep_context, run_latency_sweep
 from benchmarks.prefill import run_prefill_scaling
 from benchmarks.reasoning import run_reasoning_benchmark
+from benchmarks.sandbox import run_sandbox
+from benchmarks.sandbox import summary_entry as sandbox_summary
 from benchmarks.tool_calling import run_tool_calling_benchmark
 from benchmarks.ttft_breakdown import run_ttft_breakdown
 from harness.client import ModelClient
@@ -389,9 +393,32 @@ def step_spec_comparison(run: Run) -> None:
     run.record("spec_comparison", comparison)
 
 
+def step_sandbox(run: Run) -> None:
+    """Run agent-eval against the model (benchmarks/sandbox.py). A failure goes to the summary, and the run continues."""
+    try:
+        endpoint = run.cfg["endpoint"]
+        result = run_sandbox(
+            run.cfg.get("sandbox") or {},
+            base_url=endpoint["base_url"],
+            served_name=endpoint.get("model_name", run.cfg["name"]),
+            label=re.sub(r"[^A-Za-z0-9._-]", "-", run.cfg["name"]),
+            run_dir=run.run_dir,
+            command_flag=prefix_caching_flag(run.server.command) if run.server else None,
+            allow_no_prefix_cache=run.args.sandbox_allow_no_prefix_cache,
+        )
+        run.record("sandbox", result, summary_entry=sandbox_summary(result))
+        print(f"[core_runner] sandbox: {run.summary['sandbox']}")
+    except Exception as exc:
+        run.summary["sandbox"] = {"status": "failed", "error": f"{type(exc).__name__}: {exc}"}
+        print(f"[core_runner] warning: sandbox step failed: {exc}")
+
+
 def run_benchmarks(run: Run) -> None:
     """Run the benchmark steps in their fixed order, without the skipped ones."""
     args, cfg = run.args, run.cfg
+    if args.only_sandbox:
+        step_sandbox(run)
+        return
     if not args.skip_latency:
         step_latency(run)
     if not args.skip_deep_context and cfg.get("context_lengths"):
@@ -412,6 +439,8 @@ def run_benchmarks(run: Run) -> None:
         step_tool_calling(run)
     if args.compare_spec:
         step_spec_comparison(run)
+    if args.sandbox:
+        step_sandbox(run)
 
 
 def main():
@@ -428,6 +457,11 @@ def main():
     parser.add_argument("--skip-tool-calling", action="store_true", help="Skip the tool-calling benchmark")
     parser.add_argument("--compare-spec", action="store_true",
                         help="Run decode benchmark with spec-dec enabled and disabled, then compare")
+    parser.add_argument("--sandbox", action="store_true",
+                        help="Run the sandbox step (agent-eval) after the other steps")
+    parser.add_argument("--only-sandbox", action="store_true", help="Run only the sandbox step")
+    parser.add_argument("--sandbox-allow-no-prefix-cache", action="store_true",
+                        help="Run the sandbox step although the server has prefix caching off")
     parser.add_argument(
         "--server-mode",
         choices=("managed", "external"),
