@@ -77,6 +77,9 @@ Runs of this era have `harness.schema_version` 5.
 - Tool calling (#138): a task that raises an exception has the `details` `Exception: <error>`. Now `failure_modes.request_failed` counts it. Before, it counted in `no_tool_call` or in no mode. Scores do not change.
 - Client TTFT: a stream with no text event, for example a hidden first token of Inkling 2 Mini, now gets the time of the first chunk with a nonzero `usage.completion_tokens`. Before, its client TTFT was `NaN` and its `effective_prefill_tps` was `null`. A stream with a text event gets the same value as before. Thus this fix adds no era and does not change `SCHEMA_VERSION`.
 
+The sandbox step ([sandbox.md](sandbox.md)) adds no era. Its results compare only within one `benchmark_version`
+of `sandbox.json`, one agent-eval commit, one version of each task set, and one set of limits and agents.
+
 ## Metrics across era boundaries
 
 "Yes" means that the harness measures the metric with the same method on both sides. The vLLM version can still change the number. E1 and E2 also differ in the vLLM and torch versions. Read a difference between them as an effect of the vLLM upgrade.

@@ -1,0 +1,59 @@
+# gpt-oss-20b (MoE: 21B parameters, about 3.6B active; the layers alternate sliding-window and full attention)
+# with the MXFP4 weights of OpenAI, for the sandbox step only (docs/sandbox.md). Download the weights first
+# (about 13 GB):
+#   hf download openai/gpt-oss-20b
+# Not run yet. The parsers are the gpt-oss parsers of vLLM 0.33.0: `openai` for the tool calls and
+# `openai_gptoss` for the reasoning. agent-eval sends no reasoning effort, so the default of the template applies.
+# The model has no linear-attention layers, so its prefix-cache blocks stay small.
+# Stop DeepSeek before the run (window mode). Ask before you stop a worker.
+name: gpt-oss-20b-openai-mxfp4-agent
+server:
+  mode: managed
+  command:
+    - vllm
+    - serve
+    - openai/gpt-oss-20b
+    - --host
+    - "127.0.0.1"
+    - --port
+    - "8000"
+    - --tensor-parallel-size
+    - "1"
+    - --gpu-memory-utilization
+    - "0.45"
+    - --kv-cache-memory-bytes
+    - 16G
+    - --max-model-len
+    - "131072"
+    - --max-num-seqs
+    - "8"
+    - --max-num-batched-tokens
+    - "8192"
+    - --enable-chunked-prefill
+    - --enable-prefix-caching
+    - --async-scheduling
+    - --reasoning-parser
+    - openai_gptoss
+    - --tool-call-parser
+    - openai
+    - --enable-auto-tool-choice
+    - --enable-per-request-metrics
+    - --generation-config
+    - auto
+  environment:
+    VLLM_USE_FASTOKENS: "0"
+  startup_timeout_s: 900
+  shutdown_timeout_s: 60
+endpoint:
+  base_url: "http://127.0.0.1:8000"
+  model_name: "openai/gpt-oss-20b"
+  chat: true
+ready_timeout_s: 900
+sandbox:
+  agent_eval_commit: null   # set it to the agent-eval commit with task sets (spark-moe-specialize#109)
+  heldout_dir: ~/Projects/agent-eval-heldout
+  heldout_commit: v1
+  agents: 8
+  slots: 8
+  container_memory: 2g
+  stop_new_after: "04:30"

@@ -165,10 +165,11 @@ def find_new_run_dir(name: str, before: set[Path], lines: list[str]) -> Path | N
     return new_dirs.pop() if len(new_dirs) == 1 else None
 
 
-def run_attempt(model_yaml: Path, core_runner: Path, name: str, log_file: Any, timeout_s: float) -> dict[str, Any]:
-    """Run core_runner.py once. Return the status, error, run_dir and summary."""
+def run_attempt(model_yaml: Path, core_runner: Path, name: str, log_file: Any, timeout_s: float,
+                core_args: tuple[str, ...] = ()) -> dict[str, Any]:
+    """Run core_runner.py once, with core_args after the other arguments. Return the status, error, run_dir and summary."""
     before = list_run_dirs(name)
-    cmd = [sys.executable, str(core_runner), "--model", str(model_yaml), "--results-dir", str(RESULTS_DIR)]
+    cmd = [sys.executable, str(core_runner), "--model", str(model_yaml), "--results-dir", str(RESULTS_DIR), *core_args]
     try:
         returncode, lines = stream_process(cmd, log_file, timeout_s)
     except Exception as exc:
@@ -207,6 +208,7 @@ def run_one_model(
     retry: bool = True,
     max_retries: int = 1,
     log_dir: Path = Path("logs"),
+    core_args: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     """Execute core_runner.py for one model YAML and return a result dict.
 
@@ -242,7 +244,7 @@ def run_one_model(
             start = time.time()
             # Clear the fields so that a result never shows an earlier attempt's run dir.
             result.update(run_dir=None, summary=None, error=None)
-            result.update(run_attempt(model_yaml, core_runner, name, log_file, remaining))
+            result.update(run_attempt(model_yaml, core_runner, name, log_file, remaining, core_args))
             result["duration_s"] = round(time.time() - start, 1)
             result["attempts"] = attempt + 1
             if result["status"] == "pass":
@@ -342,7 +344,10 @@ def c_short(status: str) -> str:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Run core_runner.py on all model YAMLs")
-    parser.add_argument("--model", help="Run only this specific model YAML (relative to models/)")
+    parser.add_argument("--model", action="append",
+                        help="Run only this model YAML (relative to models/). Repeat it for several models.")
+    parser.add_argument("--sandbox", action="store_true", help="Pass --sandbox to core_runner.py")
+    parser.add_argument("--only-sandbox", action="store_true", help="Pass --only-sandbox to core_runner.py")
     parser.add_argument("--dry-run", action="store_true", help="Show what would run without executing")
     parser.add_argument("--no-retry", action="store_true", help="Do not retry failed runs")
     parser.add_argument("--max-retries", type=int, default=1, help="Number of retry attempts on failure")
@@ -357,11 +362,11 @@ def main(argv: list[str] | None = None) -> None:
 
     # Discover model YAMLs
     if args.model:
-        yaml_path = models_dir / args.model
-        if not yaml_path.exists():
-            log(f"{c('red', 'ERROR')}: {yaml_path} not found")
-            sys.exit(1)
-        model_files = [yaml_path]
+        model_files = [models_dir / m for m in args.model]
+        for yaml_path in model_files:
+            if not yaml_path.exists():
+                log(f"{c('red', 'ERROR')}: {yaml_path} not found")
+                sys.exit(1)
     else:
         model_files = sorted(models_dir.glob("*.yml")) + sorted(models_dir.glob("*.yaml"))
         if not model_files:
@@ -412,6 +417,7 @@ def main(argv: list[str] | None = None) -> None:
             retry=not args.no_retry,
             max_retries=args.max_retries,
             log_dir=out / "logs",
+            core_args=tuple(f for f, on in (("--sandbox", args.sandbox), ("--only-sandbox", args.only_sandbox)) if on),
         )
         results.append(r)
 

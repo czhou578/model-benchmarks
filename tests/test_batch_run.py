@@ -145,3 +145,18 @@ def test_discovery_skips_subfolders(tmp_path, monkeypatch, capsys) -> None:
     out = capsys.readouterr().out
     assert "top" in out
     assert "old" not in out
+
+
+def test_sandbox_flags_and_several_models(results, tmp_path, monkeypatch) -> None:
+    calls = script(monkeypatch, results, [("20260101_000000", "completed", 0), ("20260101_010000", "completed", 0)])
+    models = tmp_path / "models"
+    (models / "agent").mkdir(parents=True)
+    for n in ("a", "b"):
+        (models / "agent" / f"{n}.yml").write_text("name: m\n")
+    monkeypatch.setattr(batch_run, "MODELS_DIR", models)
+    with pytest.raises(SystemExit) as done:
+        batch_run.main(["--model", "agent/a.yml", "--model", "agent/b.yml", "--only-sandbox", "--no-retry",
+                        "--output-dir", str(tmp_path / "out")])
+    assert done.value.code == 0
+    assert [c[3] for c in calls] == [str(models / "agent" / "a.yml"), str(models / "agent" / "b.yml")]
+    assert all(c[-1] == "--only-sandbox" and "--sandbox" not in c for c in calls)

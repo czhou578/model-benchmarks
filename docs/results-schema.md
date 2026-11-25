@@ -284,6 +284,22 @@ Each request uses `max_tokens` from `reasoning_max_tokens` (default 4096). Old r
 
 Top-level fields: `config`, `total_tasks`, `total_correct`, `composite_score` (0 to 6), `composite_components`, `category_scores`, `per_task`, `failure_modes`, and `repeats` when the run has more than 1 repeat. [tool-calling.md](tool-calling.md) describes the fields and the scoring.
 
+## sandbox.json
+
+Written by the sandbox step ([sandbox.md](sandbox.md)), with its own `benchmark_version`.
+
+| Field | Unit | Meaning |
+|---|---|---|
+| `config` | | The `sandbox` keys with their defaults, `commits` (the full agent-eval and held-out commits), `sets`, `label` and `served_name`. |
+| `start_time`, `end_time` | s | Unix times of the agent-eval run. |
+| `exit_code` | | Exit code of `agent_eval.py`. |
+| `prefix_cache` | | `enabled`, `block_size`, the measured `hits`, `queries` and `hit_rate` (%), and `best_hits` and `best_rate` (%) for the block size. |
+| `point_dir` | | The agent-eval point: `rows.jsonl`, `point.json` and a `transcript.json` for each task run. |
+| `report` | | The output of `agent_report.py --json`: for each model, set and family, the rate of each result with `rate`, `lo` and `hi` (%), the events H1 to H4, the stops, `median_s` and `median_completion_tokens`. |
+
+In `summary.json`, `sandbox` holds `status`, `exit_code`, the runs, tasks, pass rate and hallucination rate of each
+set, `prefix_cache_hit_rate` and `prefix_cache_best_rate`.
+
 ## spec_comparison.json
 
 | Field | Unit | Meaning |
