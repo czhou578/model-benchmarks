@@ -8,12 +8,15 @@ from datetime import datetime
 
 import pytest
 
-from benchmarks import sandbox
+from benchmarks import sandbox, token_usage
 
 FAKE_EVAL = """import json, os, sys
 os.makedirs(os.environ["AGENT_EVAL_OUT"], exist_ok=True)
 with open(os.path.join(os.environ["AGENT_EVAL_OUT"], "call.json"), "w") as f:
     json.dump({"argv": sys.argv[1:], "tasks": os.environ["AGENT_EVAL_TASKS"]}, f)
+os.makedirs(os.path.join(os.environ["AGENT_EVAL_OUT"], "point", "m-C1-s0"), exist_ok=True)
+with open(os.path.join(os.environ["AGENT_EVAL_OUT"], "point", "m-C1-s0", "transcript.json"), "w") as f:
+    json.dump({"model": "m", "turns": [{"usage": {"prompt_tokens": 9, "completion_tokens": 1}, "seconds": 1}]}, f)
 print("21:00:00 point m C1 s0: pass (report, 3 turns, 1.0 s)")
 print("a line that is not a run")
 print("21:00:01 point m D1 s0: wrong (report, 5 turns, 2.0 s)")
@@ -52,6 +55,7 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(sandbox, "server_metrics", lambda url: metrics.pop(0) if metrics else None)
     jobs: list[tuple[str, ...]] = []
     monkeypatch.setattr(sandbox, "job", lambda *a: jobs.append(a))
+    monkeypatch.setattr(token_usage, "find_token", lambda: None)   # no test sends events to a real Token Tracker
     cfg = {"agent_eval_dir": str(ae), "agent_eval_commit": commit, "heldout_dir": str(held),
            "heldout_commit": held_commit}
     return cfg, tmp_path, metrics, jobs
@@ -93,6 +97,20 @@ def test_run_sandbox(env):
     assert argv[argv.index("--tasks") + 1] == "D1,HC01" and "--families" not in argv and jobs[3] == ("set", "--steps", "2")
     entry = sandbox.summary_entry(result)
     assert entry["status"] == "completed" and entry["sets"]["dev"]["pass"]["rate"] == 50.0
+
+
+def test_token_usage_push(env, monkeypatch, capsys):
+    cfg, tmp_path, _, _ = env
+    sent: list[dict] = []
+    monkeypatch.setattr(token_usage, "find_token", lambda: "tok")
+    monkeypatch.setattr(token_usage, "post", lambda events, token: sent.extend(events) or len(events))
+    run(cfg | {"token_tracker": False}, tmp_path)
+    assert not sent
+    run(cfg, tmp_path)   # one push after each run line and one at the end: the run goes to Token Tracker one time
+    thread = f"{tmp_path.parent.name}/{tmp_path.name}/m-C1-s0"
+    assert [(e["source_id"], e["model"], e["project"], e["total_tokens"]) for e in sent] == [
+        (f"agent-eval:{thread}:0", "served", "model-benchmarks/sandbox", 10)]
+    assert "token usage: 1 events sent" in capsys.readouterr().out
 
 
 def test_refusals(env):
