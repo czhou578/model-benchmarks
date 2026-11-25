@@ -19,8 +19,10 @@ stores its results in the run dir.
    command. `--sandbox-allow-no-prefix-cache` runs anyway.
 3. It runs `agent_eval.py point` with the model as `--endpoint`. Each task runs with each seed.
 4. It calls `job step` for each finished task run, when it runs inside `job run`.
-5. It reads `/metrics` again and runs `agent_report.py --json` with the block size of the server.
-6. It writes `sandbox.json` and adds the rates of each task set to `summary.json`.
+5. It sends the token counts of each finished task run to Token Tracker, when the push is on. See
+   [Token usage on Token Tracker](#token-usage-on-token-tracker).
+6. It reads `/metrics` again and runs `agent_report.py --json` with the block size of the server.
+7. It writes `sandbox.json` and adds the rates of each task set to `summary.json`.
 
 A failure of the step goes to `summary.json` as `"status": "failed"` with the error, and the run continues.
 
@@ -83,6 +85,17 @@ Use `--no-retry` with `batch_run.py`: a retry makes a new run dir and runs all t
   problem, for example a chat template that changes earlier turns.
 - A hybrid model computes up to one block again on each turn. Compare its minutes per task with a non-hybrid model
   with care.
+
+## Token usage on Token Tracker
+
+agent-eval calls the model server directly, so [Token Tracker](https://github.com/czhou578/token-tracker) does not
+see the tokens of the agents. The step sends one usage event for each model turn to Token Tracker, with the provider
+`agent-eval`. It sends counts, model names, task ids and seeds only.
+
+The push is on when `sandbox.token_tracker` is `true` (the default) and the machine has an ingest token of Token
+Tracker. Set `sandbox.token_tracker: false` in the model config to turn the push off. A failed push gives one warning
+and does not fail the step. [token-usage.md](token-usage.md) has the fields, the switches and the command for a push
+by hand.
 
 ## Isolation
 

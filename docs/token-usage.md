@@ -2,7 +2,7 @@
 
 ## In simple words
 
-In the sandbox step, agent-eval calls the model server directly. Thus [Token Tracker](https://github.com/czhou578/token-tracker)
+In the [sandbox step](sandbox.md), agent-eval calls the model server directly. Thus [Token Tracker](https://github.com/czhou578/token-tracker)
 does not see the tokens that the agents use. `benchmarks/token_usage.py` reads the transcripts of agent-eval and
 sends the token counts to Token Tracker. Then the tokens show on the Token Tracker dashboard.
 
@@ -73,7 +73,8 @@ python -m benchmarks.token_usage RESULTS/G1 --model qwen=second-model-fit --dry-
 
 Give each point a different name. A second point with the same name replaces the rows of the first point.
 
-To see the totals of the provider, ask the API of Token Tracker:
+The "Providers" panel of the Token Tracker dashboard shows the total of `agent-eval`. The API of Token Tracker gives
+the same totals:
 
 ```bash
 curl -s 'http://127.0.0.1:8765/api/stats?provider=agent-eval'
