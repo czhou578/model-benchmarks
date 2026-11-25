@@ -45,6 +45,7 @@ JS_MODULES = [
     "lines.js",
     "scores.js",
     "tasks.js",
+    "sandbox.js",
 ]
 
 # PR #42 and PR #44 (merged 2026-11-07) fixed the cache-salt placement and
@@ -271,6 +272,29 @@ def tool_calling_info(summary: dict[str, Any], run_dir: Path) -> dict[str, Any] 
     return info
 
 
+def sandbox_info(summary: dict[str, Any], run_dir: Path) -> dict[str, Any] | None:
+    """The agent results of the sandbox step: the rates of each task set, the stops, the times and the cache."""
+    entry = summary.get("sandbox")
+    if not isinstance(entry, dict):
+        return None
+    info: dict[str, Any] = {
+        "status": entry.get("status"), "error": entry.get("error"), "sets": entry.get("sets") or {},
+        "hit_rate": entry.get("prefix_cache_hit_rate"), "best_rate": entry.get("prefix_cache_best_rate"),
+    }
+    detail = load_json(run_dir / "sandbox.json")
+    if isinstance(detail, dict):
+        config = detail.get("config") or {}
+        info["agents"], info["seeds"] = config.get("agents"), config.get("seeds")
+        info["commits"] = {k: str(v)[:12] for k, v in (config.get("commits") or {}).items()}
+        for group in (detail.get("report") or {}).get("groups", []):
+            target = info["sets"].get(group.get("set"))
+            if group.get("family") == "all" and isinstance(target, dict):
+                secs = group.get("median_s")
+                target.update(stops=group.get("stops"), median_tokens=group.get("median_completion_tokens"),
+                              median_min=round(secs / 60, 2) if isinstance(secs, (int, float)) else None)
+    return info
+
+
 def spec_info(summary: dict[str, Any]) -> list[dict[str, Any]] | None:
     comparison = summary.get("spec_comparison")
     if not isinstance(comparison, dict):
@@ -378,6 +402,7 @@ def collect_run(run_dir: Path) -> dict[str, Any] | None:
         "reasoning": reasoning_info(summary),
         "tool_calling": tool_calling_info(summary, run_dir),
         "spec": spec_info(summary),
+        "sandbox": sandbox_info(summary, run_dir),
         "gpu": {
             "power_avg_w": gpu.get("gpu_power_avg_w"),
             "power_peak_w": gpu.get("gpu_power_peak_w"),

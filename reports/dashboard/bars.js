@@ -67,7 +67,7 @@
     var m = { l: 52, r: 12, t: 12, b: 34 };
     var iw = Math.max(40, W - m.l - m.r), ih = H - m.t - m.b;
     var max = 0;
-    groups.forEach(function (g) { g.bars.forEach(function (b) { if (isNum(b.value)) max = Math.max(max, b.value); }); });
+    groups.forEach(function (g) { g.bars.forEach(function (b) { if (isNum(b.value)) max = Math.max(max, b.value, isNum(b.hi) ? b.hi : 0); }); });
     var yt = niceTicks(max, 4), ytop = yt[yt.length - 1];
     var fy = function (v) { return m.t + ih - v / ytop * ih; };
     var svg = s("svg", { viewBox: "0 0 " + W + " " + H, height: H, role: "img", "aria-label": cfg.aria || "" }, plot);
@@ -89,6 +89,11 @@
         var hgt = Math.max(1, fy(0) - fy(b.value));
         var p = s("path", { d: roundedBarV(x, fy(0), bw, hgt, 4) }, svg);
         p.style.fill = b.color;
+        if (isNum(b.lo) && isNum(b.hi)) {   // a 95% interval as a whisker with caps
+          var cx = x + bw / 2, yl = fy(b.lo), yh = fy(b.hi);
+          s("path", { d: "M" + cx + "," + yl + "V" + yh + "M" + (cx - 3) + "," + yh + "H" + (cx + 3) + "M" + (cx - 3) + "," + yl + "H" + (cx + 3),
+                      fill: "none", "stroke-width": 1.5 }, svg).style.stroke = "var(--ink)";
+        }
         var hitR = s("rect", { x: x - gap / 2, y: m.t, width: bw + gap, height: ih, fill: "transparent" }, svg);
         bindTip(hitR, function () { return { title: g.label, rows: [{ color: b.color, value: cfg.yFmt(b.value), label: b.name }].concat(b.extra || []) }; });
         hitR.addEventListener("pointerenter", function () { p.style.opacity = "0.82"; });
