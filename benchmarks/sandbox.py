@@ -19,6 +19,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from benchmarks.token_usage import Pusher
+
 BENCHMARK_VERSION = "1.0"
 DEFAULTS: dict[str, Any] = {
     "agent_eval_dir": "~/Projects/dsv4-specialize/agent-eval",
@@ -34,6 +36,7 @@ DEFAULTS: dict[str, Any] = {
     "max_tokens": 8192,
     "time_limit_s": 1200,
     "stop_new_after": None,
+    "token_tracker": True,   # send the token usage to Token Tracker, if this machine has an ingest token
 }
 RUN_LINE = re.compile(r": (pass|wrong|hallucination|stopped|server_error) \(")
 
@@ -136,6 +139,9 @@ def run_sandbox(sandbox_cfg: dict[str, Any], *, base_url: str, served_name: str,
     tasks = len(sc["tasks"]) if sc["tasks"] else task_count(sets, sc["families"])
     job("set", "--steps", str(tasks * int(sc["seeds"])))
 
+    # One event for each model turn goes to Token Tracker (benchmarks/token_usage.py), after each finished run.
+    usage = Pusher(out / "point", point=f"{run_dir.parent.name}/{run_dir.name}", project="model-benchmarks/sandbox",
+                   models={label: served_name}) if sc["token_tracker"] else None
     start, done = time.time(), 0
     print(f"[sandbox] {' '.join(argv[2:])}", flush=True)
     with subprocess.Popen(argv, cwd=ae_dir, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -146,6 +152,11 @@ def run_sandbox(sandbox_cfg: dict[str, Any], *, base_url: str, served_name: str,
             if RUN_LINE.search(line):
                 done += 1
                 job("step", str(done))
+                if usage:
+                    usage.push()
+    if usage and usage.token:
+        usage.push()
+        print(f"[sandbox] token usage: {usage.events} events sent to Token Tracker", flush=True)
     end, after = time.time(), server_metrics(base_url)
 
     block = (after or before or {}).get("block_size")
