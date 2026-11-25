@@ -123,6 +123,7 @@ The runner does not validate keys. It ignores an unknown key, so a misspelled ke
 | `sandbox.slots`, `sandbox.container_memory` | int, string | 2, `1g` | no | Containers at the same time on the host, and the memory of each. | sandbox |
 | `sandbox.max_tokens`, `sandbox.time_limit_s` | int | 8192, 1200 | no | `max_tokens` of each turn, and the time limit of each task run. | sandbox |
 | `sandbox.stop_new_after` | `HH:MM` | none | no | No new task run starts after this local time. | sandbox |
+| `sandbox.token_tracker` | bool | `true` | no | Send the token counts of each model turn to Token Tracker, if the machine has an ingest token. See [token-usage.md](token-usage.md). | sandbox |
 
 Notes:
 

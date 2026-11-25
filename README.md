@@ -152,6 +152,7 @@ The modules in `benchmarks/` import from `harness/` and from other modules in `b
 - [docs/methodology.md](docs/methodology.md): how each benchmark measures.
 - [docs/tool-calling.md](docs/tool-calling.md): the tool-calling tasks and the scorer.
 - [docs/sandbox.md](docs/sandbox.md): the sandbox step, which runs the model as an agent on coding tasks.
+- [docs/token-usage.md](docs/token-usage.md): how the sandbox step sends its token counts to Token Tracker.
 - [docs/adding-a-benchmark.md](docs/adding-a-benchmark.md): how to add a benchmark.
 - [docs/dashboard.md](docs/dashboard.md): how to build, serve, and read the dashboard.
 - [docs/dgx-spark.md](docs/dgx-spark.md): DGX Spark setup and the memory guard.
